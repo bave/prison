@@ -1,0 +1,16 @@
+
+まだ途中．
+
+ToDo
+	data.conf を libcage にがっちゃんこすること
+		-> libcage の open entry multi
+		-> libcage の close entry multi
+		-> libcage の open entry single
+		-> libcage の open entry single
+		-> を追加する必要あり．
+	hostRRR はまだ yans からもってくる
+	serviceRRR
+	Group viewer
+	Service viewer
+	
+

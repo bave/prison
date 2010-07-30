@@ -4,8 +4,23 @@
 #ENVP= MACOSX_DEPLOYMENT_TARGET=10.6
 
 CC=g++
-CFLAGS= -Wall -x objective-c++ -framework Cocoa,Foundation,AppKit
-#CFLAGS= -w -x objective-c++ -framework Foundation
+
+PLAT := $(shell uname)
+
+ifeq "$(PLAT)" "Darwin"
+CFLAGS= -g -Wall 
+CFLAGS+= -x objective-c++ -framework Cocoa,AppKit
+CFLAGS+= -lresolv -lstdc++
+endif
+
+ifeq "$(PLAT)" "Linux"
+CFLAGS= -lobjc
+CFLAGS+= -lgnustep-base
+CFLAGS+= -I/usr/include/GNUstep
+CFLAGS+= -fconstant-string-class=NSConstantString
+CFLAGS+= -fobjc-exceptions
+endif
+
 
 all:
 	ls
@@ -45,6 +60,9 @@ kvt: kvt.m
 
 mgmt: mgmt.m
 	${CC} ${CFLAGS} mgmt.m
+
+gpg: gpg.m
+	${CC} ${CFLAGS} gpg.m -lgpgme
 
 
 clean:

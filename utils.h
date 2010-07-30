@@ -18,6 +18,8 @@
 #include <vector>
 #include <string>
 
+#include "tsc.h"
+
 using namespace std;
 
 enum retFlag { success, fail };

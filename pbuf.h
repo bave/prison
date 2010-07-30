@@ -135,6 +135,7 @@
     }
     sum += adjust;
 
+    // --bug--- shift size is less than 31
     while (sum>0xFFFF) {
         sum = (sum>>16) + (sum&0xFFFF);
     }
@@ -151,7 +152,7 @@
 
 /*
  * 0                16               31
- * +----------------+----------------+       ∧ 
+ * +----------------+----------------+       ∧
  * |       Source IPv4 Address       |       |
  * +----------------+----------------+       |
  * |     Destination IPv4 Address    | pseudo-header

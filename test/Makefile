@@ -9,8 +9,10 @@ PLAT := $(shell uname)
 
 ifeq "$(PLAT)" "Darwin"
 CFLAGS= -g -Wall 
+CFLAGS+= -I/opt/local/include
 CFLAGS+= -x objective-c++ -framework Cocoa,AppKit
-CFLAGS+= -lresolv -lstdc++
+CFLAGS+= -Wno-deprecated-declarations -Wno-deprecated
+CFLAGS+= -lresolv -lstdc++ -lgpgme -lgpg-error
 endif
 
 ifeq "$(PLAT)" "Linux"
@@ -62,8 +64,8 @@ mgmt: mgmt.m
 	${CC} ${CFLAGS} mgmt.m
 
 gpg: gpg.m
-	${CC} ${CFLAGS} gpg.m -lgpgme
-
+	${CC} ${CFLAGS} gpg.m
 
 clean:
 	rm ./a.out
+	rm -rf ./a.out.dSYM

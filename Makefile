@@ -17,7 +17,8 @@ raprins:
 clean: clean_ds clean_current
 
 clean_current:
-	rm ./a.out
+	rm ./a.out &
+	rm -rf ./a.out.dSYM &
 
 clean_ds:
 	$(MAKE) -C ds clean

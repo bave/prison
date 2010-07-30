@@ -69,7 +69,7 @@ int main(int argc, const char **argv)
     id pool = [NSAutoreleasePool new];
     [NSApplication sharedApplication];
 
-    if([NSBundle loadNibvNamed:@"main.nib" owner:NSApp]) {
+    if([NSBundle loadNibNamed:nil owner:NSApp]) {
         id m = [myObject new];
         [m setMainThread:NSApp];
         //[NSApp setDelegate:];

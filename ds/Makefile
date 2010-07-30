@@ -11,6 +11,6 @@ clean: genclean
 	rm DSlibinfoMIGServer.c DSlibinfoMIGUser.c DSlibinfoMIG.h
 
 genclean:
-	rm ./flushcache
+	rm ./flushcache &
 
 

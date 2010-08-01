@@ -2,7 +2,7 @@
 #define __RAPRINS_UTILS_H_
 
 #import <Cocoa/Cocoa.h>
-#import <servers/bootstrap.h>
+
 
 #include <stdio.h>
 #include <string.h>
@@ -22,9 +22,17 @@ enum retFlag { success, fail };
 // Macro Code
 #define FW_PREFIX(X) htonl( (unsigned int)(0xFFFFFFFF << (32-X)) )
 #define INT3 __asm__ __volatile__("int3");
+
+#ifdef __MACH__
+#import <servers/bootstrap.h>
 #define s6_addr8  __u6_addr.__u6_addr8
 #define s6_addr16 __u6_addr.__u6_addr16
 #define s6_addr32 __u6_addr.__u6_addr32
+#endif
+
+#ifdef __linux__
+#define bool BOOL
+#endif
 
 // prototype --------------------------------------------------------------------
 
@@ -160,7 +168,7 @@ NSArray* array_split(NSString* string, NSString* delimiter) {
             //NSLog(@"%@\n",token);
             [array addObject:token];
         }
-        [scanner scanCharactersFromSet:chSet intoString:nil];
+        //[scanner scanCharactersFromSet:chSet intoString:nil];
     }
     //[pool release];
     return [NSArray arrayWithArray:array];

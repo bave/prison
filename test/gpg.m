@@ -1,6 +1,7 @@
 #import <Cocoa/Cocoa.h>
 
 #include "../gpg.h"
+#include "../utils.h"
 
 
 int main()

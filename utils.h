@@ -15,12 +15,7 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 
-#include <vector>
-#include <string>
-
 #include "tsc.h"
-
-using namespace std;
 
 enum retFlag { success, fail };
 
@@ -35,13 +30,13 @@ enum retFlag { success, fail };
 
 // string spliter...
 NSArray* array_split(NSString* string, NSString* delimiter);
-//void vector_split(const string& s_src, const char *c, vector<string>& s_dst);
 
 // transform address to numerical
 // transform numerical to address
 // const char* -> NSString... irresolute
 const char* ip_ntoa(NSString* ns_str, NSData* ns_data);
 NSData* ip_aton(NSString* type, NSString* addr);
+
 void fillscopeid(struct sockaddr_in6 *sin6);
 
 // memory 
@@ -170,31 +165,6 @@ NSArray* array_split(NSString* string, NSString* delimiter) {
     //[pool release];
     return [NSArray arrayWithArray:array];
 }
-
-/*
-// this code is lang:c++,, using STL
-void vector_split(const string& s_src, const char *c, vector<string>& s_dst)
-{
-    string::size_type i = 0;
-    string::size_type j = s_src.find(c);
-    string tmp = s_src.substr(i,j-i);
-
-    if (tmp.size() == 0) return;
-    s_dst.push_back(tmp);
-
-    while(j != string::npos){
-        i = j++;
-        j = s_src.find(c,j);
-        if (j == string::npos){
-            s_dst.push_back(s_src.substr(i+1, s_src.size()));
-            break;
-        }
-        tmp = s_src.substr(i,j-i);
-        s_dst.push_back(tmp.substr(1,tmp.size()));
-    }
-    return;
-}
-*/
 
 void fillscopeid(struct sockaddr_in6 *sin6)
 {

@@ -15,9 +15,9 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 
-#include "tsc.h"
-
 enum retFlag { success, fail };
+
+
 
 // Macro Code
 #define FW_PREFIX(X) htonl( (unsigned int)(0xFFFFFFFF << (32-X)) )
@@ -32,6 +32,8 @@ enum retFlag { success, fail };
 
 #ifdef __linux__
 #define bool BOOL
+#define true 1
+#define false 1
 #endif
 
 // prototype --------------------------------------------------------------------
@@ -168,7 +170,9 @@ NSArray* array_split(NSString* string, NSString* delimiter) {
             //NSLog(@"%@\n",token);
             [array addObject:token];
         }
-        //[scanner scanCharactersFromSet:chSet intoString:nil];
+        #ifdef __MACH__
+        [scanner scanCharactersFromSet:chSet intoString:nil];
+        #endif
     }
     //[pool release];
     return [NSArray arrayWithArray:array];

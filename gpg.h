@@ -18,8 +18,15 @@
 #include <locale.h>
 
 #ifdef __linux__
+
+#ifndef true
 #define true  1
+#endif
+
+#ifndef false
 #define false 0
+#endif
+
 #include <sys/stat.h>
 //#define BOOL int
 #endif

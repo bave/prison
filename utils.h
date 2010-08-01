@@ -32,8 +32,12 @@ enum retFlag { success, fail };
 
 #ifdef __linux__
 #define bool BOOL
+#ifndef treu
 #define true 1
+#endif
+#ifndef false
 #define false 1
+#endif
 #endif
 
 // prototype --------------------------------------------------------------------
@@ -170,9 +174,7 @@ NSArray* array_split(NSString* string, NSString* delimiter) {
             //NSLog(@"%@\n",token);
             [array addObject:token];
         }
-        #ifdef __MACH__
-        [scanner scanCharactersFromSet:chSet intoString:nil];
-        #endif
+        [scanner scanCharactersFromSet:chSet intoString:(NSString**)nil];
     }
     //[pool release];
     return [NSArray arrayWithArray:array];

@@ -3,7 +3,6 @@
 
 #import <Cocoa/Cocoa.h>
 
-
 #include <stdio.h>
 #include <string.h>
 #include <netdb.h>
@@ -17,10 +16,8 @@
 
 enum retFlag { success, fail };
 
-
-
 // Macro Code
-#define FW_PREFIX(X) htonl( (unsigned int)(0xFFFFFFFF << (32-X)) )
+#define FW_PREFIX(X) htonl((unsigned int)(0xFFFFFFFF << (32-X)))
 #define INT3 __asm__ __volatile__("int3");
 
 #ifdef __MACH__
@@ -31,7 +28,9 @@ enum retFlag { success, fail };
 #endif
 
 #ifdef __linux__
+#ifndef bool
 #define bool BOOL
+#endif
 #ifndef treu
 #define true 1
 #endif
@@ -45,13 +44,14 @@ enum retFlag { success, fail };
 // string spliter...
 NSArray* array_split(NSString* string, NSString* delimiter);
 
-// transform address to numerical
 // transform numerical to address
-// const char* -> NSString... irresolute
 const char* ip_ntoa(NSString* ns_str, NSData* ns_data);
+// transform address to numerical
 NSData* ip_aton(NSString* type, NSString* addr);
 
-void fillscopeid(struct sockaddr_in6 *sin6);
+
+// directory management
+NSString* currentdir(void);
 
 // memory 
 void memdump(void *mem, int i);
@@ -62,12 +62,30 @@ bool memswap(void* s1, void* s2, size_t size);
 bool fcomp(NSString* flags, NSString* flag);
 bool ip4comp(NSString* addr1, NSString* addr2);
 
+// for ipv6 code
+void fillscopeid(struct sockaddr_in6 *sin6);
+
 // now ipv4 only
 // 127.1.1.1 255.0.0.0 -> 127.0.0.0
 NSString* addrmask(NSString* addr, NSString* mask);
 
 
 // implementation --------------------------------------------------------------
+
+NSString* currentdir(void)
+{
+    id pool = [NSAutoreleasePool new];
+
+    NSFileManager* manager;
+    NSString* path;
+    manager = [NSFileManager defaultManager];
+    path = [[NSString alloc]initWithFormat:@"%@/",[manager currentDirectoryPath]];
+    [pool drain];
+    [path autorelease];
+
+    return path;
+}
+
 
 bool ip4comp(NSString* addr1, NSString* addr2)
 {
@@ -154,6 +172,9 @@ bool memswap(void* s1, void* s2, size_t size) {
     return true;
 }
 
+
+// same behavior
+// [NSString componentsSeparatedByString:(NSString*)]
 NSArray* array_split(NSString* string, NSString* delimiter) {
 
     NSCharacterSet* chSet;

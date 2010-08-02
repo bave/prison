@@ -18,11 +18,9 @@
 #include <locale.h>
 
 #ifdef __linux__
-
 #ifndef true
 #define true  1
 #endif
-
 #ifndef false
 #define false 0
 #endif
@@ -832,6 +830,10 @@
 {
     id pool = [NSAutoreleasePool new];
 
+    if (key == nil) {
+        @throw @"error:[gpg throw] non key stream";
+    }
+
     NSMutableArray* args;
     args = [ NSMutableArray array];
     if (gpgDir != nil) {
@@ -841,9 +843,7 @@
     }
     [args addObject:@"--throw-keyids"];
 
-    if (key == nil) {
-        @throw @"error:[gpg throw] non key stream";
-    }
+
 
     // input pipe
     NSPipe* in_pipe;

@@ -10,23 +10,34 @@ int main()
 
     int ret;
 
-    NSString* home;
-    #ifdef __MACH__
-    home = [NSString stringWithString:@"/Users/bayve/work/gpg/"];
-    #elif __linux__
-    home = [NSString stringWithString:@"/home/t-inoue/work/gpg/"];
-    #endif
+    NSString* home = nil;
+    home = [NSString stringWithFormat:@"%@%@", currentdir(), @"../gpg/"];
     NSLog(@"home_dir  :%@\n", home);
 
-    NSString* sig;
-    NSString* sigpath;
-    sigpath = [NSString stringWithFormat:@"%@%@", home, @"Makefile.asc"];
+    NSString* sig = nil;
+    NSString* sigpath = nil;
+    sigpath = [NSString stringWithFormat:@"%@%@", home, @"hage/hage.pub.asc"];
+    // 10.5 later...
+    //NSError*  error;
+    //error = nil;
+    //sig = [NSString stringWithContentsOfFile:sigpath
+    //                                encoding:NSUTF8StringEncoding
+    //                                   error:&error];
+    // or
+    //sig = [NSString stringWithContentsOfFile:sigpath
+    //                                encoding:NSUTF8StringEncoding
+    //                                   error:nil];
+    // before 10.4 or linux objc
+    sig = [NSString stringWithContentsOfFile:sigpath];
     NSLog(@"sign_file :%@\n",sigpath);
+    NSLog(@"sign_file :\n%@\n",sig);
 
-    NSString* key;
-    NSString* keypath;
-    keypath = [NSString stringWithFormat:@"%@%@", home, @"takano.gpg"];
-    NSLog(@"import_key:%@\n",keypath);
+    NSString* key = nil;
+    NSString* keypath = nil;
+    keypath = [NSString stringWithFormat:@"%@%@", home, @"hage/hage.pub"];
+    key = [NSString stringWithContentsOfFile:keypath];
+    NSLog(@"keypath:%@\n",keypath);
+    NSLog(@"key:\n%@\n",key);
 
     GPGME* gpg;
     //gpg = [GPGME new];
@@ -53,10 +64,10 @@ int main()
                             :@"1024"
                             :@"RSA"
                             :@"1024"
-                            :@"bave"
-                            :@"bave@aris"];
+                            :@"test"
+                            :@"test@aris"];
 
-            [gpg setPass:@"bave"];
+            [gpg setPass:@"test"];
             NSLog(@"set_params\n");
 
             ret = [gpg genkey];
@@ -71,22 +82,6 @@ int main()
 
     // verify test
     @try {
-        /*
-        // 10.5 later...
-        NSError*  error;
-        error = nil;
-        sig = [NSString stringWithContentsOfFile:sigpath
-                                        encoding:NSUTF8StringEncoding
-                                           error:&error];
-        // or
-        sig = [NSString stringWithContentsOfFile:sigpath
-                                        encoding:NSUTF8StringEncoding
-                                           error:nil];
-        */
-        // before 10.4 or linux objc
-        sig = [NSString stringWithContentsOfFile:sigpath];
-
-        //NSLog(@"sig:\n%@\n",sig);
         NSLog(@"valid:%d\n", [gpg verify:sig]);
     }
     @catch (id e) {
@@ -97,9 +92,8 @@ int main()
     @try {
         // all keyring
         //NSLog(@"all keyring \n%@\n", [gpg export:nil]);
-
         // user pubring
-        //NSLog(@"uid keyring \n%@\n", [gpg export:@"bave"]);
+        NSLog(@"text user keyring export \n%@\n", [gpg export:@"test"]);
     }
     @catch (id e) {
         NSLog(@"%@\n", e);
@@ -107,7 +101,6 @@ int main()
 
     // import-key
     @try {
-        key = [NSString stringWithContentsOfFile:keypath];
         NSLog(@"import:%d\n", [gpg import:key]);
     }
     @catch (id e){
@@ -121,7 +114,6 @@ int main()
     @catch (id e){
         NSLog(@"%@\n", e);
     }
-
 
     [pool drain];
     return 0;

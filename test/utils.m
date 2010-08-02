@@ -6,12 +6,17 @@
 int main() {
     int i;
     id pool = [[NSAutoreleasePool alloc] init];
+
     NSArray* array;
-    array = array_split(@"123.234.345.456", @".");
+    NSString* str = @"123.456.789.abc";
+    array = array_split(str, @".");
+
+    NSLog(@"%@\n" , array);
+    NSLog(@"%@\n" ,[str componentsSeparatedByString:@"."]);
+
 
     for (i=0; i<[array icount]; i++) {
         NSLog(@"%@\n", [array objectAtIndex:i]);
-        
     }
 
     NSData* addr;
@@ -61,6 +66,8 @@ int main() {
     a.s_addr = htonl(0xc0a80aff);
     addr = [NSData dataWithBytes:&a length:sizeof(a)];
     NSLog(@"%s", ip_ntoa(@"IPv4", addr));
+
+    NSLog(@"%@\n", currentdir());
 
     [pool release];
     return 0;

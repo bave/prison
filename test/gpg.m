@@ -93,7 +93,7 @@ int main()
         // all keyring
         //NSLog(@"all keyring \n%@\n", [gpg export:nil]);
         // user pubring
-        NSLog(@"text user keyring export \n%@\n", [gpg export:@"test"]);
+        NSLog(@"test user keyring export \n%@\n", [gpg export:@"test"]);
     }
     @catch (id e) {
         NSLog(@"%@\n", e);

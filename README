@@ -8,7 +8,7 @@ ToDo
 	Group viewer
 	Service viewer
     gpg 
-        -> genkey の callback
+        -> genkey callback
         -> sign
         -> delete
 	

@@ -111,9 +111,17 @@ int main()
         NSLog(@"%@\n", e);
     }
 
+    // sign
     @try {
         [gpg setPasswd:@"test"];
         NSLog(@"sign armor code\n%@\n", [gpg sign:@"testText\n"]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    @try {
+        NSLog(@"decrypt message\n%@\n", [gpg decrypt:sig]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);

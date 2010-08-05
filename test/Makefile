@@ -63,7 +63,7 @@ kvt: kvt.m
 mgmt: mgmt.m
 	${CC} ${CFLAGS} mgmt.m
 
-gpg: gpg.m
+gpgme: gpg.m
 	${CC} ${CFLAGS} gpg.m -lgpgme -lgpg-error
 
 clean:

@@ -3,9 +3,10 @@
 
 /*
  * todo
- * - decode
+ *   decrypt
  * - delkey
  * - templary import
+ * - this class is have to reconstruct signleton.
  */
 
 #import <Cocoa/Cocoa.h>
@@ -78,14 +79,15 @@
                    :(NSString*)mail;
 
 - (int)genkey;
-- (int)genrkey;
 - (int)import:(NSString*)key;
 - (int)verify:(NSString*)sig;
-
-- (NSString*)sign:(NSString*)txt;
+- (NSString*)decrypt:(NSString*)sig;
 - (NSString*)export:(NSString*)uid;
+- (NSString*)sign:(NSString*)txt;
 - (NSArray*)throw:(NSString*)key;
 
+// not implementation
+- (int)genrkey;
 - (int)delkey:(NSString*)key;
 
 
@@ -157,9 +159,57 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgPasswd = [[NSString alloc] initWithString:passwd];
 }
 
-- (int)genrkey
+- (NSString*)decrypt:(NSString*)sig
 {
-    return 0;
+    id pool = [NSAutoreleasePool new];
+
+    gpgme_ctx_t ctx;
+    gpgErr = gpgme_new (&ctx);
+    gpgErr = gpgme_set_protocol(ctx, GPGME_PROTOCOL_OpenPGP);
+
+    gpgme_data_t  in_data;
+    gpgme_data_new_from_mem(&in_data, [sig UTF8String], [sig length], 0);
+
+
+    gpgme_data_t out_data;
+    gpgErr = gpgme_data_new(&out_data);
+
+    gpgErr = gpgme_op_decrypt(ctx, in_data, out_data);
+    if (gpgErr) {
+        //NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
+        @throw @"error: [gpg decrypt] violation error";
+    }
+
+    gpgme_decrypt_result_t result;
+    result = gpgme_op_decrypt_result(ctx);
+    if (result->unsupported_algorithm) {
+        //NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
+        @throw @"error: [gpg decrypt] unsupported algorithm";
+    }
+
+    //[self _print_data:out_data];
+
+    NSData* out_nsdata;
+    out_nsdata = [self _data_to_nsdata:out_data];
+    if ([out_nsdata length] == 0) {
+        //NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
+        @throw @"error: [gpg decrypt] nonexistent sig data";
+    }
+
+    gpgme_data_release (in_data);
+    gpgme_data_release (out_data);
+    gpgme_release (ctx);
+
+    const NSStringEncoding* encode;
+    encode = [NSString availableStringEncodings];
+
+    NSString* out_string;
+    out_string = [[NSString alloc] initWithData:out_nsdata encoding:*encode];
+    [pool drain];
+
+    [out_string autorelease];
+
+    return out_string;
 }
 
 - (NSString*)sign:(NSString*)txt
@@ -179,9 +229,9 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgme_data_t out_data;
     gpgErr = gpgme_data_new(&out_data);
 
-    gpgErr = gpgme_op_sign (ctx, in_data, out_data, GPGME_SIG_MODE_NORMAL);
-    //gpgErr = gpgme_op_sign (ctx, in, out, GPGME_SIG_MODE_DETACH);
-    //gpgErr = gpgme_op_sign (ctx, in, out, GPGME_SIG_MODE_CLEAR);
+    gpgErr = gpgme_op_sign(ctx, in_data, out_data, GPGME_SIG_MODE_NORMAL);
+    //gpgErr = gpgme_op_sign(ctx, in, out, GPGME_SIG_MODE_DETACH);
+    //gpgErr = gpgme_op_sign(ctx, in, out, GPGME_SIG_MODE_CLEAR);
     if (gpgErr) {
         @throw @"error: [gpg sign] violation error";
     }
@@ -1187,6 +1237,8 @@ static gpgme_error_t _passwd_cb(void* object,
     if (gpgVer != nil)  [gpgVer release];
     if (gpgPasswd != nil) [gpgPasswd release];
 
+    [gpgLock release];
+
     [super dealloc];
     return;
 }
@@ -1342,24 +1394,15 @@ static gpgme_error_t _passwd_cb(void* object,
     return false;
 }
 
+- (int)genrkey
+{
+    return false;
+}
 
 - (int)delkey:(NSString*)key
 {
     return false;
 }
-
-
-/*
-- (gpgme_error_t)passwd_callback:(void*)opaque
-                                :(const char*)uid_hint
-                                :(const char*)passphrase_info
-                                :(int)last_was_bad
-                                :(int)fd
-{
-    write (fd, "abc\n", 4);
-    return 0;
-}
-*/
 
 @end
 

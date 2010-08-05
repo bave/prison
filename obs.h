@@ -64,6 +64,7 @@ extern NSLock* extLock;
     // --------------
     // release coding
     // --------------
+    [fwLock release];
     [super dealloc];
     return;
 }

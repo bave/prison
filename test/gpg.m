@@ -11,24 +11,20 @@ int main()
     int ret;
 
     NSString* home = nil;
-    home = [NSString stringWithFormat:@"%@%@", currentdir(), @"../gpg/"];
+    home = [NSString stringWithFormat:@"%@%@", currentdir(), @"gpg/"];
     NSLog(@"home_dir  :%@\n", home);
 
     NSString* sig = nil;
     NSString* sigpath = nil;
     sigpath = [NSString stringWithFormat:@"%@%@", home, @"hage/hage.pub.asc"];
-    // 10.5 later...
-    //NSError*  error;
-    //error = nil;
-    //sig = [NSString stringWithContentsOfFile:sigpath
-    //                                encoding:NSUTF8StringEncoding
-    //                                   error:&error];
-    // or
-    //sig = [NSString stringWithContentsOfFile:sigpath
-    //                                encoding:NSUTF8StringEncoding
-    //                                   error:nil];
-    // before 10.4 or linux objc
+
+    #ifdef LEOPARD
+    sig = [NSString stringWithContentsOfFile:sigpath
+                                    encoding:NSUTF8StringEncoding error:nil];
+    #else
     sig = [NSString stringWithContentsOfFile:sigpath];
+    #endif
+
     NSLog(@"sign_file :%@\n",sigpath);
     NSLog(@"sign_file :\n%@\n",sig);
 
@@ -67,7 +63,7 @@ int main()
                             :@"test"
                             :@"test@aris"];
 
-            [gpg setPass:@"test"];
+            [gpg setPasswd:@"test"];
             NSLog(@"set_params\n");
 
             ret = [gpg genkey];
@@ -110,6 +106,14 @@ int main()
     // throw-keyids
     @try {
         NSLog(@"%@\n",[gpg throw:key]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    @try {
+        [gpg setPasswd:@"test"];
+        NSLog(@"sign armor code\n%@\n", [gpg sign:@"testText\n"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);

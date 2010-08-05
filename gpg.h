@@ -3,11 +3,9 @@
 
 /*
  * todo
- * ホームディレクトリの最後の "/" を確認する．
- * ホームディレクトリが無かったときに作る．
- * 実行時のカレントディレクトリの検出
- * - sign
+ * - decode
  * - delkey
+ * - templary import
  */
 
 #import <Cocoa/Cocoa.h>
@@ -30,21 +28,23 @@
 #endif
 
 #ifdef __MACH__
-#include "common.h"
-#include "category.h"
-#include "utils.h"
+//#include "common.h"
+//#include "category.h"
+//#include "utils.h"
 #endif
 
 //debuf line
 //NSLog(@"%s\n", gpg_strerror(gpgErr));
 //NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
 
+
+
 @interface GPGME : NSObject
 {
     NSString* gpgDir;
     NSString* gpgExe;
     NSString* gpgVer;
-    NSString* gpgPass;
+    NSString* gpgPasswd;
 
     NSMutableDictionary* gpgDict;
 
@@ -66,12 +66,10 @@
 - (NSString*)getVer;
 - (NSString*)getPass;
 
-
 - (BOOL)hasSecring;
 - (BOOL)hasPubring;
 
-
-- (void)setPass:(NSString*)pass;
+- (void)setPasswd:(NSString*)passwd;
 - (void)mkKeyParams:(NSString*)key
                    :(NSString*)keylen
                    :(NSString*)sub
@@ -81,16 +79,17 @@
 
 - (int)genkey;
 - (int)genrkey;
-- (int)delkey:(NSString*)key;
-- (int)verify:(NSString*)sig;
 - (int)import:(NSString*)key;
+- (int)verify:(NSString*)sig;
+
+- (NSString*)sign:(NSString*)txt;
 - (NSString*)export:(NSString*)uid;
 - (NSArray*)throw:(NSString*)key;
 
+- (int)delkey:(NSString*)key;
 
 
 // private function
-
 - (void)_print_sig_summary:(gpgme_sigsum_t)summary;
 - (void)_pinrt_sig_status:(gpgme_error_t)status;
 - (void)_print_data:(gpgme_data_t)data;
@@ -103,11 +102,33 @@
 - (int)_mk_directory:(NSString*)dir;
 - (int)_rm_directory:(NSString*)dir;
 
-
 @end
 
 
 @implementation GPGME
+
+// gpgme callback function ------------------------------------------------------
+static gpgme_error_t _passwd_cb(void* object,
+                                const char* uid_hint,
+                                const char* passphrase_info,
+                                int prev_was_bad,
+                                int fd)
+{
+     id pool = [NSAutoreleasePool new];
+    GPGME* gpg = (GPGME*)object;
+
+    //NSLog(@"passphrase:%@\n", [(GPGME*)object getPass]);
+    NSString* passwd = [NSString stringWithFormat:@"%@\n", [gpg getPass]];
+
+    if (passwd == nil) return GPG_ERR_NO_PASSPHRASE;
+
+    write (fd, [passwd UTF8String], [passwd length]);
+
+    [pool drain];
+
+    return GPG_ERR_NO_ERROR;
+}
+// ------------------------------------------------------------------------------
 
 // public function
 
@@ -127,12 +148,13 @@
 
 - (NSString*)getPass
 {
-    return gpgPass;
+    return gpgPasswd;
 }
 
-- (void)setPass:(NSString*)pass
+- (void)setPasswd:(NSString*)passwd
 {
-    gpgPass = [[NSString alloc] initWithString:pass];
+    if (gpgPasswd != nil) [gpgPasswd release];
+    gpgPasswd = [[NSString alloc] initWithString:passwd];
 }
 
 - (int)genrkey
@@ -140,9 +162,60 @@
     return 0;
 }
 
+- (NSString*)sign:(NSString*)txt
+{
+    id pool = [NSAutoreleasePool new];
+
+    gpgme_ctx_t ctx;
+    gpgErr = gpgme_new (&ctx);
+    gpgErr = gpgme_set_protocol(ctx, GPGME_PROTOCOL_OpenPGP);
+    gpgme_set_passphrase_cb(ctx, _passwd_cb, self);
+    gpgme_set_armor(ctx, 1);
+    gpgme_set_textmode (ctx, 1);
+
+    gpgme_data_t  in_data;
+    gpgme_data_new_from_mem(&in_data, [txt UTF8String], [txt length], 0);
+
+    gpgme_data_t out_data;
+    gpgErr = gpgme_data_new(&out_data);
+
+    gpgErr = gpgme_op_sign (ctx, in_data, out_data, GPGME_SIG_MODE_NORMAL);
+    //gpgErr = gpgme_op_sign (ctx, in, out, GPGME_SIG_MODE_DETACH);
+    //gpgErr = gpgme_op_sign (ctx, in, out, GPGME_SIG_MODE_CLEAR);
+    if (gpgErr) {
+        @throw @"error: [gpg sign] violation error";
+    }
+
+    //gpgme_sign_result_t result;
+    //result = gpgme_op_sign_result (ctx);
+    
+    //[self _print_data:out_data];
+
+    NSData* out_nsdata;
+    out_nsdata = [self _data_to_nsdata:out_data];
+    if ([out_nsdata length] == 0) {
+        @throw @"error: [gpg sign] nonexistent txt data";
+    }
+    gpgme_data_release (in_data);
+    gpgme_data_release (out_data);
+    gpgme_release (ctx);
+
+    const NSStringEncoding* encode;
+    encode = [NSString availableStringEncodings];
+
+    NSString* out_string;
+    out_string = [[NSString alloc] initWithData:out_nsdata encoding:*encode];
+    [pool drain];
+
+    [out_string autorelease];
+
+    return out_string;
+}
+
 - (NSString*)export:(NSString*)uid
 {
 #ifdef __MACH__
+    // batch mode code
 
     id pool = [NSAutoreleasePool new];
 
@@ -250,6 +323,7 @@
     return out_string;
 
 #elif __linux__
+    // gpgme mode code
 
     const char *uid_char;
     uid_char = [uid UTF8String];
@@ -268,7 +342,7 @@
         @throw @"error: [gpg export] violation error";
     }
 
-    [self _print_data:out_data];
+    //[self _print_data:out_data];
 
     NSData* out_nsdata;
     out_nsdata = [self _data_to_nsdata:out_data];
@@ -380,7 +454,7 @@
     gpgme_set_armor(ctx, 1);
 
     gpgme_data_t  in_data;
-    gpgme_data_new_from_mem(&in_data, [key UTF8String], [key length], 1);
+    gpgme_data_new_from_mem(&in_data, [key UTF8String], [key length], 0);
 
     if (gpgErr) {
         @throw @"error:[gpg import] violation error";
@@ -480,7 +554,7 @@
         @throw @"error:[gpg genkey]";
     }
 
-    if (gpgPass == nil) {
+    if (gpgPasswd == nil) {
         @throw @"error:[gpg genkey]";
     }
 
@@ -503,8 +577,8 @@
     mail = [[gpgDict objectForKey:@"mail"] UTF8String];
 
 
-    const char* pass;
-    pass = [gpgPass UTF8String];
+    const char* passwd;
+    passwd = [gpgPasswd UTF8String];
 
     //char* comment;
     //char* expire;
@@ -542,7 +616,7 @@
             sublen,
             user,
             mail,
-            pass,
+            passwd,
             "0",
             "RaprinsKey",
             [pubring UTF8String],
@@ -640,7 +714,7 @@
             sublen,
             user,
             mail,
-            pass);
+            passwd);
      //"Name-Comment: \n"
      //"Expire-Date: 0\n"
 
@@ -801,7 +875,7 @@
 
     gpgme_new(&ctx);
     gpgme_set_protocol(ctx,GPGME_PROTOCOL_OpenPGP);
-    gpgme_data_new_from_mem(&in_data, [sig UTF8String], [sig length], 1);
+    gpgme_data_new_from_mem(&in_data, [sig UTF8String], [sig length], 0);
     gpgme_data_new(&out_data);
     gpgErr = gpgme_op_verify(ctx, in_data, NULL, out_data);
 
@@ -1047,6 +1121,9 @@
         gpgErr = gpgme_get_engine_info(&gpgInfo);
         if (gpgErr) @throw @"error:[gpg initWithDir]";
 
+        if (![dir hasSuffix:@"/"]) {
+            dir = [NSString stringWithFormat:@"%@%@", dir, @"/"];
+        }
         gpgErr = gpgme_set_engine_info(gpgInfo->protocol,
                                        gpgInfo->file_name,
                                        [dir UTF8String]);
@@ -1108,7 +1185,7 @@
     if (gpgDir != nil)  [gpgDir release];
     if (gpgExe != nil)  [gpgExe release];
     if (gpgVer != nil)  [gpgVer release];
-    if (gpgPass != nil) [gpgPass release];
+    if (gpgPasswd != nil) [gpgPasswd release];
 
     [super dealloc];
     return;
@@ -1270,6 +1347,19 @@
 {
     return false;
 }
+
+
+/*
+- (gpgme_error_t)passwd_callback:(void*)opaque
+                                :(const char*)uid_hint
+                                :(const char*)passphrase_info
+                                :(int)last_was_bad
+                                :(int)fd
+{
+    write (fd, "abc\n", 4);
+    return 0;
+}
+*/
 
 @end
 

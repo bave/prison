@@ -3,6 +3,10 @@
 
 #import <Cocoa/Cocoa.h>
 
+#ifdef __MARC__
+#include <AvailabilityMacros.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <netdb.h>
@@ -19,6 +23,9 @@ enum retFlag { success, fail };
 // Macro Code
 #define FW_PREFIX(X) htonl((unsigned int)(0xFFFFFFFF << (32-X)))
 #define INT3 __asm__ __volatile__("int3");
+#define SNOW    DEPRECATED_IN_MAC_OS_X_VERSION_10_6_AND_LATER
+#define LEOPARD DEPRECATED_IN_MAC_OS_X_VERSION_10_5_AND_LATER
+
 
 #ifdef __MACH__
 #import <servers/bootstrap.h>
@@ -52,6 +59,7 @@ NSData* ip_aton(NSString* type, NSString* addr);
 
 // directory management
 NSString* currentdir(void);
+bool mkdir(NSString* dir);
 
 // memory 
 void memdump(void *mem, int i);
@@ -69,8 +77,30 @@ void fillscopeid(struct sockaddr_in6 *sin6);
 // 127.1.1.1 255.0.0.0 -> 127.0.0.0
 NSString* addrmask(NSString* addr, NSString* mask);
 
-
 // implementation --------------------------------------------------------------
+
+bool mkdir(NSString* dir)
+{
+    id pool = [NSAutoreleasePool new];
+    bool ret;
+
+    NSFileManager* manager;
+    manager = [NSFileManager defaultManager];
+
+    #ifdef LEOPARD
+    ret = [manager createDirectoryAtPath:dir
+             withIntermediateDirectories:false
+                              attributes:nil
+                                   error:nil];
+    #else
+    ret = [manager createDirectoryAtPath:dir attributes:nil];
+    #endif
+
+
+    [pool drain];
+    return true;
+}
+
 
 NSString* currentdir(void)
 {

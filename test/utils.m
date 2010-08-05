@@ -68,6 +68,7 @@ int main() {
     NSLog(@"%s", ip_ntoa(@"IPv4", addr));
 
     NSLog(@"%@\n", currentdir());
+    NSLog(@"%d\n", mkdir(@"tetete"));
 
     [pool release];
     return 0;

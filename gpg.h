@@ -122,7 +122,7 @@ static gpgme_error_t _passwd_cb(void* object,
     //NSLog(@"passphrase:%@\n", [(GPGME*)object getPass]);
     NSString* passwd = [NSString stringWithFormat:@"%@\n", [gpg getPass]];
 
-    if (passwd == nil) return GPG_ERR_NO_PASSPHRASE;
+    if (passwd == nil) return GPG_ERR_BAD_PASSPHRASE;
 
     write (fd, [passwd UTF8String], [passwd length]);
 
@@ -170,13 +170,15 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgme_data_t  in_data;
     gpgme_data_new_from_mem(&in_data, [sig UTF8String], [sig length], 0);
 
-
     gpgme_data_t out_data;
     gpgErr = gpgme_data_new(&out_data);
 
     gpgErr = gpgme_op_decrypt(ctx, in_data, out_data);
     if (gpgErr) {
-        //NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
+        NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
+        gpgme_data_release (in_data);
+        gpgme_data_release (out_data);
+        gpgme_release (ctx);
         @throw @"error: [gpg decrypt] violation error";
     }
 
@@ -184,6 +186,9 @@ static gpgme_error_t _passwd_cb(void* object,
     result = gpgme_op_decrypt_result(ctx);
     if (result->unsupported_algorithm) {
         //NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
+        gpgme_data_release (in_data);
+        gpgme_data_release (out_data);
+        gpgme_release (ctx);
         @throw @"error: [gpg decrypt] unsupported algorithm";
     }
 
@@ -193,6 +198,9 @@ static gpgme_error_t _passwd_cb(void* object,
     out_nsdata = [self _data_to_nsdata:out_data];
     if ([out_nsdata length] == 0) {
         //NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
+        gpgme_data_release (in_data);
+        gpgme_data_release (out_data);
+        gpgme_release (ctx);
         @throw @"error: [gpg decrypt] nonexistent sig data";
     }
 
@@ -233,6 +241,9 @@ static gpgme_error_t _passwd_cb(void* object,
     //gpgErr = gpgme_op_sign(ctx, in, out, GPGME_SIG_MODE_DETACH);
     //gpgErr = gpgme_op_sign(ctx, in, out, GPGME_SIG_MODE_CLEAR);
     if (gpgErr) {
+        gpgme_data_release (in_data);
+        gpgme_data_release (out_data);
+        gpgme_release (ctx);
         @throw @"error: [gpg sign] violation error";
     }
 
@@ -244,6 +255,9 @@ static gpgme_error_t _passwd_cb(void* object,
     NSData* out_nsdata;
     out_nsdata = [self _data_to_nsdata:out_data];
     if ([out_nsdata length] == 0) {
+        gpgme_data_release (in_data);
+        gpgme_data_release (out_data);
+        gpgme_release (ctx);
         @throw @"error: [gpg sign] nonexistent txt data";
     }
     gpgme_data_release (in_data);
@@ -389,6 +403,8 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgErr = gpgme_op_export(ctx, uid_char, 0, out_data);
 
     if (gpgErr) {
+        gpgme_data_release (out_data);
+        gpgme_release (ctx);
         @throw @"error: [gpg export] violation error";
     }
 
@@ -398,8 +414,13 @@ static gpgme_error_t _passwd_cb(void* object,
     out_nsdata = [self _data_to_nsdata:out_data];
 
     if ([out_nsdata length] == 0) {
+        gpgme_data_release (out_data);
+        gpgme_release (ctx);
         @throw @"error: [gpg export] nonexistent user";
     }
+
+    gpgme_data_release (out_data);
+    gpgme_release (ctx);
 
     const NSStringEncoding* encode;
     encode = [NSString availableStringEncodings];
@@ -423,8 +444,6 @@ static gpgme_error_t _passwd_cb(void* object,
 
 #ifdef __MACH__
 
-    id pool = [NSAutoreleasePool new];
-
     if (key == nil) {
         @throw @"error:[gpg import] nonexistent key";
     }
@@ -432,6 +451,8 @@ static gpgme_error_t _passwd_cb(void* object,
     if ([key length] == 0) {
         @throw @"error:[gpg import] nonexistent key";
     }
+
+    id pool = [NSAutoreleasePool new];
 
     NSMutableArray* args;
     args = [ NSMutableArray array];
@@ -481,15 +502,19 @@ static gpgme_error_t _passwd_cb(void* object,
 
     int ret;
     [task waitUntilExit];
+
+    // closefile
+    [devNull closeFile];
+
     ret = [task terminationStatus];
     //NSLog(@"ret:%d", ret);
 
     if (ret != 0) {
+        [task release];
+        [pool drain];
         @throw @"error:[gpg import] violation error";
     }
 
-    // closefile
-    [devNull closeFile];
 
     [task release];
     [pool drain];
@@ -506,13 +531,11 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgme_data_t  in_data;
     gpgme_data_new_from_mem(&in_data, [key UTF8String], [key length], 0);
 
-    if (gpgErr) {
-        @throw @"error:[gpg import] violation error";
-    }
-
 
     gpgErr = gpgme_op_import(ctx, in_data);
     if (gpgErr) {
+        gpgme_data_release (in_data);
+        gpgme_release (ctx);
         @throw @"error:[gpg import] violation error";
     }
 
@@ -522,6 +545,8 @@ static gpgme_error_t _passwd_cb(void* object,
     // if you want to understand,, more detail information ..
     // checking in result_check() at gpgme/tests/gpg/t-import.c
     if (result->imports->result != 0) {
+        gpgme_data_release (in_data);
+        gpgme_release (ctx);
         @throw @"error:[gpg import] violation error";
     }
 
@@ -537,7 +562,8 @@ static gpgme_error_t _passwd_cb(void* object,
         // GPGME_IMPORT_SUBKEY	8
         // GPGME_IMPORT_SECRET	16
         // ==========================================
-
+        gpgme_data_release (in_data);
+        gpgme_release (ctx);
         @throw @"error:[gpg import] existent users";
     }
 
@@ -935,6 +961,9 @@ static gpgme_error_t _passwd_cb(void* object,
         gpgme_release(ctx);
         @throw @"error:[gpg verity]";
     }
+
+    //printf("verify data\n");
+    //[self _print_data:out_data];
 
     result = gpgme_op_verify_result(ctx); 
     valid = [self _is_valid:result];

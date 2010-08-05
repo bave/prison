@@ -23,12 +23,11 @@ enum retFlag { success, fail };
 // Macro Code
 #define FW_PREFIX(X) htonl((unsigned int)(0xFFFFFFFF << (32-X)))
 #define INT3 __asm__ __volatile__("int3");
-#define SNOW    DEPRECATED_IN_MAC_OS_X_VERSION_10_6_AND_LATER
-#define LEOPARD DEPRECATED_IN_MAC_OS_X_VERSION_10_5_AND_LATER
-
 
 #ifdef __MACH__
 #import <servers/bootstrap.h>
+#define SNOW    DEPRECATED_IN_MAC_OS_X_VERSION_10_6_AND_LATER
+#define LEOPARD DEPRECATED_IN_MAC_OS_X_VERSION_10_5_AND_LATER
 #define s6_addr8  __u6_addr.__u6_addr8
 #define s6_addr16 __u6_addr.__u6_addr16
 #define s6_addr32 __u6_addr.__u6_addr32
@@ -59,7 +58,9 @@ NSData* ip_aton(NSString* type, NSString* addr);
 
 // directory management
 NSString* currentdir(void);
+#ifdef __MACH__
 bool mkdir(NSString* dir);
+#endif
 
 // memory 
 void memdump(void *mem, int i);
@@ -79,6 +80,7 @@ NSString* addrmask(NSString* addr, NSString* mask);
 
 // implementation --------------------------------------------------------------
 
+#ifdef __MACH__
 bool mkdir(NSString* dir)
 {
     id pool = [NSAutoreleasePool new];
@@ -100,7 +102,7 @@ bool mkdir(NSString* dir)
     [pool drain];
     return true;
 }
-
+#endif
 
 NSString* currentdir(void)
 {

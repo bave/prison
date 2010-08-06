@@ -778,7 +778,6 @@ static gpgme_error_t _passwd_cb(void* object,
         // ==========================================
         gpgme_data_release(in_data);
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error:[gpg import] existent users";
     }
 
@@ -1030,6 +1029,7 @@ static gpgme_error_t _passwd_cb(void* object,
 
     gpgErr = gpgme_op_genkey (ctx, buffer, NULL, NULL);
     if (gpgErr) {
+        gpgme_release(ctx);
         @throw @"error:[gpg genkey] op_genkey";
     }
 

@@ -626,7 +626,6 @@ static gpgme_error_t _passwd_cb(void* object,
     if (gpgErr) {
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error: [gpg export] violation error";
     }
 
@@ -638,7 +637,6 @@ static gpgme_error_t _passwd_cb(void* object,
     if ([out_nsdata length] == 0) {
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error: [gpg export] nonexistent user";
     }
 

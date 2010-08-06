@@ -16,15 +16,13 @@ int main()
 
     NSString* sig = nil;
     NSString* sigpath = nil;
-    sigpath = [NSString stringWithFormat:@"%@%@", home, @"hage/hage.pub.asc"];
-
+    sigpath = [NSString stringWithFormat:@"%@%@", home, @"hage/message.asc"];
     #ifdef LEOPARD
     sig = [NSString stringWithContentsOfFile:sigpath
                                     encoding:NSUTF8StringEncoding error:nil];
     #else
     sig = [NSString stringWithContentsOfFile:sigpath];
     #endif
-
     NSLog(@"sign_file :%@\n",sigpath);
     NSLog(@"sign_file :\n%@\n",sig);
 
@@ -78,7 +76,9 @@ int main()
 
     // verify test
     @try {
-        NSLog(@"valid:%d\n", [gpg verify:sig]);
+        NSLog(@"verify message:\n%@\n", [gpg verify:sig]);
+        NSLog(@"valid:%d\n", [gpg getValid]);
+        NSLog(@"trust:%d\n", [gpg getTrust]);
     }
     @catch (id e) {
         NSLog(@"%@\n", e);
@@ -89,7 +89,7 @@ int main()
         // all keyring
         //NSLog(@"all keyring \n%@\n", [gpg export:nil]);
         // user pubring
-        NSLog(@"test user keyring export \n%@\n", [gpg export:@"test"]);
+        NSLog(@"export keyring\n%@\n", [gpg export:@"test"]);
     }
     @catch (id e) {
         NSLog(@"%@\n", e);
@@ -97,7 +97,7 @@ int main()
 
     // import-key
     @try {
-        NSLog(@"import:%d\n", [gpg import:key]);
+        NSLog(@"import message:%d\n", [gpg import:key]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -114,14 +114,31 @@ int main()
     // sign
     @try {
         [gpg setPasswd:@"test"];
-        NSLog(@"sign armor code\n%@\n", [gpg sign:@"testText\n"]);
+        NSLog(@"sign message\n%@\n", [gpg sign:@"tetete\n"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
     }
 
+    //encryptForce
     @try {
-        NSLog(@"decrypt message\n%@\n", [gpg decrypt:sig]);
+        NSLog(@"force encrypt message\n%@\n", [gpg encryptForce:@"tetete" :@"hage"]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    //encrypt
+    @try {
+        NSLog(@"encrypt mesg\n%@\n", [gpg encrypt:@"tetete" :@"test"]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    // decrypt
+    @try {
+        NSLog(@"decrypt mesg\n%@\n", [gpg decrypt:[gpg encrypt:@"tetete" :@"test"]]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);

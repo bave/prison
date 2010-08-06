@@ -23,7 +23,6 @@
 //#include "utils.h"
 
 // global declaration
-NSLock*  meLock;
 NSLock* extLock;
 FWHooker*  fw;
 Observer* obs;
@@ -49,7 +48,6 @@ int main(int argc, char** argv)
 
     // initialize Class -------------------------------------------------------
     mgmt = [Manager new];
-    meLock = [NSLock new];
     extLock = [NSLock new];
     // ------------------------------------------------------------------------
 
@@ -270,6 +268,7 @@ int main(int argc, char** argv)
     close(divertNAME);
     close(divertME2L);
     close(divertEXT2ME);
+    [extLock release];
     [queue release];
     [pool drain];
     return success;

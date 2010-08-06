@@ -35,7 +35,6 @@
 #define OP_EXT2ME 2
 #define OP_ROUTE  3
 
-extern NSLock*  meLock;
 extern NSLock* extLock;
 extern Manager*   mgmt;
 extern FWHooker*    fw;

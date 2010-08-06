@@ -3,10 +3,13 @@
 
 /*
  * todo
- *   decrypt
+ * - sign-key
+ * - list-user
+ * - getOwner
  * - delkey
  * - templary import
  * - this class is have to reconstruct signleton.
+ * - all method reconstruct mutex lock
  */
 
 #import <Cocoa/Cocoa.h>
@@ -42,6 +45,8 @@
 
 @interface GPGME : NSObject
 {
+    int gpgValid;
+    int gpgTrust;
     NSString* gpgDir;
     NSString* gpgExe;
     NSString* gpgVer;
@@ -62,6 +67,9 @@
 - (id)initWithDir:(NSString*)dir;
 - (void)dealloc;
 
+- (int)getValid;
+- (int)getTrust;
+
 - (NSString*)getDir;
 - (NSString*)getExe;
 - (NSString*)getVer;
@@ -79,12 +87,17 @@
                    :(NSString*)mail;
 
 - (int)genkey;
+
 - (int)import:(NSString*)key;
-- (int)verify:(NSString*)sig;
-- (NSString*)decrypt:(NSString*)sig;
 - (NSString*)export:(NSString*)uid;
-- (NSString*)sign:(NSString*)txt;
 - (NSArray*)throw:(NSString*)key;
+
+- (NSString*)sign:(NSString*)txt;
+- (NSString*)verify:(NSString*)sig;
+
+- (NSString*)decrypt:(NSString*)sig;
+- (NSString*)encrypt:(NSString*)txt :(NSString*)uid;
+- (NSString*)encryptForce:(NSString*)txt :(NSString*)uid;
 
 // not implementation
 - (int)genrkey;
@@ -134,10 +147,21 @@ static gpgme_error_t _passwd_cb(void* object,
 
 // public function
 
+- (int)getValid
+{
+    return gpgValid;
+}
+
+- (int)getTrust
+{
+    return gpgTrust;
+}
+
 - (NSString*)getDir
 {
     return gpgDir;
 }
+
 - (NSString*)getExe
 {
     return gpgExe;
@@ -159,6 +183,211 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgPasswd = [[NSString alloc] initWithString:passwd];
 }
 
+- (NSString*)encrypt:(NSString*)txt :(NSString*)uid
+{
+    if (txt == nil) {
+        @throw @"error:[gpg encrypt] nonexistent txt";
+    }
+
+    if ([txt length] == 0) {
+        @throw @"error:[gpg encrypt] nonexistent txt";
+    }
+
+    if (uid == nil) {
+        @throw @"error:[gpg encrypt] nonexistent uid";
+    }
+
+    if ([uid length] == 0) {
+        @throw @"error:[gpg encrypt] nonexistent uid";
+    }
+
+    // ----------------------------------------
+    // if have a uid list of user trustdb....
+    // ----------------------------------------
+
+    id pool = [NSAutoreleasePool new];
+
+    NSMutableArray* args;
+    args = [ NSMutableArray array];
+    [args addObject:@"--homedir"];
+    [args addObject:gpgDir];
+    [args addObject:@"--batch"];
+    [args addObject:@"--armor"];
+    [args addObject:@"-r"];
+    [args addObject:uid];
+    [args addObject:@"--encrypt"];
+
+    // input pipe
+    NSPipe* in_pipe;
+    in_pipe = [NSPipe pipe];
+    NSFileHandle* input;
+    input = [in_pipe fileHandleForWriting];
+
+    // output pipe
+    NSPipe* out_pipe;
+    out_pipe = [NSPipe pipe];
+    NSFileHandle* output;
+    output = [out_pipe fileHandleForReading];
+
+    // error pipe
+    NSFileHandle* devNull;
+    devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+
+    // task
+    NSTask* task;
+    task = [[NSTask alloc] init];
+    [task setLaunchPath:gpgExe];
+    [task setStandardInput:in_pipe];
+    [task setStandardOutput:out_pipe];
+    [task setStandardError:devNull];
+    [task setArguments:args];
+    [task launch];
+
+    // encoding environment value
+    const NSStringEncoding* encode;
+    encode = [NSString availableStringEncodings];
+
+    // stdin processing
+    NSString* in_string = [NSString stringWithString:txt];
+    NSData* in_data;
+    in_data = [in_string dataUsingEncoding:*encode];
+    [input writeData:in_data];
+    [input closeFile];
+
+    // stdout processing
+    NSData* out_data;
+    out_data = [output readDataToEndOfFile];
+    NSString* out_string;
+    out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+
+    int ret;
+    [task waitUntilExit];
+
+    // closefile
+    [output closeFile];
+    [devNull closeFile];
+
+    ret = [task terminationStatus];
+    //NSLog(@"ret:%d", ret);
+
+    if (ret != 0) {
+        [task release];
+        [pool drain];
+        @throw @"error:[gpg encrypt] violation error";
+    }
+
+
+    [task release];
+    [pool drain];
+
+    [out_string autorelease];
+
+    return out_string;
+}
+
+- (NSString*)encryptForce:(NSString*)txt :(NSString*)uid
+{
+    if (txt == nil) {
+        @throw @"error:[gpg encrypt] nonexistent txt";
+    }
+
+    if ([txt length] == 0) {
+        @throw @"error:[gpg encrypt] nonexistent txt";
+    }
+
+    if (uid == nil) {
+        @throw @"error:[gpg encrypt] nonexistent uid";
+    }
+
+    if ([uid length] == 0) {
+        @throw @"error:[gpg encrypt] nonexistent uid";
+    }
+
+    // ----------------------------------------
+    // if have a uid list of user trustdb....
+    // ----------------------------------------
+
+    id pool = [NSAutoreleasePool new];
+
+    NSMutableArray* args;
+    args = [ NSMutableArray array];
+    [args addObject:@"--homedir"];
+    [args addObject:gpgDir];
+    [args addObject:@"--batch"];
+    [args addObject:@"--always-trust"];
+    [args addObject:@"--armor"];
+    [args addObject:@"-r"];
+    [args addObject:uid];
+    [args addObject:@"--encrypt"];
+
+    // input pipe
+    NSPipe* in_pipe;
+    in_pipe = [NSPipe pipe];
+    NSFileHandle* input;
+    input = [in_pipe fileHandleForWriting];
+
+    // output pipe
+    NSPipe* out_pipe;
+    out_pipe = [NSPipe pipe];
+    NSFileHandle* output;
+    output = [out_pipe fileHandleForReading];
+
+    // error pipe
+    NSFileHandle* devNull;
+    devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+
+    // task
+    NSTask* task;
+    task = [[NSTask alloc] init];
+    [task setLaunchPath:gpgExe];
+    [task setStandardInput:in_pipe];
+    [task setStandardOutput:out_pipe];
+    [task setStandardError:devNull];
+    [task setArguments:args];
+    [task launch];
+
+    // encoding environment value
+    const NSStringEncoding* encode;
+    encode = [NSString availableStringEncodings];
+
+    // stdin processing
+    NSString* in_string = [NSString stringWithString:txt];
+    NSData* in_data;
+    in_data = [in_string dataUsingEncoding:*encode];
+    [input writeData:in_data];
+    [input closeFile];
+
+    // stdout processing
+    NSData* out_data;
+    out_data = [output readDataToEndOfFile];
+    NSString* out_string;
+    out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+
+    int ret;
+    [task waitUntilExit];
+
+    // closefile
+    [output closeFile];
+    [devNull closeFile];
+
+    ret = [task terminationStatus];
+    //NSLog(@"ret:%d", ret);
+
+    if (ret != 0) {
+        [task release];
+        [pool drain];
+        @throw @"error:[gpg encrypt] violation error";
+    }
+
+
+    [task release];
+    [pool drain];
+
+    [out_string autorelease];
+
+    return out_string;
+}
+
 - (NSString*)decrypt:(NSString*)sig
 {
     id pool = [NSAutoreleasePool new];
@@ -166,6 +395,7 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgme_ctx_t ctx;
     gpgErr = gpgme_new (&ctx);
     gpgErr = gpgme_set_protocol(ctx, GPGME_PROTOCOL_OpenPGP);
+    gpgme_set_passphrase_cb(ctx, _passwd_cb, self);
 
     gpgme_data_t  in_data;
     gpgme_data_new_from_mem(&in_data, [sig UTF8String], [sig length], 0);
@@ -175,20 +405,26 @@ static gpgme_error_t _passwd_cb(void* object,
 
     gpgErr = gpgme_op_decrypt(ctx, in_data, out_data);
     if (gpgErr) {
-        NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
-        gpgme_data_release (in_data);
-        gpgme_data_release (out_data);
-        gpgme_release (ctx);
-        @throw @"error: [gpg decrypt] violation error";
+        gpgme_data_release(in_data);
+        gpgme_data_release(out_data);
+        gpgme_release(ctx);
+        [pool drain];
+
+        if (GPG_ERR_NO_DATA == gpgme_err_code(gpgErr)) {
+            @throw @"error: [gpg decrypt] not encrypted signature";
+        } else {
+            @throw @"error: [gpg decrypt] violation error";
+        }
     }
 
     gpgme_decrypt_result_t result;
     result = gpgme_op_decrypt_result(ctx);
     if (result->unsupported_algorithm) {
         //NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
-        gpgme_data_release (in_data);
-        gpgme_data_release (out_data);
-        gpgme_release (ctx);
+        gpgme_data_release(in_data);
+        gpgme_data_release(out_data);
+        gpgme_release(ctx);
+        [pool drain];
         @throw @"error: [gpg decrypt] unsupported algorithm";
     }
 
@@ -198,15 +434,16 @@ static gpgme_error_t _passwd_cb(void* object,
     out_nsdata = [self _data_to_nsdata:out_data];
     if ([out_nsdata length] == 0) {
         //NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
-        gpgme_data_release (in_data);
-        gpgme_data_release (out_data);
-        gpgme_release (ctx);
+        gpgme_data_release(in_data);
+        gpgme_data_release(out_data);
+        gpgme_release(ctx);
+        [pool drain];
         @throw @"error: [gpg decrypt] nonexistent sig data";
     }
 
     gpgme_data_release (in_data);
     gpgme_data_release (out_data);
-    gpgme_release (ctx);
+    gpgme_release(ctx);
 
     const NSStringEncoding* encode;
     encode = [NSString availableStringEncodings];
@@ -241,9 +478,10 @@ static gpgme_error_t _passwd_cb(void* object,
     //gpgErr = gpgme_op_sign(ctx, in, out, GPGME_SIG_MODE_DETACH);
     //gpgErr = gpgme_op_sign(ctx, in, out, GPGME_SIG_MODE_CLEAR);
     if (gpgErr) {
-        gpgme_data_release (in_data);
-        gpgme_data_release (out_data);
-        gpgme_release (ctx);
+        gpgme_data_release(in_data);
+        gpgme_data_release(out_data);
+        gpgme_release(ctx);
+        [pool drain];
         @throw @"error: [gpg sign] violation error";
     }
 
@@ -255,14 +493,15 @@ static gpgme_error_t _passwd_cb(void* object,
     NSData* out_nsdata;
     out_nsdata = [self _data_to_nsdata:out_data];
     if ([out_nsdata length] == 0) {
-        gpgme_data_release (in_data);
-        gpgme_data_release (out_data);
-        gpgme_release (ctx);
+        gpgme_data_release(in_data);
+        gpgme_data_release(out_data);
+        gpgme_release(ctx);
+        [pool drain];
         @throw @"error: [gpg sign] nonexistent txt data";
     }
-    gpgme_data_release (in_data);
-    gpgme_data_release (out_data);
-    gpgme_release (ctx);
+    gpgme_data_release(in_data);
+    gpgme_data_release(out_data);
+    gpgme_release(ctx);
 
     const NSStringEncoding* encode;
     encode = [NSString availableStringEncodings];
@@ -285,11 +524,9 @@ static gpgme_error_t _passwd_cb(void* object,
 
     NSMutableArray* args;
     args = [ NSMutableArray array];
-    if (gpgDir != nil) {
-        [args addObject:@"--homedir"];
-        [args addObject:gpgDir];
-        //NSLog(@"%@\n", gpgDir);
-    }
+    [args addObject:@"--homedir"];
+    [args addObject:gpgDir];
+    //NSLog(@"%@\n", gpgDir);
     [args addObject:@"--armor"];
     [args addObject:@"--export"];
     //[args addObject:@"--export-options"];
@@ -321,13 +558,7 @@ static gpgme_error_t _passwd_cb(void* object,
     // task
     NSTask* task;
     task = [[NSTask alloc] init];
-    /*
-    if (gpgDir != nil) {
-        [task setCurrentDirectoryPath:gpgDir];
-    }
-    */
     [task setLaunchPath:gpgExe];
-    //[task setStandardInput:in_pipe];
     [task setStandardOutput:out_pipe];
     [task setStandardError:devNull];
     [task setArguments:args];
@@ -336,16 +567,6 @@ static gpgme_error_t _passwd_cb(void* object,
     // encoding environment value
     const NSStringEncoding* encode;
     encode = [NSString availableStringEncodings];
-
-    // stdin
-    /*
-    NSString* in_string;
-    in_string = @"input data";
-    NSData* in_data;
-    in_data = [in_string dataUsingEncoding:*encode];
-    [input writeData:in_data];
-    [input closeFile];
-    */
 
     int ret;
     [task waitUntilExit];
@@ -403,8 +624,9 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgErr = gpgme_op_export(ctx, uid_char, 0, out_data);
 
     if (gpgErr) {
-        gpgme_data_release (out_data);
-        gpgme_release (ctx);
+        gpgme_data_release(out_data);
+        gpgme_release(ctx);
+        [pool drain];
         @throw @"error: [gpg export] violation error";
     }
 
@@ -414,13 +636,14 @@ static gpgme_error_t _passwd_cb(void* object,
     out_nsdata = [self _data_to_nsdata:out_data];
 
     if ([out_nsdata length] == 0) {
-        gpgme_data_release (out_data);
-        gpgme_release (ctx);
+        gpgme_data_release(out_data);
+        gpgme_release(ctx);
+        [pool drain];
         @throw @"error: [gpg export] nonexistent user";
     }
 
-    gpgme_data_release (out_data);
-    gpgme_release (ctx);
+    gpgme_data_release(out_data);
+    gpgme_release(ctx);
 
     const NSStringEncoding* encode;
     encode = [NSString availableStringEncodings];
@@ -456,11 +679,9 @@ static gpgme_error_t _passwd_cb(void* object,
 
     NSMutableArray* args;
     args = [ NSMutableArray array];
-    if (gpgDir != nil) {
-        [args addObject:@"--homedir"];
-        [args addObject:gpgDir];
-        //NSLog(@"%@\n", gpgDir);
-    }
+    [args addObject:@"--homedir"];
+    [args addObject:gpgDir];
+    //NSLog(@"%@\n", gpgDir);
     [args addObject:@"--fast-import"];
 
     // input pipe
@@ -477,11 +698,6 @@ static gpgme_error_t _passwd_cb(void* object,
     // task
     NSTask* task;
     task = [[NSTask alloc] init];
-    /*
-    if (gpgDir != nil) {
-        [task setCurrentDirectoryPath:gpgDir];
-    }
-    */
     [task setLaunchPath:gpgExe];
     [task setStandardInput:in_pipe];
     [task setStandardOutput:devNull];
@@ -534,8 +750,9 @@ static gpgme_error_t _passwd_cb(void* object,
 
     gpgErr = gpgme_op_import(ctx, in_data);
     if (gpgErr) {
-        gpgme_data_release (in_data);
-        gpgme_release (ctx);
+        gpgme_data_release(in_data);
+        gpgme_release(ctx);
+        [pool drain];
         @throw @"error:[gpg import] violation error";
     }
 
@@ -545,8 +762,9 @@ static gpgme_error_t _passwd_cb(void* object,
     // if you want to understand,, more detail information ..
     // checking in result_check() at gpgme/tests/gpg/t-import.c
     if (result->imports->result != 0) {
-        gpgme_data_release (in_data);
-        gpgme_release (ctx);
+        gpgme_data_release(in_data);
+        gpgme_release(ctx);
+        [pool drain];
         @throw @"error:[gpg import] violation error";
     }
 
@@ -562,8 +780,9 @@ static gpgme_error_t _passwd_cb(void* object,
         // GPGME_IMPORT_SUBKEY	8
         // GPGME_IMPORT_SECRET	16
         // ==========================================
-        gpgme_data_release (in_data);
-        gpgme_release (ctx);
+        gpgme_data_release(in_data);
+        gpgme_release(ctx);
+        [pool drain];
         @throw @"error:[gpg import] existent users";
     }
 
@@ -665,16 +884,16 @@ static gpgme_error_t _passwd_cb(void* object,
     @try{
 
 
-    NSString* pubring;
+    //NSString* pubring;
     //pubring = [NSString stringWithFormat:@"%@%@", gpgDir, @"pubring.gpg"];
-    pubring = [NSString stringWithString:@"pubring.gpg"];
+    //pubring = [NSString stringWithString:@"pubring.gpg"];
 
-    NSString* secring;
+    //NSString* secring;
     //secring = [NSString stringWithFormat:@"%@%@", gpgDir, @"secring.gpg"];
-    secring = [NSString stringWithString:@"secring.gpg"];
+    //secring = [NSString stringWithString:@"secring.gpg"];
 
     sprintf(buffer,
-            "\nKey-Type: %s\n"
+            "Key-Type: %s\n"
             "Key-Length: %s\n"
             "Subkey-Type: %s\n"
             "Subkey-Length: %s\n"
@@ -683,8 +902,8 @@ static gpgme_error_t _passwd_cb(void* object,
             "Passphrase: %s\n"
             "Expire-Date: %s\n"
             "Name-Comment: %s\n"
-            "%%pubring %s\n"
-            "%%secring %s\n"
+            //"%%pubring %s\n"
+            //"%%secring %s\n"
             "%%commit\n",
             key,
             keylen,
@@ -694,9 +913,9 @@ static gpgme_error_t _passwd_cb(void* object,
             mail,
             passwd,
             "0",
-            "RaprinsKey",
-            [pubring UTF8String],
-            [secring UTF8String]);
+            "RaprinsKey");
+            //[pubring UTF8String],
+            //[secring UTF8String]);
 
     //NSLog(@"%s\n", buffer);
 
@@ -708,6 +927,10 @@ static gpgme_error_t _passwd_cb(void* object,
 
     NSMutableArray* args;
     args = [NSMutableArray array];
+    if (gpgDir != nil) {
+        [args addObject:@"--homedir"];
+        [args addObject:gpgDir];
+    }
     [args addObject:@"--batch"];
     [args addObject:@"--no-tty"];
     [args addObject:@"--gen-key"];
@@ -723,10 +946,11 @@ static gpgme_error_t _passwd_cb(void* object,
 
     NSTask* task;
     task = [[NSTask alloc] init];
+    /*
     if (gpgDir != nil) {
         [task setCurrentDirectoryPath:gpgDir];
     }
-
+    */
     [task setLaunchPath:gpgExe];
     [task setStandardInput:pipe];
     [task setStandardOutput:devNull];
@@ -818,7 +1042,7 @@ static gpgme_error_t _passwd_cb(void* object,
     if (!result) {return false; }
     if (!result->fpr) { return false; }
 
-    gpgme_release (ctx);
+    gpgme_release(ctx);
 
     return true;
 
@@ -936,18 +1160,21 @@ static gpgme_error_t _passwd_cb(void* object,
 }
 
 
-- (int)verify:(NSString*)sig
+- (NSString*)verify:(NSString*)sig
 {
     int valid;
-    //int trust;
-    int ret;
+    int trust;
     gpgme_ctx_t ctx;
     gpgme_data_t in_data;
     gpgme_data_t out_data;
     gpgme_verify_result_t result;
 
-    if ([sig compare:@"No Data"] == NSOrderedSame)
-        @throw @"error:[gpg verity]: nonexistent sigature file";
+    id pool = [NSAutoreleasePool new];
+
+    if ([sig compare:@"No Data"] == NSOrderedSame) {
+        [pool drain];
+        @throw @"error: [gpg verity] nonexistent sigature file";
+    }
 
     gpgme_new(&ctx);
     gpgme_set_protocol(ctx,GPGME_PROTOCOL_OpenPGP);
@@ -959,7 +1186,8 @@ static gpgme_error_t _passwd_cb(void* object,
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        @throw @"error:[gpg verity]";
+        [pool drain];
+        @throw @"error: [gpg verify] violation error";
     }
 
     //printf("verify data\n");
@@ -967,16 +1195,47 @@ static gpgme_error_t _passwd_cb(void* object,
 
     result = gpgme_op_verify_result(ctx); 
     valid = [self _is_valid:result];
-    //trust = [self _is_trust:result];
+    trust = [self _is_trust:result];
 
-    // ret = valid + trust;
-    ret = valid;
+    gpgTrust = trust;
+    gpgValid = valid;
+
+    /*
+    if (valid != 1) {
+        gpgme_data_release(in_data);
+        gpgme_data_release(out_data);
+        gpgme_release(ctx);
+        [pool drain];
+        //return @"unValid"
+        //@throw @"error: [gpg verity] no validation";
+    }
+    */
+
+    NSData* out_nsdata = nil;
+    out_nsdata = [self _data_to_nsdata:out_data];
+
+    if ([out_nsdata length] == 0) {
+        gpgme_data_release(in_data);
+        gpgme_data_release(out_data);
+        gpgme_release(ctx);
+        [pool drain];
+        @throw @"error: [gpg decrypt] nonexistent sig data";
+    }
 
     gpgme_data_release(in_data);
     gpgme_data_release(out_data);
     gpgme_release(ctx);
 
-    return ret;
+    const NSStringEncoding* encode;
+    encode = [NSString availableStringEncodings];
+
+    NSString* out_string = nil;
+    out_string = [[NSString alloc] initWithData:out_nsdata encoding:*encode];
+
+    [pool drain];
+    [out_string autorelease];
+
+    return out_string;
 }
 
 - (NSArray*)throw:(NSString*)key
@@ -984,16 +1243,14 @@ static gpgme_error_t _passwd_cb(void* object,
     id pool = [NSAutoreleasePool new];
 
     if (key == nil) {
+        [pool drain];
         @throw @"error:[gpg throw] non key stream";
     }
 
-    NSMutableArray* args;
+    NSMutableArray* args = nil;
     args = [ NSMutableArray array];
-    if (gpgDir != nil) {
-        [args addObject:@"--homedir"];
-        [args addObject:gpgDir];
-        //NSLog(@"%@\n", gpgDir);
-    }
+    [args addObject:@"--homedir"];
+    [args addObject:gpgDir];
     [args addObject:@"--throw-keyids"];
 
 
@@ -1029,9 +1286,9 @@ static gpgme_error_t _passwd_cb(void* object,
     encode = [NSString availableStringEncodings];
 
     // stdin
-    NSString* in_string;
+    NSString* in_string = nil;
     in_string = key;
-    NSData* in_data;
+    NSData* in_data = nil;
     in_data = [in_string dataUsingEncoding:*encode];
     [input writeData:in_data];
     [input closeFile];
@@ -1042,9 +1299,9 @@ static gpgme_error_t _passwd_cb(void* object,
     //NSLog(@"ret:%d", ret);
 
     // stdout
-    NSData* out_data;
+    NSData* out_data = nil;
     out_data = [output readDataToEndOfFile];
-    NSString* out_string;
+    NSString* out_string = nil;
     out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
     [out_string autorelease];
 
@@ -1061,10 +1318,12 @@ static gpgme_error_t _passwd_cb(void* object,
 
 
     if ([out_string length] == 0) {
+        [pool drain];
         @throw @"error:[gpg throw] no key data";
     }
 
     if (ret != 0) {
+        [pool drain];
         @throw @"error: [gpg throw] violation error";
     }
 
@@ -1077,7 +1336,7 @@ static gpgme_error_t _passwd_cb(void* object,
     NSScanner* scanner;
     NSString* token;
 
-    NSMutableArray* array;
+    NSMutableArray* array = nil;
 
     chSet = [NSCharacterSet characterSetWithCharactersInString:@"\n"];
     array = [[[NSMutableArray alloc] init] autorelease];
@@ -1098,7 +1357,7 @@ static gpgme_error_t _passwd_cb(void* object,
     //NSLog(@"%@\n", array);
     // ---------------------------------------------------------------------
 
-    NSArray* ret_array;
+    NSArray* ret_array = nil;
     ret_array = [[NSArray alloc] initWithArray:array];
 
     [task release];

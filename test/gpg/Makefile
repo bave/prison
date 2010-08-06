@@ -1,4 +1,5 @@
-all:clean
+all:
+	ls -a
 
 import:
 	cat takano.gpg | gpg --homedir ./ --import
@@ -23,4 +24,6 @@ clean_current:
 	rm ./pubring.gpg &
 	rm ./secring.gpg &
 	rm ./trustdb.gpg &
+	rm ./random_seed &
+
 

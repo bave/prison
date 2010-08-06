@@ -17,7 +17,6 @@
 
 extern FWHooker   * fw;
 extern Manager*   mgmt;
-//extern NSLock*  meLock;
 extern NSLock* extLock;
 
 

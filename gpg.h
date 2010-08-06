@@ -752,7 +752,6 @@ static gpgme_error_t _passwd_cb(void* object,
     if (gpgErr) {
         gpgme_data_release(in_data);
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error:[gpg import] violation error";
     }
 
@@ -764,7 +763,6 @@ static gpgme_error_t _passwd_cb(void* object,
     if (result->imports->result != 0) {
         gpgme_data_release(in_data);
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error:[gpg import] violation error";
     }
 

@@ -7,6 +7,7 @@
  * - list-user
  * - getOwner
  * - delkey
+ * - import return only ture...
  * - templary import
  * - this class is have to reconstruct signleton.
  * - all method reconstruct mutex lock
@@ -532,8 +533,8 @@ static gpgme_error_t _passwd_cb(void* object,
     //[args addObject:@"--export-options"];
     //[args addObject:@"export-minimal"];
     if (uid != nil) {
-        [args addObject:uid];
         //NSLog(@"%@\n", uid);
+        [args addObject:uid];
     }
 
     /*
@@ -659,11 +660,12 @@ static gpgme_error_t _passwd_cb(void* object,
 {
 
     /*
-     *  now, this mesg return only ture.
+     *  now, this message return only ture.
      *  error is rising exception.
      */
 
 #ifdef __MACH__
+    // batch mode code
 
     if (key == nil) {
         @throw @"error:[gpg import] nonexistent key";
@@ -736,6 +738,7 @@ static gpgme_error_t _passwd_cb(void* object,
     return true;     
 
 #elif __linux__
+    // gpgme mode code
 
     gpgme_ctx_t ctx;
     gpgErr = gpgme_new (&ctx);
@@ -828,6 +831,8 @@ static gpgme_error_t _passwd_cb(void* object,
 
 - (int)genkey
 {
+    id pool = [NSAutoreleasePool new];
+
     char buffer[512];
     memset(buffer, '\0', 512);
 
@@ -875,7 +880,6 @@ static gpgme_error_t _passwd_cb(void* object,
 
 #ifdef __MACH__
 
-    id pool = [NSAutoreleasePool new];
     @try{
 
 
@@ -978,7 +982,6 @@ static gpgme_error_t _passwd_cb(void* object,
 
 
     [task release];
-    [pool drain];
 
     if (ret == 0) { return true;  }
     if (ret != 0) { return false; }
@@ -986,8 +989,11 @@ static gpgme_error_t _passwd_cb(void* object,
     }
 
     @catch (id err) {
+        [pool drain];
         @throw @"error:[gpg genkey]";
     }
+
+    [pool drain];
 
     return false;
 
@@ -1015,7 +1021,6 @@ static gpgme_error_t _passwd_cb(void* object,
 
 
     gpgme_ctx_t ctx;
-
     gpgme_genkey_result_t result;
 
     //NSLog(@"\n%s", buffer);
@@ -1023,6 +1028,8 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgErr = gpgme_new (&ctx);
     gpgErr = gpgme_set_protocol(ctx, GPGME_PROTOCOL_OpenPGP);
     if (gpgErr) {
+        gpgme_release(ctx);
+        [pool drain];
         @throw @"error:[gpg genkey] new_ctx";
     }
     gpgme_set_armor (ctx, 1);
@@ -1030,16 +1037,27 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgErr = gpgme_op_genkey (ctx, buffer, NULL, NULL);
     if (gpgErr) {
         gpgme_release(ctx);
+        [pool drain];
         @throw @"error:[gpg genkey] op_genkey";
     }
 
     result = gpgme_op_genkey_result(ctx);
 
-    if (!result) {return false; }
-    if (!result->fpr) { return false; }
+    if (!result) {
+        gpgme_release(ctx);
+        [pool drain];
+        return false;
+    }
+
+    if (!result->fpr) {
+        gpgme_release(ctx);
+        [pool drain];
+        return false;
+    }
 
     gpgme_release(ctx);
 
+    [pool drain];
     return true;
 
 #endif
@@ -1158,6 +1176,7 @@ static gpgme_error_t _passwd_cb(void* object,
 
 - (NSString*)verify:(NSString*)sig
 {
+    [gpgLock lock];
     int valid;
     int trust;
     gpgme_ctx_t ctx;
@@ -1168,6 +1187,7 @@ static gpgme_error_t _passwd_cb(void* object,
     id pool = [NSAutoreleasePool new];
 
     if ([sig compare:@"No Data"] == NSOrderedSame) {
+        [gpgLock unlock];
         [pool drain];
         @throw @"error: [gpg verity] nonexistent sigature file";
     }
@@ -1182,6 +1202,7 @@ static gpgme_error_t _passwd_cb(void* object,
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
+        [gpgLock unlock];
         [pool drain];
         @throw @"error: [gpg verify] violation error";
     }
@@ -1192,7 +1213,6 @@ static gpgme_error_t _passwd_cb(void* object,
     result = gpgme_op_verify_result(ctx); 
     valid = [self _is_valid:result];
     trust = [self _is_trust:result];
-
     gpgTrust = trust;
     gpgValid = valid;
 
@@ -1214,6 +1234,7 @@ static gpgme_error_t _passwd_cb(void* object,
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
+        [gpgLock unlock];
         [pool drain];
         @throw @"error: [gpg decrypt] nonexistent sig data";
     }
@@ -1224,10 +1245,10 @@ static gpgme_error_t _passwd_cb(void* object,
 
     const NSStringEncoding* encode;
     encode = [NSString availableStringEncodings];
-
     NSString* out_string = nil;
     out_string = [[NSString alloc] initWithData:out_nsdata encoding:*encode];
 
+    [gpgLock unlock];
     [pool drain];
     [out_string autorelease];
 
@@ -1248,8 +1269,6 @@ static gpgme_error_t _passwd_cb(void* object,
     [args addObject:@"--homedir"];
     [args addObject:gpgDir];
     [args addObject:@"--throw-keyids"];
-
-
 
     // input pipe
     NSPipe* in_pipe;
@@ -1328,11 +1347,10 @@ static gpgme_error_t _passwd_cb(void* object,
     // NSArray* array_split(NSString* string, NSString* delimiter)
     // please ref [NSString componentsSeparatedByString:@""];
 
-    NSCharacterSet* chSet;
-    NSScanner* scanner;
-    NSString* token;
-
     NSMutableArray* array = nil;
+    NSCharacterSet* chSet = nil;
+    NSScanner* scanner = nil;
+    NSString* token = nil;
 
     chSet = [NSCharacterSet characterSetWithCharactersInString:@"\n"];
     array = [[[NSMutableArray alloc] init] autorelease];
@@ -1632,7 +1650,7 @@ static gpgme_error_t _passwd_cb(void* object,
 
     while ((ret=gpgme_data_read(data, buf, 1024-1)) > 0)
     {
-        fwrite (buf, ret, 1, stdout);
+        fwrite(buf, ret, 1, stdout);
     }
     return;
 }

@@ -16,9 +16,10 @@
 #import <Cocoa/Cocoa.h>
 
 #include <string.h>
+#include <locale.h>
+
 #include <gpgme.h>
 #include <gpg-error.h>
-#include <locale.h>
 
 #ifdef __linux__
 #ifndef true
@@ -27,18 +28,14 @@
 #ifndef false
 #define false 0
 #endif
-
 #include <sys/stat.h>
-//#define BOOL int
 #endif
 
 #ifdef __MACH__
-//#include "common.h"
-//#include "category.h"
-//#include "utils.h"
 #endif
 
-//debuf line
+// debug line
+//NSLog(@"debug_%d\n", __LINE__);
 //NSLog(@"%s\n", gpg_strerror(gpgErr));
 //NSLog(@"%d:%s\n", __LINE__, gpg_strerror(gpgErr));
 
@@ -79,6 +76,7 @@
 - (BOOL)hasSecring;
 - (BOOL)hasPubring;
 
+
 - (void)setPasswd:(NSString*)passwd;
 - (void)mkKeyParams:(NSString*)key
                    :(NSString*)keylen
@@ -92,6 +90,7 @@
 - (int)import:(NSString*)key;
 - (NSString*)export:(NSString*)uid;
 - (NSArray*)throw:(NSString*)key;
+- (NSString*)userlist;
 
 - (NSString*)sign:(NSString*)txt;
 - (NSString*)verify:(NSString*)sig;
@@ -182,6 +181,97 @@ static gpgme_error_t _passwd_cb(void* object,
 {
     if (gpgPasswd != nil) [gpgPasswd release];
     gpgPasswd = [[NSString alloc] initWithString:passwd];
+}
+
+- (NSString*)userlist
+{
+    id pool = [NSAutoreleasePool new];
+
+    //NSPipe* in_pipe = nil;;
+    //NSFileHandle* input = nil;
+    NSPipe* out_pipe = nil;
+    NSFileHandle* output = nil;
+    NSFileHandle* devNull = nil;
+
+    NSTask* task = nil;
+    NSData* out_data = nil;
+    NSString* out_string = nil;
+
+    int ret;
+    const NSStringEncoding* encode;
+
+    @try{
+
+        NSMutableArray* args;
+        args = [NSMutableArray array];
+        [args addObject:@"--homedir"];
+        [args addObject:gpgDir];
+        [args addObject:@"--list-key"];
+
+        /*
+        // input pipe
+        in_pipe = [NSPipe pipe];
+        input = [in_pipe fileHandleForWriting];
+        */
+
+        // output pipe
+        out_pipe = [NSPipe pipe];
+        output = [out_pipe fileHandleForReading];
+
+        // error pipe
+        devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+
+        task = [[NSTask alloc] init];
+        [task setLaunchPath:gpgExe];
+        //[task setStandardInput:in_pipe];
+        [task setStandardOutput:out_pipe];
+        [task setStandardError:devNull];
+        [task setArguments:args];
+        [task launch];
+
+        [task waitUntilExit];
+        ret = [task terminationStatus];
+
+        if (ret != 0) {
+            @throw @"violation error";
+        }
+
+        // stdout
+        encode = [NSString availableStringEncodings];
+        out_data = [output readDataToEndOfFile];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+
+        if ([out_string length] == 0) {
+            @throw @"no data";
+        }
+    }
+
+    @catch (NSString* err) {
+        NSString* err_string = [NSString stringWithFormat:
+                                @"error: [gpg userlist] %@", err];
+        @throw err_string;
+    }
+
+    @catch (id err) {
+        [output closeFile];
+        [devNull closeFile];
+        [task release];
+        [pool drain];
+        @throw err;
+    }
+    @finally {
+        NSLog(@"debug_%d\n", __LINE__);
+        [output closeFile];
+        [devNull closeFile];
+        [task release];
+        [pool drain];
+        NSLog(@"debug_%d\n", __LINE__);
+    }
+
+        NSLog(@"debug_%d\n", __LINE__);
+    [out_string autorelease];
+
+    return out_string;
 }
 
 - (NSString*)encrypt:(NSString*)txt :(NSString*)uid
@@ -1388,7 +1478,7 @@ static gpgme_error_t _passwd_cb(void* object,
 
     self = [super init];
 
-    if(self != nil) {
+    if (self != nil) {
         // --------------
         // initial coding
         BOOL isDir;
@@ -1454,7 +1544,7 @@ static gpgme_error_t _passwd_cb(void* object,
 {
     self = [super init];
 
-    if(self != nil) {
+    if (self != nil) {
         // --------------
         // initial coding
         // --------------

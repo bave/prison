@@ -144,6 +144,14 @@ int main()
         NSLog(@"%@\n", e);
     }
 
+    // decrypt
+    @try {
+        NSLog(@"userlist mesg\n%@\n", [gpg userlist]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
     [pool drain];
     return 0;
 }

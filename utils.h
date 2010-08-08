@@ -215,7 +215,7 @@ NSArray* array_split(NSString* string, NSString* delimiter) {
     NSMutableArray* array;
 
 
-    //id pool = [[NSAutoreleasePool alloc] init];
+    id pool = [NSAutoreleasePool new];
     //NSString* string = @"123.234.345.456";
 
     array = [[[NSMutableArray alloc] init] autorelease];
@@ -229,7 +229,9 @@ NSArray* array_split(NSString* string, NSString* delimiter) {
         }
         [scanner scanCharactersFromSet:chSet intoString:(NSString**)nil];
     }
-    //[pool release];
+    [array retain];
+    [pool release];
+    [array release];
     return [NSArray arrayWithArray:array];
 }
 

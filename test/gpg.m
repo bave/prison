@@ -103,14 +103,6 @@ int main()
         NSLog(@"%@\n", e);
     }
 
-    // throw-keyids
-    @try {
-        NSLog(@"%@\n",[gpg throw:key]);
-    }
-    @catch (id e){
-        NSLog(@"%@\n", e);
-    }
-
     // sign
     @try {
         [gpg setPasswd:@"test"];
@@ -144,7 +136,21 @@ int main()
         NSLog(@"%@\n", e);
     }
 
-    // decrypt
+    // ----- gpg version independent ------------------------------------------
+    // check
+    // gpg2 (GnuPG) 2.0.14
+    // gpg  (GnuPG) 1.4.10
+
+    // throw-keyids
+    @try {
+        NSLog(@"%@\n",[gpg throw:key]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+
+    // userlist
     @try {
         NSLog(@"userlist mesg\n%@\n", [gpg userlist]);
     }

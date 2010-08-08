@@ -260,15 +260,12 @@ static gpgme_error_t _passwd_cb(void* object,
         @throw err;
     }
     @finally {
-        NSLog(@"debug_%d\n", __LINE__);
         [output closeFile];
         [devNull closeFile];
         [task release];
         [pool drain];
-        NSLog(@"debug_%d\n", __LINE__);
     }
 
-        NSLog(@"debug_%d\n", __LINE__);
     [out_string autorelease];
 
     return out_string;
@@ -1436,6 +1433,14 @@ static gpgme_error_t _passwd_cb(void* object,
     // nsstring split to nsarray -- from utils.h ---------------------------
     // NSArray* array_split(NSString* string, NSString* delimiter)
     // please ref [NSString componentsSeparatedByString:@""];
+
+    /* format...
+    pub  2048R/A470B63E 2010-06-20 hoge <hoge@gmail.com>
+    sub  2048R/A4A7D860 2010-06-20
+    pub  2048R/85D0E976 2010-06-17 Hage Hage <hagehage@gmail.com>
+    sub  2048R/C5A5F02F 2010-06-17
+    */
+
 
     NSMutableArray* array = nil;
     NSCharacterSet* chSet = nil;

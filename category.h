@@ -35,33 +35,34 @@
 
 // NSData -------------------------------------------------------------
 @interface NSData(exDigest)
-- (NSData *) sha1Digest;
-- (NSData *) md5Digest;
-- (NSString *) hexString;
+- (NSData*)sha1Digest;
+- (NSData*)md5Digest;
+- (NSString*)hexString;
 @end
 
 @implementation NSData(exDigest)
-- (NSData *) sha1Digest
+- (NSData*)sha1Digest
 {
     unsigned char result[CC_SHA1_DIGEST_LENGTH];
     CC_SHA1([self bytes], [self length], result);
     return [NSData dataWithBytes:result length:CC_SHA1_DIGEST_LENGTH];
 }
 
-- (NSData *) md5Digest {
+- (NSData*)md5Digest {
     unsigned char result[CC_MD5_DIGEST_LENGTH];
     CC_MD5([self bytes], [self length], result);
     return [NSData dataWithBytes:result length:CC_MD5_DIGEST_LENGTH];
 }
 
-- (NSString *)hexString {
+- (NSString*)hexString {
     unsigned int i;
-    static const char *hexstr[16] = { "0", "1", "2", "3",
+    static const char* hexstr[16] = { "0", "1", "2", "3",
                                       "4", "5", "6", "7",
                                       "8", "9", "a", "b",
                                       "c", "d", "e", "f" };
-    const char *dataBuffer = (char *)[self bytes];
-    NSMutableString *stringBuffer = [NSMutableString stringWithCapacity:([self length] * 2)];
+    const char* dataBuffer = (char*)[self bytes];
+    NSMutableString* stringBuffer = nil;
+    stringBuffer = [NSMutableString stringWithCapacity:([self length]*2)];
     for (i=0; i<[self length]; i++)
     {
         uint8_t t1, t2;

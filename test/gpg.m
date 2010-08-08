@@ -59,7 +59,7 @@ int main()
                             :@"RSA"
                             :@"1024"
                             :@"test"
-                            :@"test@aris"];
+                            :@"test@raprins"];
 
             [gpg setPasswd:@"test"];
             NSLog(@"set_params\n");
@@ -89,7 +89,7 @@ int main()
         // all keyring
         //NSLog(@"all keyring \n%@\n", [gpg export:nil]);
         // user pubring
-        NSLog(@"export keyring\n%@\n", [gpg export:@"test"]);
+        NSLog(@"export keyring\n%@\n", [gpg export:@"test@raprins"]);
     }
     @catch (id e) {
         NSLog(@"%@\n", e);
@@ -130,7 +130,7 @@ int main()
 
     // decrypt
     @try {
-        NSLog(@"decrypt mesg\n%@\n", [gpg decrypt:[gpg encrypt:@"tetete" :@"test"]]);
+        NSLog(@"decrypt mesg\n%@\n\n", [gpg decrypt:[gpg encrypt:@"tetete" :@"test"]]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -143,16 +143,23 @@ int main()
 
     // throw-keyids
     @try {
-        NSLog(@"%@\n",[gpg throw:key]);
+        NSLog(@"throw message\n%@\n",[gpg throw:key]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
     }
 
-
     // userlist
     @try {
-        NSLog(@"userlist mesg\n%@\n", [gpg userlist]);
+        NSLog(@"usrlist mesg\n%@\n", [gpg usrlist]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    // onwerlist
+    @try {
+        NSLog(@"ownlist mesg\n%@\n", [gpg ownlist]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);

@@ -36,7 +36,7 @@ struct _fw_param {
  * reference of structure
 struct ip_fw {
     u_int32_t version;
-    void *context;
+    void* context;
     u_int64_t fw_pcnt;
     u_int64_t fw_bcnt;
     struct in_addr fw_src;
@@ -71,8 +71,8 @@ struct ip_fw {
     } fw_un;
     u_char fw_prot;
     u_char fw_nports;
-    void *pipe_ptr;
-    void *next_rule_ptr;
+    void* pipe_ptr;
+    void* next_rule_ptr;
     uid_t fw_uid;
     int fw_logamount;
     u_int64_t fw_loghighest;
@@ -108,8 +108,8 @@ struct ip_fw {
 - (void)setProtocol:(uint8_t)protocol;
 - (void)setFlag:(unsigned int)flag;
 - (void)setDivertPort:(uint16_t)port;
-- (NSData *)getRuleForNum:(uint16_t)ruleNumber;
-- (NSArray *)getNumList;
+- (NSData*)getRuleForNum:(uint16_t)ruleNumber;
+- (NSArray*)getNumList;
 - (bool)hasNum:(uint16_t)num;
 - (uint16_t)getEmptyNum:(bool)waiting;
 
@@ -152,7 +152,7 @@ struct ip_fw {
     return;
 }
 
-- (NSArray *)getNumList
+- (NSArray*)getNumList
 {
     return [fwList allObjects];
 }
@@ -179,7 +179,7 @@ struct ip_fw {
 - (bool)hasNum:(uint16_t)num{
     /*
     NSNumber* ns_num;
-    NSEnumerator *enumerate = [fwList objectEnumerator];
+    NSEnumerator* enumerate = [fwList objectEnumerator];
     while ((ns_num = [enumerate nextObject])){
         if([ns_num unsignedShortValue] == num+FW_BIAS_RULE_NUMBER) {
             return true;
@@ -210,7 +210,7 @@ struct ip_fw {
     do {
 
         indicateDataSize = sizeof(struct ip_fw) * numRules;
-        rules = (struct ip_fw *)realloc(rules, indicateDataSize);
+        rules = (struct ip_fw*)realloc(rules, indicateDataSize);
         memset(rules, 0, sizeof(indicateDataSize));
 
         rules->version = IP_FW_CURRENT_API_VERSION;
@@ -231,7 +231,7 @@ struct ip_fw {
 
     int i;
     int matchingNumber;
-    NSMutableData *retData;
+    NSMutableData* retData;
     retData = [[NSMutableData alloc] autorelease];
     matchingNumber = FW_BIAS_RULE_NUMBER + ruleNumber;
     for( i = 0; i < numRules; i++ ) {

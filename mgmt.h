@@ -179,7 +179,7 @@ extern FWHooker* fw;
     /*
     // filter がつくられてからのタイムアウト
     // そのうち使うかも
-    NSEnumerator *enumerate;
+    NSEnumerator* enumerate;
     enumerate = [mgmtDictFIDDate keyEnumerator];
     for (id key in enumerate) {
         if ([[mgmtDictFIDDate objectForKey:key] timeIntervalSinceNow] < INITIALLY_TIMEOUT) {
@@ -188,7 +188,7 @@ extern FWHooker* fw;
     }
     */
 
-    NSEnumerator *enumerate;
+    NSEnumerator* enumerate;
     enumerate = [mgmtDictFIDIdle keyEnumerator];
     for (id key in enumerate) {
         if ([[mgmtDictFIDIdle objectForKey:key] timeIntervalSinceNow] < FW_IDLE_TIMEOUT) {
@@ -204,7 +204,7 @@ extern FWHooker* fw;
     set = [NSMutableSet new];
     [set autorelease];
 
-    NSEnumerator *enumerate;
+    NSEnumerator* enumerate;
     enumerate = [mgmtDictPPIdle keyEnumerator];
     for (id key in enumerate) {
         if ([[mgmtDictPPIdle objectForKey:key] timeIntervalSinceNow] < PP_IDLE_TIMEOUT) {

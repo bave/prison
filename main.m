@@ -167,31 +167,31 @@ int main(int argc, char** argv)
     // --------------------------------------------------------------------
 
 
-    NSOperationQueue *queue;
+    NSOperationQueue* queue;
     queue = [[NSOperationQueue alloc] init];
 
     [queue setMaxConcurrentOperationCount:10];
     [queue setName:@"mainQueue"];
 
-    Operation *opNAME;
+    Operation* opNAME;
     opNAME = [[[Operation alloc] init] autorelease];
     opNAME.socketFD=divertNAME;
     opNAME.selector=OP_NAME;
     [queue addOperation:opNAME];
 
-    Operation *opME2L;
+    Operation* opME2L;
     opME2L = [[[Operation alloc] init] autorelease];
     opME2L.socketFD=divertME2L;
     opME2L.selector=OP_ME2L;
     [queue addOperation:opME2L];
 
-    Operation *opEXT2ME;
+    Operation* opEXT2ME;
     opEXT2ME = [[[Operation alloc] init] autorelease];
     opEXT2ME.socketFD=divertEXT2ME;
     opEXT2ME.selector=OP_EXT2ME;
     [queue addOperation:opEXT2ME];
 
-    Operation *opROUTE;
+    Operation* opROUTE;
     opROUTE = [[[Operation alloc] init] autorelease];
     opROUTE.socketFD=0;
     opROUTE.selector=OP_ROUTE;

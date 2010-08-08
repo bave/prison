@@ -615,7 +615,7 @@ extern Observer*   obs;
 
         if (protocol != 0) {
             // processing for rerouting ----------------------------------------
-            struct ip *ip;
+            struct ip* ip;
             ip = (struct ip*)[pbuf getL3];
             memset(&sin_recv, 0, sizeof(sin_recv));
             sin_recv.sin_family=AF_INET;
@@ -629,7 +629,7 @@ extern Observer*   obs;
 
         /*
         {
-            struct ip *ip;
+            struct ip* ip;
             ip = (struct ip*)[pbuf getL3];
             NSData* data1;
             data1 = [NSData dataWithBytes:&ip->ip_src.s_addr length:sizeof(uint32_t)];
@@ -638,7 +638,7 @@ extern Observer*   obs;
             data2 = [NSData dataWithBytes:&ip->ip_dst.s_addr length:sizeof(uint32_t)];
             printf("ip_dst:%s\n", ip_ntoa(@"IPv4", data2));
             //printf("ip_sum :0x%x\n", ntohs(ip->ip_sum));
-            struct tcphdr *tcp;
+            struct tcphdr* tcp;
             tcp = (struct tcphdr*)[pbuf getL4];
             printf("tcp_sport:%d\n", ntohs(tcp->th_sport));
             printf("tcp_dport:%d\n", ntohs(tcp->th_dport));
@@ -782,12 +782,12 @@ extern Observer*   obs;
 /*
 int main(int argc, char** argv) {
     id pool = [[NSAutoreleasePool alloc] init];
-    NSOperationQueue *queue;
+    NSOperationQueue* queue;
     queue = [[NSOperationQueue alloc] init];
     [queue setMaxConcurrentOperationCount:10];
     [queue setName:@"testQueue"];
 
-    Operation *op = [[[Operation alloc] init] autorelease];
+    Operation* op = [[[Operation alloc] init] autorelease];
     op.socketFD=1;
     op.selector=OP_NAME;
     [queue addOperation:op];

@@ -283,7 +283,7 @@ struct _rr_pkt {
 @private
 */
     // class member (for class information)
-    u_char *count_pointer;
+    u_char* count_pointer;
     u_char n_payload_buf[UDP_PACKET_SIZE];
     size_t compress_size;
     size_t n_size_payload;
@@ -444,7 +444,7 @@ struct _rr_pkt {
 }
 */
 
-- (bool)n_create_rr_answer:(NSString *)s {
+- (bool)n_create_rr_answer:(NSString*)s {
 
     n_ans++;
     //npkt.n_ans_name[0] = 0xC0;

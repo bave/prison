@@ -5,7 +5,7 @@
  * todo
  * - sign-key
  * - list-user
- * - getOwner
+ * - getOwn
  * - delkey
  * - import return only ture...
  * - templary import
@@ -90,7 +90,8 @@
 - (int)import:(NSString*)key;
 - (NSString*)export:(NSString*)uid;
 - (NSArray*)throw:(NSString*)key;
-- (NSString*)userlist;
+- (NSArray*)usrlist;
+- (NSArray*)ownlist;
 
 - (NSString*)sign:(NSString*)txt;
 - (NSString*)verify:(NSString*)sig;
@@ -116,6 +117,9 @@
 
 - (int)_mk_directory:(NSString*)dir;
 - (int)_rm_directory:(NSString*)dir;
+
+- (NSArray*)_parse_list_pub:(NSString*)pub;
+- (NSArray*)_parse_list_sec:(NSString*)sec;
 
 @end
 
@@ -183,9 +187,10 @@ static gpgme_error_t _passwd_cb(void* object,
     gpgPasswd = [[NSString alloc] initWithString:passwd];
 }
 
-- (NSString*)userlist
+- (NSArray*)ownlist
 {
     id pool = [NSAutoreleasePool new];
+    id saved_err = nil;
 
     //NSPipe* in_pipe = nil;;
     //NSFileHandle* input = nil;
@@ -206,7 +211,7 @@ static gpgme_error_t _passwd_cb(void* object,
         args = [NSMutableArray array];
         [args addObject:@"--homedir"];
         [args addObject:gpgDir];
-        [args addObject:@"--list-key"];
+        [args addObject:@"--list-secret-keys"];
 
         /*
         // input pipe
@@ -248,15 +253,13 @@ static gpgme_error_t _passwd_cb(void* object,
 
     @catch (NSString* err) {
         NSString* err_string = [NSString stringWithFormat:
-                                @"error: [gpg userlist] %@", err];
+                                @"error: [gpg usrlist] %@", err];
+        saved_err = [err retain];
         @throw err_string;
     }
 
     @catch (id err) {
-        [output closeFile];
-        [devNull closeFile];
-        [task release];
-        [pool drain];
+        saved_err = [err retain];
         @throw err;
     }
     @finally {
@@ -264,11 +267,102 @@ static gpgme_error_t _passwd_cb(void* object,
         [devNull closeFile];
         [task release];
         [pool drain];
+        [saved_err autorelease];
     }
 
     [out_string autorelease];
+    //NSLog(@"%@\n", out_string);
 
-    return out_string;
+    return [self _parse_list_sec:out_string];
+}
+
+- (NSArray*)usrlist
+{
+    id pool = [NSAutoreleasePool new];
+    id saved_err = nil;
+
+    //NSPipe* in_pipe = nil;;
+    //NSFileHandle* input = nil;
+    NSPipe* out_pipe = nil;
+    NSFileHandle* output = nil;
+    NSFileHandle* devNull = nil;
+
+    NSTask* task = nil;
+    NSData* out_data = nil;
+    NSString* out_string = nil;
+
+    int ret;
+    const NSStringEncoding* encode;
+
+    @try{
+
+        NSMutableArray* args;
+        args = [NSMutableArray array];
+        [args addObject:@"--homedir"];
+        [args addObject:gpgDir];
+        [args addObject:@"--list-public-key"];
+
+        /*
+        // input pipe
+        in_pipe = [NSPipe pipe];
+        input = [in_pipe fileHandleForWriting];
+        */
+
+        // output pipe
+        out_pipe = [NSPipe pipe];
+        output = [out_pipe fileHandleForReading];
+
+        // error pipe
+        devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+
+        task = [[NSTask alloc] init];
+        [task setLaunchPath:gpgExe];
+        //[task setStandardInput:in_pipe];
+        [task setStandardOutput:out_pipe];
+        [task setStandardError:devNull];
+        [task setArguments:args];
+        [task launch];
+
+        [task waitUntilExit];
+        ret = [task terminationStatus];
+
+        if (ret != 0) {
+            @throw @"violation error";
+        }
+
+        // stdout
+        encode = [NSString availableStringEncodings];
+        out_data = [output readDataToEndOfFile];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+
+        if ([out_string length] == 0) {
+            @throw @"no data";
+        }
+    }
+
+    @catch (NSString* err) {
+        NSString* err_string = [NSString stringWithFormat:
+                                @"error: [gpg usrlist] %@", err];
+        saved_err = [err retain];
+        @throw err_string;
+    }
+
+    @catch (id err) {
+        saved_err = [err retain];
+        @throw err;
+    }
+    @finally {
+        [output closeFile];
+        [devNull closeFile];
+        [task release];
+        [pool drain];
+        [saved_err autorelease];
+    }
+
+    [out_string autorelease];
+    //NSLog(@"%@\n", out_string);
+
+    return [self _parse_list_pub:out_string];
 }
 
 - (NSString*)encrypt:(NSString*)txt :(NSString*)uid
@@ -698,7 +792,7 @@ static gpgme_error_t _passwd_cb(void* object,
 #elif __linux__
     // gpgme mode code
 
-    const char *uid_char;
+    const char* uid_char;
     uid_char = [uid UTF8String];
 
     gpgme_ctx_t ctx;
@@ -1155,7 +1249,7 @@ static gpgme_error_t _passwd_cb(void* object,
 {
     id pool = [NSAutoreleasePool new];
 
-    NSFileManager *manager;
+    NSFileManager* manager;
     manager = [NSFileManager defaultManager];
 
     NSString* secring;
@@ -1177,7 +1271,7 @@ static gpgme_error_t _passwd_cb(void* object,
             //get filesize
             #ifdef __MACH__
                 int filesize;
-                NSDictionary *item;
+                NSDictionary* item;
                 item = [manager attributesOfItemAtPath:secring error:NULL];
                 filesize = [item fileSize];
             #elif __linux__
@@ -1210,7 +1304,7 @@ static gpgme_error_t _passwd_cb(void* object,
 {
     id pool = [NSAutoreleasePool new];
 
-    NSFileManager *manager;
+    NSFileManager* manager;
     manager = [NSFileManager defaultManager];
 
     NSString* pubring;
@@ -1232,7 +1326,7 @@ static gpgme_error_t _passwd_cb(void* object,
             //get filesize
             #ifdef __MACH__
                 int filesize;
-                NSDictionary *item;
+                NSDictionary* item;
                 item = [manager attributesOfItemAtPath:pubring error:NULL];
                 filesize = [item fileSize];
             #elif __linux__
@@ -1789,6 +1883,188 @@ static gpgme_error_t _passwd_cb(void* object,
     [gpgLock lock];
     [gpgLock unlock];
     return false;
+}
+
+- (NSArray*)_parse_list_pub:(NSString*)pub
+{
+    id pool = [NSAutoreleasePool new];
+    id saved_err = nil;
+
+    NSArray* line_array = nil;
+    NSArray* word_array = nil;
+    NSEnumerator* line_enum = nil;
+    NSEnumerator* word_enum = nil;
+    NSMutableArray* ans_array = nil;
+    NSMutableArray* output_array = nil;
+    NSMutableDictionary* ans_dict = nil;
+
+    @try {
+        if (pub == nil) @throw @"nothing input pub_string";
+
+        ans_array = [NSMutableArray new];
+        ans_dict = [NSMutableDictionary new];
+
+        line_array = [pub componentsSeparatedByString:@"\n"];
+        line_enum = [line_array objectEnumerator];
+        //NSLog(@"%@\n", [line_enum allObjects]);
+
+        for (id line_element in line_enum) {
+
+            // - line reconstruction process ------------
+            //NSLog(@"%@\n", line_element);
+
+            if ([line_element length] == 0) {
+                if ([ans_dict count] != 0) {
+                    [ans_array addObject:ans_dict];
+                }
+                [ans_dict autorelease];
+                ans_dict = [NSMutableDictionary new];
+                continue;
+            }
+
+
+            word_array = [line_element componentsSeparatedByString:@" "];
+            if ([line_element characterAtIndex:0] == 'p') {
+                [ans_dict setObject:[word_array objectAtIndex:3] forKey:@"pub"]; 
+            }
+            if ([line_element characterAtIndex:0] == 's') {
+                [ans_dict setObject:[word_array objectAtIndex:3] forKey:@"sub"]; 
+            }
+            // ------------------------------------------
+
+            word_enum = [word_array objectEnumerator];
+            for (id word_element in word_enum) {
+                //NSLog(@"%@\n", word_element);
+
+                // - word reconstruction process ------------
+
+                if ([word_element length] == 0) continue;
+                if ([word_element characterAtIndex:0] == '/') continue;
+                if ([word_element characterAtIndex:0] == '-') continue;
+                if ([word_element characterAtIndex:0] == '<') {
+                    int start = 1;
+                    int end = [word_element length] - 2;
+                    NSRange range = NSMakeRange(start, end);
+                    word_element = [word_element substringWithRange:range];
+                    [ans_dict setObject:word_element forKey:@"user"]; 
+                }
+
+                // ------------------------------------------
+            }
+            //NSLog(@"%@\n", ans_array);
+        }
+        output_array = [[NSArray alloc] initWithArray:ans_array];
+    }
+    @catch (NSString* err) {
+        NSString* err_string = [NSString stringWithFormat:
+                                   @"error: [gpg _parse_list_pub] %@", err];
+        saved_err = [err retain];
+        @throw err_string;
+    }
+    @catch (id err) {
+        NSLog(@"internal error:%@\n", err);
+        saved_err = [err retain];
+        @throw err;
+    }
+    @finally {
+        [pool drain];
+        [saved_err autorelease];
+    }
+    [output_array autorelease];
+
+    return output_array;
+}
+
+- (NSArray*)_parse_list_sec:(NSString*)sec
+{
+    id pool = [NSAutoreleasePool new];
+    id saved_err = nil;
+
+    NSArray* line_array = nil;
+    NSArray* word_array = nil;
+    NSEnumerator* line_enum = nil;
+    NSEnumerator* word_enum = nil;
+    NSMutableArray* ans_array = nil;
+    NSMutableArray* output_array = nil;
+    NSMutableDictionary* ans_dict = nil;
+
+    @try {
+        if (sec == nil) return false;
+
+        ans_array = [NSMutableArray new];
+        ans_dict = [NSMutableDictionary new];
+
+        line_array = [sec componentsSeparatedByString:@"\n"];
+        line_enum = [line_array objectEnumerator];
+        //NSLog(@"%@\n", line_array);
+        //NSLog(@"%@\n", [line_enum allObjects]);
+
+        for (id line_element in line_enum) {
+
+            // - line reconstruction process ------------
+            //NSLog(@"%@\n", line_element);
+
+            if ([line_element length] == 0) {
+                if ([ans_dict count] != 0) {
+                    [ans_array addObject:ans_dict];
+                }
+                [ans_dict autorelease];
+                ans_dict = [NSMutableDictionary new];
+                continue;
+            }
+
+            word_array = [line_element componentsSeparatedByString:@" "];
+
+            if ([line_element characterAtIndex:1] == 'e') {
+                [ans_dict setObject:[word_array objectAtIndex:3] forKey:@"sec"]; 
+            }
+            if ([line_element characterAtIndex:1] == 's') {
+                [ans_dict setObject:[word_array objectAtIndex:3] forKey:@"sub"]; 
+            }
+
+            // ------------------------------------------
+
+            word_enum = [word_array objectEnumerator];
+            for (id word_element in word_enum) {
+                //NSLog(@"%@\n", word_element);
+
+                // - word reconstruction process ------------
+
+                if ([word_element length] == 0) continue;
+                if ([word_element characterAtIndex:0] == '/') continue;
+                if ([word_element characterAtIndex:0] == '-') continue;
+                if ([word_element characterAtIndex:0] == '<') {
+                    int start = 1;
+                    int end = [word_element length] - 2;
+                    NSRange range = NSMakeRange(start, end);
+                    word_element = [word_element substringWithRange:range];
+                    [ans_dict setObject:word_element forKey:@"user"]; 
+                }
+                // ------------------------------------------
+            }
+            //NSLog(@"%@\n", ans_array);
+        }
+        output_array = [[NSArray alloc] initWithArray:ans_array];
+    }
+    @catch (NSString* err) {
+        NSString* err_string = [NSString stringWithFormat:
+                                   @"error: [gpg _parse_list_sec] %@", err];
+        saved_err = [err retain];
+        @throw err_string;
+    }
+    @catch (id err) {
+        NSLog(@"internal error:%@\n", err);
+        saved_err = [err retain];
+        @throw err;
+    }
+    @finally {
+        [pool drain];
+        [saved_err autorelease];
+    }
+
+    [output_array autorelease];
+
+    return output_array;
 }
 
 - (int)genrkey

@@ -15,7 +15,7 @@
 #include "category.h"
 
 
-extern FWHooker   * fw;
+extern FWHooker*    fw;
 extern Manager*   mgmt;
 extern NSLock* extLock;
 
@@ -136,12 +136,12 @@ extern NSLock* extLock;
     NSArray* array_i;
     // notif object is timeout filter number array list
     array_i = [notif object];
-    NSEnumerator *enumerate_i;
+    NSEnumerator* enumerate_i;
     enumerate_i = [array_i objectEnumerator];
     for (id obj in enumerate_i) {
         NSArray* array_j;
         array_j = [mgmt getFID2PP:obj];
-        NSEnumerator *enumerate_j;
+        NSEnumerator* enumerate_j;
         enumerate_j = [array_j objectEnumerator];
         for (id obj2 in enumerate_j) {
             uint32_t ProtoPort;
@@ -171,7 +171,7 @@ extern NSLock* extLock;
     NSArray* array;
     // notif object is timeout filter number array list
     array = [notif object];
-    NSEnumerator *enumerate;
+    NSEnumerator* enumerate;
     enumerate = [array objectEnumerator];
     for (id obj in enumerate) {
         uint32_t ProtoPort;

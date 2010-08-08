@@ -213,7 +213,7 @@ NSArray* array_split(NSString* string, NSString* delimiter) {
     NSString* token;
     NSScanner* scanner;
     NSMutableArray* array;
-
+    NSArray* output_array;
 
     id pool = [NSAutoreleasePool new];
     //NSString* string = @"123.234.345.456";
@@ -229,10 +229,11 @@ NSArray* array_split(NSString* string, NSString* delimiter) {
         }
         [scanner scanCharactersFromSet:chSet intoString:(NSString**)nil];
     }
-    [array retain];
+
+    output_array = [[NSArray alloc] initWithArray:array];
     [pool release];
-    [array release];
-    return [NSArray arrayWithArray:array];
+    [output_array autorelease];
+    return output_array;
 }
 
 void fillscopeid(struct sockaddr_in6 *sin6)

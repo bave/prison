@@ -1880,7 +1880,12 @@ static gpgme_error_t _passwd_cb(void* object,
         line_enum = [line_array objectEnumerator];
         //NSLog(@"%@\n", [line_enum allObjects]);
 
+        #ifdef __MACH__
         for (id line_element in line_enum) {
+        #else
+        id line_element;
+        while (line_element = [line_enum nextObject]) {
+        #endif
 
             // - line reconstruction process ------------
             //NSLog(@"%@\n", line_element);
@@ -1905,7 +1910,12 @@ static gpgme_error_t _passwd_cb(void* object,
             // ------------------------------------------
 
             word_enum = [word_array objectEnumerator];
+            #ifdef __MACH__
             for (id word_element in word_enum) {
+            #else
+            id word_element;
+            while (word_element = [word_enum nextObject]) {
+            #endif
                 //NSLog(@"%@\n", word_element);
 
                 // - word reconstruction process ------------
@@ -1971,7 +1981,12 @@ static gpgme_error_t _passwd_cb(void* object,
         //NSLog(@"%@\n", line_array);
         //NSLog(@"%@\n", [line_enum allObjects]);
 
+        #ifdef __MACH__
         for (id line_element in line_enum) {
+        #else
+        id line_element;
+        while (line_element = [line_enum nextObject]) {
+        #endif
 
             // - line reconstruction process ------------
             //NSLog(@"%@\n", line_element);
@@ -1997,7 +2012,12 @@ static gpgme_error_t _passwd_cb(void* object,
             // ------------------------------------------
 
             word_enum = [word_array objectEnumerator];
+            #ifdef __MACH__
             for (id word_element in word_enum) {
+            #else
+            id word_element;
+            while (word_element = [word_enum nextObject]) {
+            #endif
                 //NSLog(@"%@\n", word_element);
 
                 // - word reconstruction process ------------
@@ -2063,8 +2083,13 @@ static gpgme_error_t _passwd_cb(void* object,
         line_enum = [line_array objectEnumerator];
         //NSLog(@"%@\n", line_array);
         //NSLog(@"%@\n", [line_enum allObjects]);
-
+        
+        #ifdef __MACH__
         for (id line_element in line_enum) {
+        #else
+        id line_element;
+        while (line_element = [line_enum nextObject]) {
+        #endif
 
             word_array = [line_element componentsSeparatedByString:@" "];
 
@@ -2087,9 +2112,13 @@ static gpgme_error_t _passwd_cb(void* object,
             }
 
             // ------------------------------------------
-
             word_enum = [word_array objectEnumerator];
+            #ifdef __MACH__
             for (id word_element in word_enum) {
+            #else
+            id word_element;
+            while (word_element = [word_enum nextObject]) {
+            #endif
                 //NSLog(@"%@\n", word_element);
 
                 // - word reconstruction process ------------

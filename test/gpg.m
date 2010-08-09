@@ -151,7 +151,7 @@ int main()
 
     // userlist
     @try {
-        NSLog(@"usrlist mesg\n%@\n", [gpg usrlist]);
+        NSLog(@"userlist mesg\n%@\n", [gpg userlist]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -159,7 +159,7 @@ int main()
 
     // onwerlist
     @try {
-        NSLog(@"ownlist mesg\n%@\n", [gpg ownlist]);
+        NSLog(@"ownerlist mesg\n%@\n", [gpg ownerlist]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);

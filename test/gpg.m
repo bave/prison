@@ -114,7 +114,7 @@ int main()
 
     //encryptForce
     @try {
-        NSLog(@"force encrypt message\n%@\n", [gpg encryptForce:@"tetete" :@"hage"]);
+        NSLog(@"force encrypt message\n%@\n", [gpg encryptForce:@"tetete" :@"hage@raprins"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -130,7 +130,7 @@ int main()
 
     // decrypt
     @try {
-        NSLog(@"decrypt mesg\n%@\n\n", [gpg decrypt:[gpg encrypt:@"tetete" :@"test"]]);
+        NSLog(@"decrypt mesg\n%@\n\n", [gpg decrypt:[gpg encrypt:@"tetete" :@"test@raprins"]]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -164,6 +164,33 @@ int main()
     @catch (id e){
         NSLog(@"%@\n", e);
     }
+
+    // delsig
+    @try {
+        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"hage@raprins"]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    // signedlist
+    @try {
+        NSLog(@"signedlist mesg\n%@\n", [gpg signedlist]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+
+    /*
+    // delkey
+    @try {
+        NSLog(@"delkey:%d\n", [gpg delkey:@"hage@raprins"]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+    */
 
     [pool drain];
     return 0;

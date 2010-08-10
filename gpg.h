@@ -4,7 +4,6 @@
 /*
  * todo
  * - mk sign-key
- * - mk delkey
  * - mk revoke
  * - mk templary import
  * - remake import return only ture...
@@ -83,13 +82,16 @@
                    :(NSString*)mail;
 
 - (int)genkey;
-- (int)delkey:(NSString*)user;
+- (int)delkey:(NSString*)uid;
+- (int)delsig:(NSString*)ksyuid :(NSString*)siguid;
 
 - (int)import:(NSString*)key;
 - (NSString*)export:(NSString*)uid;
-- (NSArray*)throw:(NSString*)key;
+
+- (NSDictionary*)signedlist;
 - (NSArray*)userlist;
 - (NSArray*)ownerlist;
+- (NSArray*)throw:(NSString*)key;
 
 - (NSString*)sign:(NSString*)txt;
 - (NSString*)verify:(NSString*)sig;
@@ -100,8 +102,7 @@
 
 // not implementation
 - (int)genrkey;
-- (int)_mk_directory:(NSString*)dir;
-- (int)_rm_directory:(NSString*)dir;
+- (int)signkey:(NSString*)uid;
 
 
 // private function
@@ -114,13 +115,12 @@
 
 - (NSData*)_data_to_nsdata:(gpgme_data_t)data;
 
-
+- (NSDictionary*)_parse_list_sig:(NSString*)sig;
 - (NSArray*)_parse_list_pub:(NSString*)pub;
 - (NSArray*)_parse_list_sec:(NSString*)sec;
 - (NSArray*)_parse_list_throw:(NSString*)key;
 
 @end
-
 
 @implementation GPGME
 
@@ -148,7 +148,6 @@ static gpgme_error_t _passwd_cb(void* object,
 // ------------------------------------------------------------------------------
 
 // public function
-
 - (int)getValid
 {
     return gpgValid;
@@ -272,6 +271,89 @@ static gpgme_error_t _passwd_cb(void* object,
     //NSLog(@"%@\n", out_string);
 
     return [self _parse_list_sec:out_string];
+}
+
+- (NSDictionary*)signedlist
+{
+    id pool = [NSAutoreleasePool new];
+    id saved_err = nil;
+
+    //NSPipe* in_pipe = nil;;
+    //NSFileHandle* input = nil;
+    NSPipe* out_pipe = nil;
+    NSFileHandle* output = nil;
+    NSFileHandle* devNull = nil;
+
+    NSTask* task = nil;
+    NSData* out_data = nil;
+    NSString* out_string = nil;
+
+    int ret;
+    const NSStringEncoding* encode;
+
+    @try{
+
+        NSMutableArray* args;
+        args = [NSMutableArray array];
+        [args addObject:@"--homedir"];
+        [args addObject:gpgDir];
+        [args addObject:@"--list-sig"];
+
+        // output pipe
+        out_pipe = [NSPipe pipe];
+        output = [out_pipe fileHandleForReading];
+
+        // error pipe
+        devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+
+        task = [[NSTask alloc] init];
+        [task setLaunchPath:gpgExe];
+        //[task setStandardInput:in_pipe];
+        [task setStandardOutput:out_pipe];
+        [task setStandardError:devNull];
+        [task setArguments:args];
+        [task launch];
+
+        [task waitUntilExit];
+        ret = [task terminationStatus];
+
+        if (ret != 0) {
+            @throw @"violation error";
+        }
+
+        // stdout
+        encode = [NSString availableStringEncodings];
+        out_data = [output readDataToEndOfFile];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+
+        if ([out_string length] == 0) {
+            @throw @"no data";
+        }
+    }
+
+    @catch (NSString* err) {
+        NSString* err_string = [NSString stringWithFormat:
+                                @"error: [gpg signedlist] %@", err];
+        saved_err = [err retain];
+        @throw err_string;
+    }
+
+    @catch (id err) {
+        saved_err = [err retain];
+        @throw err;
+    }
+    @finally {
+        [output closeFile];
+        [devNull closeFile];
+        [task release];
+        [pool drain];
+        [saved_err autorelease];
+    }
+
+    [out_string autorelease];
+    //NSLog(@"%@\n", out_string);
+
+    return [self _parse_list_sig:out_string];
 }
 
 - (NSArray*)userlist
@@ -1006,6 +1088,248 @@ static gpgme_error_t _passwd_cb(void* object,
     }
 
     return;
+}
+
+
+- (int)delsig:(NSString*)keyuid :(NSString*)siguid
+{
+    id pool = [NSAutoreleasePool new];
+    id saved_err = nil;
+
+    const NSStringEncoding* encode;
+
+    NSPipe* in_pipe = nil;;
+    NSFileHandle* input = nil;
+    NSData* in_data = nil;
+
+    NSPipe* out_pipe = nil;
+    NSFileHandle* output = nil;
+    NSData* out_data = nil;
+
+
+    NSFileHandle* devNull = nil;
+
+    NSTask* task = nil;
+
+    NSString* out_string = nil;
+
+    int ret;
+
+    @try{
+
+        // input pipe
+        in_pipe = [NSPipe pipe];
+        input = [in_pipe fileHandleForWriting];
+
+        // output pipe
+        out_pipe = [NSPipe pipe];
+        output = [out_pipe fileHandleForReading];
+
+        // error pipe
+        NSFileHandle* devNull;
+        devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+
+        NSMutableString* buf_str = [NSMutableString new];
+        NSString* commFD=[NSString stringWithFormat:@"%d", [input fileDescriptor]];
+        NSString* statFD=[NSString stringWithFormat:@"%d", [output fileDescriptor]]; 
+        //NSLog(@"%@\n", commFD);
+        //NSLog(@"%@\n", statFD);
+
+        NSMutableArray* args;
+        args = [NSMutableArray array];
+        //[args addObject:@"-q"];
+        //[args addObject:@"--with-colons"];
+        [args addObject:@"--homedir"];
+        [args addObject:gpgDir];
+        [args addObject:@"--command-fd"];
+        [args addObject:commFD];
+        [args addObject:@"--status-fd"];
+        [args addObject:statFD];
+        [args addObject:@"--edit-key"];
+        [args addObject:keyuid];
+        [args addObject:@"--"];
+
+        [buf_str appendString:@"uid 1\n"];
+        [buf_str appendString:@"delsig\n"];
+        id keyuid_list = [self signedlist];
+        id siguid_list = [keyuid_list valueForKey:keyuid];
+        int count = 0;
+        while (1) {
+            count++;
+            id num = [NSNumber numberWithInt:count];
+            id siguid_each = [siguid_list objectForKey:num];
+            if (siguid_each == nil) {
+                break;
+            }
+            if ([siguid compare:siguid_each] == NSOrderedSame) {
+                [buf_str appendString:@"y\n"];
+                if ([siguid compare:keyuid] == NSOrderedSame) {
+                    [buf_str appendString:@"y\n"];
+                }
+            }
+            else if ([@"unknown" compare:siguid_each] == NSOrderedSame) {
+                [buf_str appendString:@"y\n"];
+            }
+            else {
+                [buf_str appendString:@"N\n"];
+            }
+        }
+        [buf_str appendString:@"save\n"];
+        //[buf_str appendFormat:@"%c\n", EOF];
+        //NSLog(@"%@\n", buf_str);
+
+
+        // task
+        NSTask* task;
+        task = [[NSTask alloc] init];
+        [task setLaunchPath:gpgExe];
+        [task setStandardInput:in_pipe];
+        [task setStandardOutput:out_pipe];
+        [task setStandardError:devNull];
+        [task setArguments:args];
+        [task launch];
+
+        // encoding
+        encode = [NSString availableStringEncodings];
+
+        // stdin
+        in_data = [buf_str dataUsingEncoding:*encode];
+        [input writeData:in_data];
+
+        // stdout
+        out_data = [output readDataToEndOfFile];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+        [out_string autorelease];
+        //NSLog(@"output:%@\n", out_string);
+
+        /*
+        // stdout  -------------------------------------------------------------
+        out_data = [output readDataToEndOfFile];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+        [out_string autorelease];
+        NSLog(@"%@\n", out_string);
+
+
+        // stdout
+        out_data = [output readDataToEndOfFile];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+        [out_string autorelease];
+        NSLog(@"%@\n", out_string);
+
+        // stdin
+        buf_str = @"delsig\n";
+        in_data = [buf_str dataUsingEncoding:*encode];
+        [input writeData:in_data];
+
+        // stdout
+        out_data = [output readDataToEndOfFile];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+        [out_string autorelease];
+        NSLog(@"%@\n", out_string);
+
+        NSMutableString* buf_str2 = [NSMutableString new];
+        [buf_str2 appendFormat:@"%c\n", EOF];
+        [buf_str2 appendFormat:@"%c\n", EOF];
+        in_data = [buf_str2 dataUsingEncoding:*encode];
+        [input writeData:in_data];
+        // ----------------------------------------------------------------------
+        */
+
+        [task waitUntilExit];
+        ret = [task terminationStatus];
+
+    }
+
+    @catch (NSString* err) {
+        NSString* err_string = [NSString stringWithFormat:
+                                @"error: [gpg delkey] %@", err];
+        saved_err = [err retain];
+        @throw err_string;
+    }
+
+    @catch (id err) {
+        saved_err = [err retain];
+        @throw err;
+    }
+    @finally {
+        [devNull closeFile];
+        [task release];
+        [pool drain];
+        [saved_err autorelease];
+    }
+
+    // maybe ... checking really is deleted ... ----------
+    // processing.....
+    // ----------------------------------------------------
+    //NSLog(@"ret:%d\n", ret);
+    if (ret == 0) {
+        return true;
+    } else {
+        return false;
+    }
+
+}
+
+- (int)delkey:(NSString*)uid
+{
+    id pool = [NSAutoreleasePool new];
+    id saved_err = nil;
+
+    NSFileHandle* devNull = nil;
+
+    NSTask* task = nil;
+
+    int ret;
+
+    @try{
+        NSMutableArray* args;
+        args = [NSMutableArray array];
+        [args addObject:@"--homedir"];
+        [args addObject:gpgDir];
+        [args addObject:@"--batch"];
+        [args addObject:@"--yes"];
+        [args addObject:@"--delete-keys"];
+        [args addObject:uid];
+
+        // error&output pipe
+        devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+
+        task = [[NSTask alloc] init];
+        [task setLaunchPath:gpgExe];
+        [task setStandardOutput:devNull];
+        [task setStandardError:devNull];
+        [task setArguments:args];
+        [task launch];
+
+        [task waitUntilExit];
+        ret = [task terminationStatus];
+
+    }
+
+    @catch (NSString* err) {
+        NSString* err_string = [NSString stringWithFormat:
+                                @"error: [gpg delkey] %@", err];
+        saved_err = [err retain];
+        @throw err_string;
+    }
+
+    @catch (id err) {
+        saved_err = [err retain];
+        @throw err;
+    }
+    @finally {
+        [devNull closeFile];
+        [task release];
+        [pool drain];
+        [saved_err autorelease];
+    }
+
+    if (ret == 0) {
+        return true;
+    } else {
+        return false;
+    }
+
 }
 
 - (int)genkey
@@ -2162,30 +2486,151 @@ static gpgme_error_t _passwd_cb(void* object,
     [output_array autorelease];
     return output_array;
 }
+
+- (NSDictionary*)_parse_list_sig:(NSString*)sig
+{
+    id pool = [NSAutoreleasePool new];
+    id saved_err = nil;
+
+    NSArray* line_array = nil;
+    NSArray* word_array = nil;
+    NSDictionary* ans_dict = nil;
+    NSEnumerator* line_enum = nil;
+    NSEnumerator* word_enum = nil;
+
+    NSMutableDictionary* ans_mdict = [NSMutableDictionary new];
+
+    //NSString* sig = [NSString stringWithContentsOfFile:@"sig.txt"];
+    //NSLog(@"%@\n", pub);
+
+    @try {
+        if (sig == nil) @throw @"nothing input sig_string";
+
+        line_array = [sig componentsSeparatedByString:@"\n"];
+        line_enum = [line_array objectEnumerator];
+        #ifdef __MACH__
+        for (id line_element in line_enum) {
+        #else
+        id line_element;
+        while (line_element = [line_enum nextObject]) {
+        #endif
+
+            // - line reconstruction process ------------
+            //NSLog(@"%@\n", line_element);
+
+            int counter = 0;
+            NSNumber* ns_counter = nil;
+            NSString* user = nil;
+            NSMutableDictionary* sig_dict = [NSMutableDictionary new];
+            NSComparisonResult compResult;
+
+            compResult = [line_element compare:@"pub"
+                                       options:NSCaseInsensitiveSearch
+                                         range:NSMakeRange(0,[@"pub" length])];
+
+            if (compResult == NSOrderedSame) {
+                line_element = [line_enum nextObject];
+
+                word_array = [line_element componentsSeparatedByString:@" "];
+                word_enum = [word_array objectEnumerator];
+                #ifdef __MACH__
+                for (id word_element in word_enum) {
+                #else
+                id word_element;
+                while (word_element = [word_enum nextObject]) {
+                #endif
+                    // - word reconstruction process ------------
+                    //NSLog(@"%@\n", word_element);
+                    if ([word_element length] == 0) {
+                        continue;
+                    }
+                    if ([word_element characterAtIndex:0] == '<') {
+                        int start = 1;
+                        int end = [word_element length] - 2;
+                        NSRange range = NSMakeRange(start, end);
+                        user = [word_element substringWithRange:range];
+                        break;
+                    }
+                    // ------------------------------------------
+                }
+
+                while (1) {
+                    line_element = [line_enum nextObject];
+                    if ([line_element length] == 0) {
+                        break;
+                    }
+                    compResult = [line_element compare:@"sub"
+                                               options:NSCaseInsensitiveSearch
+                                                 range:NSMakeRange(0,[@"sub" length])];
+                    if (compResult == NSOrderedSame) {
+                        break;
+                    }
+                    counter++;
+                    ns_counter = [NSNumber numberWithInt:counter];
+                    word_array = [line_element componentsSeparatedByString:@" "];
+                    word_enum = [word_array objectEnumerator];
+                    #ifdef __MACH__
+                    for (id word_element in word_enum) {
+                    #else
+                    id word_element;
+                    while (word_element = [word_enum nextObject]) {
+                    #endif
+                        // - word reconstruction process ------------
+                        //NSLog(@"%@\n", word_element);
+                        if ([word_element length] == 0) {
+                            continue;
+                        }
+                        if ([word_element characterAtIndex:0] == '<') {
+                            int start = 1;
+                            int end = [word_element length] - 2;
+                            NSRange range = NSMakeRange(start, end);
+                            word_element = [word_element substringWithRange:range];
+                            [sig_dict setObject:word_element forKey:ns_counter];
+                        }
+                        if ([word_element characterAtIndex:0] == '[') {
+                            [sig_dict setObject:@"unknown" forKey:ns_counter];
+                        }
+                        // ------------------------------------------
+                    }
+                }
+                [ans_mdict setObject:sig_dict forKey:user];
+            }
+        }
+        //NSLog(@"per dict:%@\n", ans_mdict);
+        ans_dict = [[NSDictionary alloc] initWithDictionary:ans_mdict];
+
+    }
+    @catch (NSString* err) {
+        NSString* err_string = [NSString stringWithFormat:
+                                   @"error: [gpg _parse_list_sig] %@", err];
+        saved_err = [err retain];
+        @throw err_string;
+    }
+    @catch (id err) {
+        NSLog(@"internal error:%@\n", err);
+        saved_err = [err retain];
+        @throw err;
+    }
+    @finally {
+        [pool drain];
+        [saved_err autorelease];
+    }
+    [ans_dict autorelease];
+    return ans_dict;
+}
+
+
+
+- (int)signkey:(NSString*)uid
+{
+    return false;
+}
    
 - (int)genrkey
 {
     return false;
 }
 
-- (int)delkey:(NSString*)key
-{
-    return false;
-}
-
-- (int)_mk_directory:(NSString*)dir
-{
-    [gpgLock lock];
-    [gpgLock unlock];
-    return false;
-}
-
-- (int)_rm_directory:(NSString*)dir
-{
-    [gpgLock lock];
-    [gpgLock unlock];
-    return false;
-}
 
 @end
 

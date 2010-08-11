@@ -181,9 +181,8 @@ int main()
         NSLog(@"%@\n", e);
     }
 
-
-    /*
     // delkey
+    /*
     @try {
         NSLog(@"delkey:%d\n", [gpg delkey:@"hage@raprins"]);
     }

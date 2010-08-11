@@ -191,11 +191,16 @@ static gpgme_error_t _passwd_cb(void* object,
 
     //NSPipe* in_pipe = nil;;
     //NSFileHandle* input = nil;
+
     NSPipe* out_pipe = nil;
-    NSFileHandle* output = nil;
-    NSFileHandle* devNull = nil;
+    NSFileHandle* out_file = nil;
+
+    NSPipe* err_pipe = nil;
+    NSFileHandle* err_file = nil;
+
 
     NSTask* task = nil;
+
     NSData* out_data = nil;
     NSString* out_string = nil;
 
@@ -218,16 +223,17 @@ static gpgme_error_t _passwd_cb(void* object,
 
         // output pipe
         out_pipe = [NSPipe pipe];
-        output = [out_pipe fileHandleForReading];
+        out_file = [out_pipe fileHandleForReading];
 
         // error pipe
-        devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+        err_pipe = [NSPipe pipe];
+        err_file = [err_pipe fileHandleForReading];
 
         task = [[NSTask alloc] init];
         [task setLaunchPath:gpgExe];
         //[task setStandardInput:in_pipe];
         [task setStandardOutput:out_pipe];
-        [task setStandardError:devNull];
+        [task setStandardError:err_pipe];
         [task setArguments:args];
         [task launch];
 
@@ -240,7 +246,7 @@ static gpgme_error_t _passwd_cb(void* object,
 
         // stdout
         encode = [NSString availableStringEncodings];
-        out_data = [output readDataToEndOfFile];
+        out_data = [out_file readDataToEndOfFile];
         out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
 
         if ([out_string length] == 0) {
@@ -260,8 +266,8 @@ static gpgme_error_t _passwd_cb(void* object,
         @throw err;
     }
     @finally {
-        [output closeFile];
-        [devNull closeFile];
+        [out_file closeFile];
+        [err_file closeFile];
         [task release];
         [pool drain];
         [saved_err autorelease];
@@ -280,9 +286,12 @@ static gpgme_error_t _passwd_cb(void* object,
 
     //NSPipe* in_pipe = nil;;
     //NSFileHandle* input = nil;
+
     NSPipe* out_pipe = nil;
-    NSFileHandle* output = nil;
-    NSFileHandle* devNull = nil;
+    NSFileHandle* out_file = nil;
+
+    NSPipe* err_pipe = nil;
+    NSFileHandle* err_file = nil;
 
     NSTask* task = nil;
     NSData* out_data = nil;
@@ -301,16 +310,18 @@ static gpgme_error_t _passwd_cb(void* object,
 
         // output pipe
         out_pipe = [NSPipe pipe];
-        output = [out_pipe fileHandleForReading];
+        out_file = [out_pipe fileHandleForReading];
 
-        // error pipe
-        devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+        // output pipe
+        err_pipe = [NSPipe pipe];
+        err_file = [err_pipe fileHandleForReading];
+
 
         task = [[NSTask alloc] init];
         [task setLaunchPath:gpgExe];
         //[task setStandardInput:in_pipe];
         [task setStandardOutput:out_pipe];
-        [task setStandardError:devNull];
+        [task setStandardError:err_pipe];
         [task setArguments:args];
         [task launch];
 
@@ -323,7 +334,7 @@ static gpgme_error_t _passwd_cb(void* object,
 
         // stdout
         encode = [NSString availableStringEncodings];
-        out_data = [output readDataToEndOfFile];
+        out_data = [out_file readDataToEndOfFile];
         out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
 
         if ([out_string length] == 0) {
@@ -343,8 +354,8 @@ static gpgme_error_t _passwd_cb(void* object,
         @throw err;
     }
     @finally {
-        [output closeFile];
-        [devNull closeFile];
+        [out_file closeFile];
+        [err_file closeFile];
         [task release];
         [pool drain];
         [saved_err autorelease];
@@ -363,9 +374,12 @@ static gpgme_error_t _passwd_cb(void* object,
 
     //NSPipe* in_pipe = nil;;
     //NSFileHandle* input = nil;
+
     NSPipe* out_pipe = nil;
-    NSFileHandle* output = nil;
-    NSFileHandle* devNull = nil;
+    NSFileHandle* out_file = nil;
+
+    NSPipe* err_pipe = nil;
+    NSFileHandle* err_file = nil;
 
     NSTask* task = nil;
     NSData* out_data = nil;
@@ -390,16 +404,18 @@ static gpgme_error_t _passwd_cb(void* object,
 
         // output pipe
         out_pipe = [NSPipe pipe];
-        output = [out_pipe fileHandleForReading];
+        out_file = [out_pipe fileHandleForReading];
 
         // error pipe
-        devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+        err_pipe = [NSPipe pipe];
+        err_file = [err_pipe fileHandleForReading];
+
 
         task = [[NSTask alloc] init];
         [task setLaunchPath:gpgExe];
         //[task setStandardInput:in_pipe];
         [task setStandardOutput:out_pipe];
-        [task setStandardError:devNull];
+        [task setStandardError:err_pipe];
         [task setArguments:args];
         [task launch];
 
@@ -412,7 +428,7 @@ static gpgme_error_t _passwd_cb(void* object,
 
         // stdout
         encode = [NSString availableStringEncodings];
-        out_data = [output readDataToEndOfFile];
+        out_data = [out_file readDataToEndOfFile];
         out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
 
         if ([out_string length] == 0) {
@@ -432,8 +448,8 @@ static gpgme_error_t _passwd_cb(void* object,
         @throw err;
     }
     @finally {
-        [output closeFile];
-        [devNull closeFile];
+        [out_file closeFile];
+        [err_file closeFile];
         [task release];
         [pool drain];
         [saved_err autorelease];
@@ -481,19 +497,21 @@ static gpgme_error_t _passwd_cb(void* object,
 
     // input pipe
     NSPipe* in_pipe;
+    NSFileHandle* in_file;
     in_pipe = [NSPipe pipe];
-    NSFileHandle* input;
-    input = [in_pipe fileHandleForWriting];
+    in_file = [in_pipe fileHandleForWriting];
 
     // output pipe
     NSPipe* out_pipe;
+    NSFileHandle* out_file;
     out_pipe = [NSPipe pipe];
-    NSFileHandle* output;
-    output = [out_pipe fileHandleForReading];
+    out_file = [out_pipe fileHandleForReading];
 
     // error pipe
-    NSFileHandle* devNull;
-    devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+    NSPipe* err_pipe;
+    NSFileHandle* err_file;
+    err_pipe = [NSPipe pipe];
+    err_file = [err_pipe fileHandleForReading];
 
     // task
     NSTask* task;
@@ -501,7 +519,7 @@ static gpgme_error_t _passwd_cb(void* object,
     [task setLaunchPath:gpgExe];
     [task setStandardInput:in_pipe];
     [task setStandardOutput:out_pipe];
-    [task setStandardError:devNull];
+    [task setStandardError:err_pipe];
     [task setArguments:args];
     [task launch];
 
@@ -513,12 +531,12 @@ static gpgme_error_t _passwd_cb(void* object,
     NSString* in_string = [NSString stringWithString:txt];
     NSData* in_data;
     in_data = [in_string dataUsingEncoding:*encode];
-    [input writeData:in_data];
-    [input closeFile];
+    [in_file writeData:in_data];
+    [in_file closeFile];
 
     // stdout processing
     NSData* out_data;
-    out_data = [output readDataToEndOfFile];
+    out_data = [out_file readDataToEndOfFile];
     NSString* out_string;
     out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
 
@@ -526,8 +544,8 @@ static gpgme_error_t _passwd_cb(void* object,
     [task waitUntilExit];
 
     // closefile
-    [output closeFile];
-    [devNull closeFile];
+    [out_file closeFile];
+    [err_file closeFile];
 
     ret = [task terminationStatus];
     //NSLog(@"ret:%d", ret);
@@ -584,19 +602,21 @@ static gpgme_error_t _passwd_cb(void* object,
 
     // input pipe
     NSPipe* in_pipe;
+    NSFileHandle* in_file;
     in_pipe = [NSPipe pipe];
-    NSFileHandle* input;
-    input = [in_pipe fileHandleForWriting];
+    in_file = [in_pipe fileHandleForWriting];
 
     // output pipe
     NSPipe* out_pipe;
     out_pipe = [NSPipe pipe];
-    NSFileHandle* output;
-    output = [out_pipe fileHandleForReading];
+    NSFileHandle* out_file;
+    out_file = [out_pipe fileHandleForReading];
 
     // error pipe
-    NSFileHandle* devNull;
-    devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+    NSPipe* err_pipe;
+    err_pipe = [NSPipe pipe];
+    NSFileHandle* err_file;
+    err_file = [err_pipe fileHandleForReading];
 
     // task
     NSTask* task;
@@ -604,7 +624,7 @@ static gpgme_error_t _passwd_cb(void* object,
     [task setLaunchPath:gpgExe];
     [task setStandardInput:in_pipe];
     [task setStandardOutput:out_pipe];
-    [task setStandardError:devNull];
+    [task setStandardError:err_pipe];
     [task setArguments:args];
     [task launch];
 
@@ -616,21 +636,21 @@ static gpgme_error_t _passwd_cb(void* object,
     NSString* in_string = [NSString stringWithString:txt];
     NSData* in_data;
     in_data = [in_string dataUsingEncoding:*encode];
-    [input writeData:in_data];
-    [input closeFile];
+    [in_file writeData:in_data];
+    [in_file closeFile];
 
     // stdout processing
     NSData* out_data;
-    out_data = [output readDataToEndOfFile];
+    out_data = [out_file readDataToEndOfFile];
     NSString* out_string;
     out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
 
     int ret;
     [task waitUntilExit];
 
-    // closefile
-    [output closeFile];
-    [devNull closeFile];
+    // file close
+    [out_file closeFile];
+    [err_file closeFile];
 
     ret = [task terminationStatus];
     //NSLog(@"ret:%d", ret);
@@ -801,28 +821,29 @@ static gpgme_error_t _passwd_cb(void* object,
     /*
     // input pipe
     NSPipe* in_pipe;
-    in_pipe = [NSPipe pipe];
     NSFileHandle* input;
+    in_pipe = [NSPipe pipe];
     input = [in_pipe fileHandleForWriting];
     */
 
     // output pipe
     NSPipe* out_pipe;
+    NSFileHandle* out_file;
     out_pipe = [NSPipe pipe];
-    NSFileHandle* output;
-    output = [out_pipe fileHandleForReading];
+    out_file = [out_pipe fileHandleForReading];
 
     // error pipe
-    NSFileHandle* devNull;
-    devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
-
+    NSPipe* err_pipe;
+    NSFileHandle* err_file;
+    err_pipe = [NSPipe pipe];
+    err_file = [err_pipe fileHandleForReading];
 
     // task
     NSTask* task;
     task = [[NSTask alloc] init];
     [task setLaunchPath:gpgExe];
     [task setStandardOutput:out_pipe];
-    [task setStandardError:devNull];
+    [task setStandardError:err_pipe];
     [task setArguments:args];
     [task launch];
 
@@ -837,7 +858,7 @@ static gpgme_error_t _passwd_cb(void* object,
 
     // stdout
     NSData* out_data;
-    out_data = [output readDataToEndOfFile];
+    out_data = [out_file readDataToEndOfFile];
     NSString* out_string;
     out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
 
@@ -849,8 +870,8 @@ static gpgme_error_t _passwd_cb(void* object,
 
 
     // closefile
-    [output closeFile];
-    [devNull closeFile];
+    [out_file closeFile];
+    [err_file closeFile];
 
     [task release];
     [pool drain];
@@ -942,27 +963,35 @@ static gpgme_error_t _passwd_cb(void* object,
     args = [ NSMutableArray array];
     [args addObject:@"--homedir"];
     [args addObject:gpgDir];
-    //NSLog(@"%@\n", gpgDir);
     [args addObject:@"--fast-import"];
 
     // input pipe
     NSPipe* in_pipe;
     in_pipe = [NSPipe pipe];
-    NSFileHandle* input;
-    input = [in_pipe fileHandleForWriting];
+    NSFileHandle* in_file;
+    in_file = [in_pipe fileHandleForWriting];
 
     // output pipe
+    /*
+    NSPipe* out_pipe;
+    out_pipe = [NSPipe pipe];
+    NSFileHandle* out_file;
+    out_file = [out_pipe fileHandleForReading];
+    */
+
     // error pipe
-    NSFileHandle* devNull;
-    devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+    NSPipe* err_pipe;
+    err_pipe = [NSPipe pipe];
+    NSFileHandle* err_file;
+    err_file = [err_pipe fileHandleForReading];
 
     // task
     NSTask* task;
     task = [[NSTask alloc] init];
     [task setLaunchPath:gpgExe];
     [task setStandardInput:in_pipe];
-    [task setStandardOutput:devNull];
-    [task setStandardError:devNull];
+    //[task setStandardOutput:out_pipe];
+    [task setStandardError:err_pipe];
     [task setArguments:args];
     [task launch];
 
@@ -974,14 +1003,15 @@ static gpgme_error_t _passwd_cb(void* object,
     NSString* in_string = [NSString stringWithString:key];
     NSData* in_data;
     in_data = [in_string dataUsingEncoding:*encode];
-    [input writeData:in_data];
-    [input closeFile];
+    [in_file writeData:in_data];
+    [in_file closeFile];
 
     int ret;
     [task waitUntilExit];
 
     // closefile
-    [devNull closeFile];
+    //[out_file closeFile];
+    [err_file closeFile];
 
     ret = [task terminationStatus];
     //NSLog(@"ret:%d", ret);
@@ -1099,19 +1129,23 @@ static gpgme_error_t _passwd_cb(void* object,
     const NSStringEncoding* encode;
 
     NSPipe* in_pipe = nil;;
-    NSFileHandle* input = nil;
+    NSFileHandle* in_file = nil;
     NSData* in_data = nil;
 
     NSPipe* out_pipe = nil;
-    NSFileHandle* output = nil;
+    NSFileHandle* out_file = nil;
     NSData* out_data = nil;
 
-
-    NSFileHandle* devNull = nil;
+    NSPipe* err_pipe = nil;
+    NSFileHandle* err_file = nil;
+    NSData* err_data = nil;
 
     NSTask* task = nil;
 
     NSString* out_string = nil;
+    NSString* err_string = nil;
+
+    NSMutableString* buf_str = [NSMutableString new];
 
     int ret;
 
@@ -1119,19 +1153,21 @@ static gpgme_error_t _passwd_cb(void* object,
 
         // input pipe
         in_pipe = [NSPipe pipe];
-        input = [in_pipe fileHandleForWriting];
+        in_file = [in_pipe fileHandleForWriting];
 
         // output pipe
         out_pipe = [NSPipe pipe];
-        output = [out_pipe fileHandleForReading];
+        out_file = [out_pipe fileHandleForReading];
 
         // error pipe
-        NSFileHandle* devNull;
-        devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+        err_pipe = [NSPipe pipe];
+        err_file = [err_pipe fileHandleForReading];
 
-        NSMutableString* buf_str = [NSMutableString new];
-        NSString* commFD=[NSString stringWithFormat:@"%d", [input fileDescriptor]];
-        NSString* statFD=[NSString stringWithFormat:@"%d", [output fileDescriptor]]; 
+
+        //NSString* commFD=[NSString stringWithFormat:@"%d", [in_file fileDescriptor]];
+
+        //NSString* statFD=[NSString stringWithFormat:@"%d", [out_file fileDescriptor]]; 
+
         //NSLog(@"%@\n", commFD);
         //NSLog(@"%@\n", statFD);
 
@@ -1139,16 +1175,19 @@ static gpgme_error_t _passwd_cb(void* object,
         args = [NSMutableArray array];
         //[args addObject:@"-q"];
         //[args addObject:@"--with-colons"];
-        [args addObject:@"--homedir"];
-        [args addObject:gpgDir];
-        [args addObject:@"--command-fd"];
-        [args addObject:commFD];
-        [args addObject:@"--status-fd"];
-        [args addObject:statFD];
-        [args addObject:@"--edit-key"];
-        [args addObject:keyuid];
-        [args addObject:@"--"];
+        //[args addObject:@"--homedir"];
+        //[args addObject:gpgDir];
+        //[args addObject:@"--command-fd"];
+        //[args addObject:commFD];
+        //[args addObject:@"--status-fd"];
+        //[args addObject:statFD];
+        //[args addObject:@"--edit-key"];
+        //[args addObject:keyuid];
+        //[args addObject:@"--"];
+        //[args addObject:@"--list-sigs"];
 
+
+        /*
         [buf_str appendString:@"uid 1\n"];
         [buf_str appendString:@"delsig\n"];
         id keyuid_list = [self signedlist];
@@ -1175,17 +1214,18 @@ static gpgme_error_t _passwd_cb(void* object,
             }
         }
         [buf_str appendString:@"save\n"];
-        //[buf_str appendFormat:@"%c\n", EOF];
-        //NSLog(@"%@\n", buf_str);
-
+        [buf_str appendFormat:@"%c\n", EOF];
+        NSLog(@"%@\n", buf_str);
+        */
 
         // task
         NSTask* task;
         task = [[NSTask alloc] init];
-        [task setLaunchPath:gpgExe];
+        //[task setLaunchPath:gpgExe];
+        [task setLaunchPath:@"/tmp/a.out"];
         [task setStandardInput:in_pipe];
         [task setStandardOutput:out_pipe];
-        [task setStandardError:devNull];
+        [task setStandardError:err_pipe];
         [task setArguments:args];
         [task launch];
 
@@ -1194,13 +1234,22 @@ static gpgme_error_t _passwd_cb(void* object,
 
         // stdin
         in_data = [buf_str dataUsingEncoding:*encode];
-        [input writeData:in_data];
+        [in_file writeData:in_data];
 
         // stdout
-        out_data = [output readDataToEndOfFile];
+        out_data = [out_file readDataToEndOfFile];
         out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
         [out_string autorelease];
-        //NSLog(@"output:%@\n", out_string);
+        NSLog(@"out:\n%@\n", out_string);
+
+        // stderr
+        err_data = [err_file readDataToEndOfFile];
+        err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
+        [err_string autorelease];
+        NSLog(@"err:\n%@\n", err_string);
+
+        //err_data = [[err_pipe fileHandleForReading] availableData];
+        //NSLog(@"err:\n%s\n", [err_data bytes]);
 
         /*
         // stdout  -------------------------------------------------------------
@@ -1242,7 +1291,7 @@ static gpgme_error_t _passwd_cb(void* object,
 
     @catch (NSString* err) {
         NSString* err_string = [NSString stringWithFormat:
-                                @"error: [gpg delkey] %@", err];
+                                @"error: [gpg delsig] %@", err];
         saved_err = [err retain];
         @throw err_string;
     }
@@ -1252,7 +1301,9 @@ static gpgme_error_t _passwd_cb(void* object,
         @throw err;
     }
     @finally {
-        [devNull closeFile];
+        [in_file closeFile];
+        [out_file closeFile];
+        [err_file closeFile];
         [task release];
         [pool drain];
         [saved_err autorelease];
@@ -1275,13 +1326,25 @@ static gpgme_error_t _passwd_cb(void* object,
     id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
-    NSFileHandle* devNull = nil;
+    NSPipe* out_pipe = nil;
+    NSFileHandle* out_file = nil;
+
+    NSPipe* err_pipe = nil;
+    NSFileHandle* err_file = nil;
 
     NSTask* task = nil;
 
     int ret;
 
     @try{
+
+        out_pipe = [NSPipe pipe];
+        out_file = [out_pipe fileHandleForReading];
+
+        err_pipe = [NSPipe pipe];
+        err_file = [err_pipe fileHandleForReading];
+
+
         NSMutableArray* args;
         args = [NSMutableArray array];
         [args addObject:@"--homedir"];
@@ -1291,13 +1354,11 @@ static gpgme_error_t _passwd_cb(void* object,
         [args addObject:@"--delete-keys"];
         [args addObject:uid];
 
-        // error&output pipe
-        devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
 
         task = [[NSTask alloc] init];
         [task setLaunchPath:gpgExe];
-        [task setStandardOutput:devNull];
-        [task setStandardError:devNull];
+        [task setStandardOutput:out_pipe];
+        [task setStandardError:err_pipe];
         [task setArguments:args];
         [task launch];
 
@@ -1318,7 +1379,8 @@ static gpgme_error_t _passwd_cb(void* object,
         @throw err;
     }
     @finally {
-        [devNull closeFile];
+        [out_file closeFile];
+        [err_file closeFile];
         [task release];
         [pool drain];
         [saved_err autorelease];
@@ -1436,14 +1498,22 @@ static gpgme_error_t _passwd_cb(void* object,
     [args addObject:@"--no-tty"];
     [args addObject:@"--gen-key"];
 
-    NSPipe* pipe;
-    pipe = [NSPipe pipe];
+    NSPipe* in_pipe;
+    NSFileHandle* in_file;
+    in_pipe = [NSPipe pipe];
+    in_file = [in_pipe fileHandleForWriting];
 
-    NSFileHandle* file;
-    file = [pipe fileHandleForWriting];
+    /*
+    NSPipe* out_pipe;
+    NSFileHandle* out_file;
+    out_pipe = [NSPipe pipe];
+    out_file = [out_pipe fileHandleForReading];
+    */
 
-    NSFileHandle* devNull;
-    devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+    NSPipe* err_pipe;
+    NSFileHandle* err_file;
+    err_pipe = [NSPipe pipe];
+    err_file = [err_pipe fileHandleForReading];
 
     NSTask* task;
     task = [[NSTask alloc] init];
@@ -1453,21 +1523,23 @@ static gpgme_error_t _passwd_cb(void* object,
     }
     */
     [task setLaunchPath:gpgExe];
-    [task setStandardInput:pipe];
-    [task setStandardOutput:devNull];
-    [task setStandardError:devNull];
+    [task setStandardInput:in_pipe];
+    //[task setStandardOutput:out_pipe];
+    [task setStandardError:err_pipe];
     [task setArguments:args];
     [task launch];
 
     const NSStringEncoding* encode;
     encode = [NSString availableStringEncodings];
+
     NSData* data;
     data = [params dataUsingEncoding:*encode];
-    [file writeData:data];
+    [in_file writeData:data];
+    [in_file closeFile];
 
     // close files
-    [file closeFile];
-    [devNull closeFile];
+    //[out_file closeFile];
+    [err_file closeFile];
 
     /*
     while ([task isRunning]) {
@@ -1477,7 +1549,6 @@ static gpgme_error_t _passwd_cb(void* object,
     */
 
     [task waitUntilExit];
-
 
     int ret;
     ret = [task terminationStatus];
@@ -1772,18 +1843,20 @@ static gpgme_error_t _passwd_cb(void* object,
     // input pipe
     NSPipe* in_pipe;
     in_pipe = [NSPipe pipe];
-    NSFileHandle* input;
-    input = [in_pipe fileHandleForWriting];
+    NSFileHandle* in_file;
+    in_file = [in_pipe fileHandleForWriting];
 
     // output pipe
     NSPipe* out_pipe;
     out_pipe = [NSPipe pipe];
-    NSFileHandle* output;
-    output = [out_pipe fileHandleForReading];
+    NSFileHandle* out_file;
+    out_file = [out_pipe fileHandleForReading];
 
     // error pipe
-    NSFileHandle* devNull;
-    devNull = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
+    NSPipe* err_pipe;
+    err_pipe = [NSPipe pipe];
+    NSFileHandle* err_file;
+    err_file = [err_pipe fileHandleForReading];
 
     // task
     NSTask* task;
@@ -1791,7 +1864,7 @@ static gpgme_error_t _passwd_cb(void* object,
     [task setLaunchPath:gpgExe];
     [task setStandardInput:in_pipe];
     [task setStandardOutput:out_pipe];
-    [task setStandardError:devNull];
+    [task setStandardError:err_pipe];
     [task setArguments:args];
     [task launch];
 
@@ -1804,8 +1877,9 @@ static gpgme_error_t _passwd_cb(void* object,
     in_string = key;
     NSData* in_data = nil;
     in_data = [in_string dataUsingEncoding:*encode];
-    [input writeData:in_data];
-    [input closeFile];
+    [in_file writeData:in_data];
+    [in_file closeFile];
+
 
     int ret;
     [task waitUntilExit];
@@ -1814,9 +1888,13 @@ static gpgme_error_t _passwd_cb(void* object,
 
     // stdout
     NSData* out_data = nil;
-    out_data = [output readDataToEndOfFile];
+    out_data = [out_file readDataToEndOfFile];
     NSString* key_string = nil;
     key_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+
+    // file close
+    [out_file closeFile];
+    [err_file closeFile];
 
     //NSLog(@"data_length:%d\n", [out_data length]);
     //NSLog(@"\n%@\n", out_data);
@@ -1824,10 +1902,6 @@ static gpgme_error_t _passwd_cb(void* object,
     //NSLog(@"string_length:%d\n", [out_string length]);
     //NSLog(@"\n%@\n", out_string);
 
-
-    // closefile
-    [output closeFile];
-    [devNull closeFile];
 
     if ([key_string length] == 0) {
         [task release];
@@ -2514,6 +2588,10 @@ static gpgme_error_t _passwd_cb(void* object,
         id line_element;
         while (line_element = [line_enum nextObject]) {
         #endif
+
+            if ([line_element length] == 0) {
+                continue;
+            }
 
             // - line reconstruction process ------------
             //NSLog(@"%@\n", line_element);

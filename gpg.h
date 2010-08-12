@@ -3,13 +3,28 @@
 
 /*
  * todo
- * - mk sign-key
+ * - delsig mk return error status 
+ * - mk trust
  * - mk revoke
  * - mk templary import
- * - remake import return only ture...
+ * - remake import. now,,, import message return only ture...
  * - this class is have to reconstruct signleton.
  * - all method reconstruct mutex lock
+ * - at no distant date,,, drop gpgme code,, only ojbc code using gpg command..
  */
+
+// ----- gpg version independent ------------------------------------------
+// check
+// gpg2 (GnuPG) 2.0.14
+// gpg  (GnuPG) 1.4.10
+// ------------------------------------------------------------------------
+
+// ----- platform checking ------------------------------------------------
+// check
+// macosx snow leopard
+// Linux2.6.32-22-generic Ubuntu SMP x86_64
+// ------------------------------------------------------------------------
+
 
 #import <Cocoa/Cocoa.h>
 
@@ -62,8 +77,8 @@
 - (id)initWithDir:(NSString*)dir;
 - (void)dealloc;
 
-- (int)getValid;
-- (int)getTrust;
+- (BOOL)getValid;
+- (BOOL)getTrust;
 
 - (NSString*)getDir;
 - (NSString*)getExe;
@@ -81,9 +96,10 @@
                    :(NSString*)user
                    :(NSString*)mail;
 
-- (int)genkey;
-- (int)delkey:(NSString*)uid;
-- (int)delsig:(NSString*)ksyuid :(NSString*)siguid;
+- (BOOL)genkey;
+- (BOOL)signkey:(NSString*)uid;
+- (BOOL)delkey:(NSString*)uid;
+- (BOOL)delsig:(NSString*)keyuid :(NSString*)siguid;
 
 - (int)import:(NSString*)key;
 - (NSString*)export:(NSString*)uid;
@@ -102,8 +118,6 @@
 
 // not implementation
 - (int)genrkey;
-- (int)signkey:(NSString*)uid;
-
 
 // private function
 - (void)_print_sig_summary:(gpgme_sigsum_t)summary;
@@ -148,12 +162,12 @@ static gpgme_error_t _passwd_cb(void* object,
 // ------------------------------------------------------------------------------
 
 // public function
-- (int)getValid
+- (BOOL)getValid
 {
     return gpgValid;
 }
 
-- (int)getTrust
+- (BOOL)getTrust
 {
     return gpgTrust;
 }
@@ -248,6 +262,17 @@ static gpgme_error_t _passwd_cb(void* object,
         encode = [NSString availableStringEncodings];
         out_data = [out_file readDataToEndOfFile];
         out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+
+        // stderr
+        /*
+        NSData* err_data = nil;
+        err_data = [err_file readDataToEndOfFile];
+        NSString* err_string;
+        err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
+        [err_string autorelease];
+        NSLog(@"err:\n%@\n", err_string);
+        */
+
 
         if ([out_string length] == 0) {
             @throw @"no data";
@@ -1120,8 +1145,7 @@ static gpgme_error_t _passwd_cb(void* object,
     return;
 }
 
-
-- (int)delsig:(NSString*)keyuid :(NSString*)siguid
+- (BOOL)signkey:(NSString*)uid
 {
     id pool = [NSAutoreleasePool new];
     id saved_err = nil;
@@ -1131,23 +1155,25 @@ static gpgme_error_t _passwd_cb(void* object,
     NSPipe* in_pipe = nil;;
     NSFileHandle* in_file = nil;
     NSData* in_data = nil;
+    NSString* inFD = nil;
 
     NSPipe* out_pipe = nil;
     NSFileHandle* out_file = nil;
     NSData* out_data = nil;
+    NSString* outFD = nil;
 
     NSPipe* err_pipe = nil;
     NSFileHandle* err_file = nil;
     NSData* err_data = nil;
+    NSString* errFD = nil;
 
     NSTask* task = nil;
 
     NSString* out_string = nil;
     NSString* err_string = nil;
-
     NSMutableString* buf_str = [NSMutableString new];
 
-    int ret;
+    int ret = 1;
 
     @try{
 
@@ -1163,31 +1189,217 @@ static gpgme_error_t _passwd_cb(void* object,
         err_pipe = [NSPipe pipe];
         err_file = [err_pipe fileHandleForReading];
 
+        // in
+        inFD = [NSString stringWithFormat:@"%d", [in_file fileDescriptor]];
 
-        //NSString* commFD=[NSString stringWithFormat:@"%d", [in_file fileDescriptor]];
+        // out
+        outFD = [NSString stringWithFormat:@"%d", [out_file fileDescriptor]]; 
 
-        //NSString* statFD=[NSString stringWithFormat:@"%d", [out_file fileDescriptor]]; 
+        // error
+        errFD = [NSString stringWithFormat:@"%d", [err_file fileDescriptor]];
 
-        //NSLog(@"%@\n", commFD);
-        //NSLog(@"%@\n", statFD);
+        //NSLog(@"in  %@\n", inFD);
+        //NSLog(@"out %@\n", outFD);
+        //NSLog(@"err %@\n", errFD);
 
         NSMutableArray* args;
         args = [NSMutableArray array];
-        //[args addObject:@"-q"];
-        //[args addObject:@"--with-colons"];
-        //[args addObject:@"--homedir"];
-        //[args addObject:gpgDir];
-        //[args addObject:@"--command-fd"];
-        //[args addObject:commFD];
-        //[args addObject:@"--status-fd"];
-        //[args addObject:statFD];
-        //[args addObject:@"--edit-key"];
-        //[args addObject:keyuid];
-        //[args addObject:@"--"];
-        //[args addObject:@"--list-sigs"];
+        [args addObject:@"--homedir"];
+        [args addObject:gpgDir];
+        [args addObject:@"--yes"];
+        [args addObject:@"--batch"];
+        [args addObject:@"--passphrase-fd"];
+        [args addObject:@"0"];
+        [args addObject:@"--sign-key"];
+        [args addObject:uid];
 
+        // make input string 
+        [buf_str appendString:[self getPass]];
+        //NSLog(@"%@\n", buf_str);
+
+        // task
+        NSTask* task;
+        task = [[NSTask alloc] init];
+        [task setLaunchPath:gpgExe];
+        [task setStandardInput:in_pipe];
+        [task setStandardOutput:out_pipe];
+        [task setStandardError:err_pipe];
+        [task setArguments:args];
+        [task launch];
+
+        // encoding
+        encode = [NSString availableStringEncodings];
+
+        // stdin
+        in_data = [buf_str dataUsingEncoding:*encode];
+        [in_file writeData:in_data];
+        [in_file closeFile];
+
+        [task waitUntilExit];
+        ret = [task terminationStatus];
+
+        // stdout
+        //out_data = [out_file readDataToEndOfFile];
+        /*
+        out_data = [out_file availableData];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+        [out_string autorelease];
+        NSLog(@"out:\n%@\n", out_string);
+        */
+
+        // stderr
+        /*
+        err_data = [err_file readDataToEndOfFile];
+        err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
+        [err_string autorelease];
+        NSLog(@"err:\n%@\n", err_string);
+        */
+
+    }
+
+    @catch (NSString* err) {
+        NSString* err_string = [NSString stringWithFormat:
+                                @"error: [gpg signkey] %@", err];
+        saved_err = [err retain];
+        @throw err_string;
+    }
+
+    @catch (id err) {
+        saved_err = [err retain];
+        @throw err;
+    }
+    @finally {
+        [out_file closeFile];
+        [err_file closeFile];
+        [task release];
+        [pool drain];
+        [saved_err autorelease];
+    }
+
+    //NSLog(@"ret:%d\n", ret);
+    if (ret == 0) {
+        return true;
+    } else {
+        return false;
+    }
+
+}
+
+
+- (BOOL)delsig:(NSString*)keyuid :(NSString*)siguid
+{
+    id pool = [NSAutoreleasePool new];
+    id saved_err = nil;
+
+    const NSStringEncoding* encode;
+
+    NSPipe* in_pipe = nil;;
+    NSFileHandle* in_file = nil;
+    NSData* in_data = nil;
+
+    NSPipe* com_pipe = nil;;
+    NSFileHandle* com_file = nil;
+    NSData* com_data = nil;
+
+    NSPipe* out_pipe = nil;
+    NSFileHandle* out_file = nil;
+    NSData* out_data = nil;
+
+    NSPipe* err_pipe = nil;
+    NSFileHandle* err_file = nil;
+    NSData* err_data = nil;
+
+    NSPipe* stat_pipe = nil;
+    NSFileHandle* stat_file = nil;
+    NSData* stat_data = nil;
+
+    NSTask* task = nil;
+
+    NSString* out_string = nil;
+    NSString* err_string = nil;
+    NSString* stat_string = nil;
+
+    NSMutableString* buf_str = [NSMutableString new];
+
+    int ret = 1;
+    int valid_count = 0;
+
+    NSArray* ret_array;
+    NSEnumerator* line_enum;
+
+    @try{
+
+        // input pipe
+        in_pipe = [NSPipe pipe];
+        in_file = [in_pipe fileHandleForWriting];
+
+        // output pipe
+        out_pipe = [NSPipe pipe];
+        out_file = [out_pipe fileHandleForReading];
+
+        // error pipe
+        err_pipe = [NSPipe pipe];
+        err_file = [err_pipe fileHandleForReading];
+
+        // command pipe
+        //com_pipe = [NSPipe pipe];
+        //com_file = [com_pipe fileHandleForWriting];
+
+        // status pipe
+        //stat_pipe = [NSPipe pipe];
+        //stat_file = [stat_pipe fileHandleForReading];
+
+        // in
+        NSString* inFD = nil;
+        inFD = [NSString stringWithFormat:@"%d", [in_file fileDescriptor]];
+
+        // out
+        NSString* outFD = nil;
+        outFD = [NSString stringWithFormat:@"%d", [out_file fileDescriptor]]; 
+
+        // error
+        NSString* errFD = nil;
+        errFD = [NSString stringWithFormat:@"%d", [err_file fileDescriptor]];
 
         /*
+        // command
+        NSString* comFD = nil;
+        comFD = [NSString stringWithFormat:@"%d", [com_file fileDescriptor]];
+        */
+
+        /*
+        // stat
+        NSString* statFD = nil;
+        statFD = [NSString stringWithFormat:@"%d", [stat_file fileDescriptor]]; 
+        */
+
+
+        //NSLog(@"in  %@\n", inFD);
+        //NSLog(@"out %@\n", outFD);
+        //NSLog(@"err %@\n", errFD);
+        //NSLog(@"com %@\n", comFD);
+        //NSLog(@"stat%@\n", statFD);
+
+        NSMutableArray* args;
+        args = [NSMutableArray array];
+        [args addObject:@"-q"];
+        [args addObject:@"--no-tty"];
+        [args addObject:@"--with-colons"];
+        [args addObject:@"--homedir"];
+        [args addObject:gpgDir];
+        [args addObject:@"--command-fd"];
+        [args addObject:@"0"];
+        [args addObject:@"--status-fd"];
+        [args addObject:@"2"];
+        //[args addObject:@"--logger-fd"];
+        //[args addObject:@"2"];
+        //[args addObject:@"--attribute-fd"];
+        //[args addObject:@"2"];
+        [args addObject:@"--edit-key"];
+        [args addObject:keyuid];
+        //[args addObject:@"--"];
+
+
         [buf_str appendString:@"uid 1\n"];
         [buf_str appendString:@"delsig\n"];
         id keyuid_list = [self signedlist];
@@ -1204,25 +1416,28 @@ static gpgme_error_t _passwd_cb(void* object,
                 [buf_str appendString:@"y\n"];
                 if ([siguid compare:keyuid] == NSOrderedSame) {
                     [buf_str appendString:@"y\n"];
+                    valid_count++;
                 }
+                valid_count++;
             }
             else if ([@"unknown" compare:siguid_each] == NSOrderedSame) {
                 [buf_str appendString:@"y\n"];
+                valid_count++;
             }
             else {
                 [buf_str appendString:@"N\n"];
+                valid_count++;
             }
         }
         [buf_str appendString:@"save\n"];
-        [buf_str appendFormat:@"%c\n", EOF];
-        NSLog(@"%@\n", buf_str);
-        */
+        //NSLog(@"valid_count:%d\n", valid_count);
+        //NSLog(@"%@\n", buf_str);
 
         // task
         NSTask* task;
         task = [[NSTask alloc] init];
-        //[task setLaunchPath:gpgExe];
-        [task setLaunchPath:@"/tmp/a.out"];
+        [task setLaunchPath:gpgExe];
+        //[task setLaunchPath:@"/tmp/a.out"];
         [task setStandardInput:in_pipe];
         [task setStandardOutput:out_pipe];
         [task setStandardError:err_pipe];
@@ -1235,58 +1450,57 @@ static gpgme_error_t _passwd_cb(void* object,
         // stdin
         in_data = [buf_str dataUsingEncoding:*encode];
         [in_file writeData:in_data];
+        [in_file closeFile];
 
-        // stdout
-        out_data = [out_file readDataToEndOfFile];
-        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
-        [out_string autorelease];
-        NSLog(@"out:\n%@\n", out_string);
-
-        // stderr
-        err_data = [err_file readDataToEndOfFile];
-        err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
-        [err_string autorelease];
-        NSLog(@"err:\n%@\n", err_string);
-
-        //err_data = [[err_pipe fileHandleForReading] availableData];
-        //NSLog(@"err:\n%s\n", [err_data bytes]);
-
+        // command
         /*
-        // stdout  -------------------------------------------------------------
-        out_data = [output readDataToEndOfFile];
-        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
-        [out_string autorelease];
-        NSLog(@"%@\n", out_string);
-
-
-        // stdout
-        out_data = [output readDataToEndOfFile];
-        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
-        [out_string autorelease];
-        NSLog(@"%@\n", out_string);
-
-        // stdin
-        buf_str = @"delsig\n";
-        in_data = [buf_str dataUsingEncoding:*encode];
-        [input writeData:in_data];
-
-        // stdout
-        out_data = [output readDataToEndOfFile];
-        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
-        [out_string autorelease];
-        NSLog(@"%@\n", out_string);
-
-        NSMutableString* buf_str2 = [NSMutableString new];
-        [buf_str2 appendFormat:@"%c\n", EOF];
-        [buf_str2 appendFormat:@"%c\n", EOF];
-        in_data = [buf_str2 dataUsingEncoding:*encode];
-        [input writeData:in_data];
-        // ----------------------------------------------------------------------
+        com_data = [buf_str dataUsingEncoding:*encode];
+        [com_file writeData:com_data];
+        [com_file closeFile];
         */
 
         [task waitUntilExit];
         ret = [task terminationStatus];
 
+        // stat
+        /*
+        stat_data = [stat_file availableData];
+        stat_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+        [stat_string autorelease];
+        NSLog(@"stat:\n%@\n", stat_string);
+        */
+
+        // stdout
+        /*
+        //out_data = [out_file availableData];
+        out_data = [out_file readDataToEndOfFile];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+        [out_string autorelease];
+        NSLog(@"out:\n%@\n", out_string);
+        */
+
+        // stderr
+        err_data = [err_file readDataToEndOfFile];
+        err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
+        [err_string autorelease];
+        //NSLog(@"err:\n%@\n", err_string);
+
+        ret_array = [err_string componentsSeparatedByString:@"\n"]; 
+        line_enum = [ret_array objectEnumerator];
+        #ifdef __MACH__
+        for (id line_element in line_enum) {
+        #else
+        id line_element;
+        while (line_element = [line_enum nextObject]) {
+        #endif
+            if ([line_element hasSuffix:@".delsig.valid"]) {
+                valid_count--;
+
+            }
+            if ([line_element hasSuffix:@".delsig.selfsig"]) {
+                valid_count--;
+            }
+        }
     }
 
     @catch (NSString* err) {
@@ -1301,7 +1515,7 @@ static gpgme_error_t _passwd_cb(void* object,
         @throw err;
     }
     @finally {
-        [in_file closeFile];
+        //[stat_file closeFile];
         [out_file closeFile];
         [err_file closeFile];
         [task release];
@@ -1312,16 +1526,22 @@ static gpgme_error_t _passwd_cb(void* object,
     // maybe ... checking really is deleted ... ----------
     // processing.....
     // ----------------------------------------------------
+
     //NSLog(@"ret:%d\n", ret);
+    //NSLog(@"valid_count:%d\n", valid_count);
     if (ret == 0) {
-        return true;
+        if (valid_count == 0) {
+            return true;
+        } else {
+        return false;
+        }
     } else {
         return false;
     }
 
 }
 
-- (int)delkey:(NSString*)uid
+- (BOOL)delkey:(NSString*)uid
 {
     id pool = [NSAutoreleasePool new];
     id saved_err = nil;
@@ -1394,7 +1614,7 @@ static gpgme_error_t _passwd_cb(void* object,
 
 }
 
-- (int)genkey
+- (BOOL)genkey
 {
     id pool = [NSAutoreleasePool new];
 
@@ -1747,8 +1967,8 @@ static gpgme_error_t _passwd_cb(void* object,
 - (NSString*)verify:(NSString*)sig
 {
     [gpgLock lock];
-    int valid;
-    int trust;
+    int valid = 0;
+    int trust = 0;
     gpgme_ctx_t ctx;
     gpgme_data_t in_data;
     gpgme_data_t out_data;
@@ -2699,10 +2919,6 @@ static gpgme_error_t _passwd_cb(void* object,
 
 
 
-- (int)signkey:(NSString*)uid
-{
-    return false;
-}
    
 - (int)genrkey
 {

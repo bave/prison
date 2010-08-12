@@ -3,6 +3,12 @@
 #include "../gpg.h"
 #include "../utils.h"
 
+// ----- gpg version independent ------------------------------------------
+// check
+// gpg2 (GnuPG) 2.0.14
+// gpg  (GnuPG) 1.4.10
+
+
 
 int main()
 {
@@ -79,6 +85,9 @@ int main()
         NSLog(@"verify message:\n%@\n", [gpg verify:sig]);
         NSLog(@"valid:%d\n", [gpg getValid]);
         NSLog(@"trust:%d\n", [gpg getTrust]);
+        // trustdb()          : valid 0, trust 0
+        // trustdb(key())     : valid 1, trust 0
+        // trustdb(key(sign)) : valid 1, trust 1
     }
     @catch (id e) {
         NSLog(@"%@\n", e);
@@ -120,6 +129,7 @@ int main()
         NSLog(@"%@\n", e);
     }
 
+    /*
     //encrypt
     @try {
         NSLog(@"encrypt mesg\n%@\n", [gpg encrypt:@"tetete" :@"test"]);
@@ -127,19 +137,16 @@ int main()
     @catch (id e){
         NSLog(@"%@\n", e);
     }
+    */
 
     // decrypt
     @try {
-        NSLog(@"decrypt mesg\n%@\n\n", [gpg decrypt:[gpg encrypt:@"tetete" :@"test@raprins"]]);
+        NSLog(@"decrypt mesg\n%@\n\n",
+                [gpg decrypt:[gpg encrypt:@"tetete" :@"test@raprins"]]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
     }
-
-    // ----- gpg version independent ------------------------------------------
-    // check
-    // gpg2 (GnuPG) 2.0.14
-    // gpg  (GnuPG) 1.4.10
 
     // throw-keyids
     @try {
@@ -165,13 +172,25 @@ int main()
         NSLog(@"%@\n", e);
     }
 
-    // delsig
+    // signkey
     @try {
-        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"hage@raprins"]);
+        [gpg setPasswd:@"test"];
+        NSLog(@"sigkey:%d\n", [gpg signkey:@"hage@raprins"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
     }
+
+    /*
+    // delsig
+    @try {
+        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"hage@raprins"]);
+        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"test@raprins"]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+    */
 
     // signedlist
     @try {
@@ -181,8 +200,8 @@ int main()
         NSLog(@"%@\n", e);
     }
 
-    // delkey
     /*
+    // delkey
     @try {
         NSLog(@"delkey:%d\n", [gpg delkey:@"hage@raprins"]);
     }

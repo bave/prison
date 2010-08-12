@@ -181,7 +181,6 @@ int main()
         NSLog(@"%@\n", e);
     }
 
-    /*
     // delsig
     @try {
         NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"hage@raprins"]);
@@ -190,7 +189,6 @@ int main()
     @catch (id e){
         NSLog(@"%@\n", e);
     }
-    */
 
     // signedlist
     @try {
@@ -200,7 +198,6 @@ int main()
         NSLog(@"%@\n", e);
     }
 
-    /*
     // delkey
     @try {
         NSLog(@"delkey:%d\n", [gpg delkey:@"hage@raprins"]);
@@ -208,7 +205,6 @@ int main()
     @catch (id e){
         NSLog(@"%@\n", e);
     }
-    */
 
     [pool drain];
     return 0;

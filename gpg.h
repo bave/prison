@@ -1159,18 +1159,18 @@ static gpgme_error_t _passwd_cb(void* object,
 
     NSPipe* out_pipe = nil;
     NSFileHandle* out_file = nil;
-    NSData* out_data = nil;
+    //NSData* out_data = nil;
     NSString* outFD = nil;
 
     NSPipe* err_pipe = nil;
     NSFileHandle* err_file = nil;
-    NSData* err_data = nil;
+    //NSData* err_data = nil;
     NSString* errFD = nil;
 
     NSTask* task = nil;
 
-    NSString* out_string = nil;
-    NSString* err_string = nil;
+    //NSString* out_string = nil;
+    //NSString* err_string = nil;
     NSMutableString* buf_str = [NSMutableString new];
 
     int ret = 1;
@@ -1297,27 +1297,27 @@ static gpgme_error_t _passwd_cb(void* object,
     NSFileHandle* in_file = nil;
     NSData* in_data = nil;
 
-    NSPipe* com_pipe = nil;;
-    NSFileHandle* com_file = nil;
-    NSData* com_data = nil;
+    //NSPipe* com_pipe = nil;;
+    //NSFileHandle* com_file = nil;
+    //NSData* com_data = nil;
 
     NSPipe* out_pipe = nil;
     NSFileHandle* out_file = nil;
-    NSData* out_data = nil;
+    //NSData* out_data = nil;
 
     NSPipe* err_pipe = nil;
     NSFileHandle* err_file = nil;
     NSData* err_data = nil;
 
-    NSPipe* stat_pipe = nil;
-    NSFileHandle* stat_file = nil;
-    NSData* stat_data = nil;
+    //NSPipe* stat_pipe = nil;
+    //NSFileHandle* stat_file = nil;
+    //NSData* stat_data = nil;
 
     NSTask* task = nil;
 
-    NSString* out_string = nil;
+    //NSString* out_string = nil;
     NSString* err_string = nil;
-    NSString* stat_string = nil;
+    //NSString* stat_string = nil;
 
     NSMutableString* buf_str = [NSMutableString new];
 

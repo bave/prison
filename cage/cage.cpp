@@ -124,19 +124,24 @@ static const char* const ERR_GET               = "409";
  */
 
 int
-main(int argc, char *argv[])
+main(int argc, char** argv)
 {
     //pid_t pid;
     //bool  is_daemon = false;
 
     int   opt;
-    const char* path = "/tmp/sock_raprins";
+    const char* path = NULL;
 
-	while ((opt = getopt(argc, argv, "h:")) != -1) {
+
+	while ((opt = getopt(argc, argv, "hf:")) != -1) {
 		switch (opt) {
                 case 'h':
                         usage(argv[0]);
                         return 0;
+                case 'f':
+                        path = optarg;
+                        break;
+                        
                 /*
                 case 'd':
                         is_daemon = true;
@@ -161,6 +166,12 @@ main(int argc, char *argv[])
                 umask(0);
         }
         */
+        
+        if (path == NULL) {
+            path = "/tmp/sock_raprins";
+        }
+
+        //printf("path:%s\n", path);
 
         event_init();
 
@@ -327,7 +338,9 @@ start_listen(const char* path)
             err = bind_safe(sock_fd, path);
             if (err != 0) {
                 err = errno;
+                close(sock_fd);
                 perror("bind_safe");
+                return false;
             }
         }
         if (err == 0) {

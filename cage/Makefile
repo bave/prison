@@ -1,18 +1,17 @@
+all:cage cli
 
-CC=g++
-CFLAGS= -g -Wall -levent -lcage
+cage: cage.cpp
+	g++ -g -Wall -levent -lcage -o cage cage.cpp
 
-all:cage
-
-cage:
-	${CC} ${CFLAGS} -o cage cage.cpp 
+cli: cli.m
+	gcc -g -Wall -framework Cocoa,AppKIT -o cli cli.m
 
 .PHONY: clean
 clean: clean_current
 
 clean_current:
-	rm ./a.out &
+	rm ./cli &
 	rm ./cage &
-	rm -rf ./a.out.dSYM &
+	rm -rf ./cli.dSYM &
 	rm -rf ./cage.dSYM &
 

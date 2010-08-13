@@ -1,15 +1,26 @@
+Rapidly accessible Port Relation Identifier with Naming Service
+
+using library
+    libevent
+    libcage
+    libresolv
+    libgpgme
+    libstd++
+    boost
+
+framework
+    Cocoa
+    Appkit
 
 ToDo
 	libcage
         -> uniqe [fin]
         -> multi [fin]
+
 	hostRRR
+	GroupRRR
 	serviceRRR
+
+	host viewer
 	Group viewer
 	Service viewer
-    gpg 
-        -> genkey callback
-        -> sign
-        -> delete
-	
-

@@ -11,14 +11,16 @@ all:raprins
 
 raprins:
 	$(MAKE) -C ds
-	${CC} ${CFLAGS} main.m
+	$(MAKE) -C cage
+	${CC} ${CFLAGS} -o ppnat ppnat.m
 
 .PHONY: clean
 clean: clean_ds clean_current
 
 clean_current:
-	rm ./a.out &
-	rm -rf ./a.out.dSYM &
+	rm ./ppnat &
+	rm -rf ./ppnat.dSYM &
 
 clean_ds:
 	$(MAKE) -C ds clean
+	$(MAKE) -C cage clean

@@ -3,12 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <arpa/inet.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/un.h>
 
 #include <event.h>
 
@@ -45,7 +47,8 @@ sock2ev_type   sock2ev;
 name2node_type name2node;
 
 void usage(char *cmd);
-bool start_listen(int port);
+int bind_safe(int sock_fd, const char* path);
+bool start_listen(const char* path);
 void callback_accept(int fd, short ev, void *arg);
 void callback_read(int fd, short ev, void *arg);
 void replace(std::string &str, std::string from, std::string to);
@@ -123,25 +126,29 @@ static const char* const ERR_GET               = "409";
 int
 main(int argc, char *argv[])
 {
-        int   opt;
-        int   port = 12080;
-        bool  is_daemon = false;
-        pid_t pid;
+    //pid_t pid;
+    //bool  is_daemon = false;
 
-	while ((opt = getopt(argc, argv, "dhp:")) != -1) {
+    int   opt;
+    const char* path = "/tmp/sock_raprins";
+
+	while ((opt = getopt(argc, argv, "h:")) != -1) {
 		switch (opt) {
                 case 'h':
                         usage(argv[0]);
                         return 0;
+                /*
                 case 'd':
                         is_daemon = true;
                         break;
                 case 'p':
                         port = atoi(optarg);
                         break;
+                */
                 }
         }
 
+        /*
         if (is_daemon) {
                 if ((pid = fork()) < 0) {
                         return -1;
@@ -153,11 +160,12 @@ main(int argc, char *argv[])
                 chdir("/");
                 umask(0);
         }
+        */
 
         event_init();
 
-        if (start_listen(port) == false) {
-                std::cerr << "can't listen port: " << port << std::endl;
+        if (start_listen(path) == false) {
+                perror("start_listen");
                 return -1;
         }
 
@@ -175,48 +183,163 @@ usage(char *cmd)
         printf("    -p: the port number to listen, default value is 12080\n");
 }
 
-bool
-start_listen(int port)
+int
+bind_safe(int sock_fd, const char* path)
 {
-        sockaddr_in saddr_in;
-        event       *ev = new event;
-        int         sockfd;
-        int         on = 1;
+    mode_t umask_old;
+    struct stat st;
+    memset(&st, 0, sizeof(st));
+    struct sockaddr_un bind_request;
+    memset(&bind_request, 0, sizeof(bind_request));
 
-        if ((sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-                perror("sockfd");
+    // path size checking
+    int err = 0;
+    if (strlen(path) >= sizeof(bind_request.sun_path)) {
+        err = EINVAL;
+    }
 
-                return false;
+    // get parent diectory path
+    char* path_dir = NULL;
+    char* last_slash = NULL;
+    if (err == 0) {
+        path_dir = strdup(path);
+        if (path_dir == NULL) {
+            err = ENOMEM;
+        }
+    }
+    if (err == 0) {
+        last_slash = strrchr(path_dir, '/');
+        if (last_slash == NULL) {
+            err = EINVAL;
+        } else {
+            *last_slash = '\0';
+        }
+    }
+
+    // get parent directory status
+    if (err == 0) {        
+        err = stat(path_dir, &st);
+        if (err != 0) {
+            err = errno;
+        }
+    }
+
+    // is Existent parent directory ?
+    if ( (err == 0) && !S_ISDIR(st.st_mode) ) {
+        err = EINVAL;
+    }
+
+    // check writing....
+    if (err == 0) {
+        const char* mkdir_test_name = "/mkdir_test";
+        int mkdir_test_size = strlen(path_dir) + strlen(mkdir_test_name) + 1;
+        char* mkdir_test_path = (char*)malloc(mkdir_test_size);
+        if (mkdir_test_path == NULL) {
+                err = errno;
+        }
+        if (err == 0) {
+            memset(mkdir_test_path, 0 , mkdir_test_size);
+            strcat(mkdir_test_path, path_dir);
+            strcat(mkdir_test_path, mkdir_test_name);
+            //printf("%s\n", mkdir_test_path);
         }
 
-        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&on,
-                       sizeof(on)) < 0) {
+        // permission : rwxr-xr-t
+        static const mode_t mode_required = 
+                   S_ISVTX | S_IRWXU | (S_IRGRP | S_IXGRP) | (S_IROTH | S_IXOTH);
+
+        if (err == 0) {
+            err = mkdir(mkdir_test_path, mode_required);
+            if (err != 0) {
+                err = errno;
+            }
+        }
+        if (err == 0) {
+            err = rmdir(mkdir_test_path);
+            if (err != 0) {
+                err = errno;
+            }
+        }
+        if (err == 0) {
+            free(mkdir_test_path);
+        }
+    }
+
+    /*
+    if ( (err == 0) && ( ! (st.st_mode & S_ISTXT) || (st.st_uid != 0) ) ) {
+        err = EINVAL;
+    }
+    if ( (err == 0) && (st.st_uid != geteuid()) ) {
+        err = EINVAL;
+    }
+    if ( (err == 0) && ((st.st_mode & ACCESSPERMS) != mode_required)) {
+        err = EINVAL;
+    }
+    */
+
+    if (err == 0) {
+        umask_old = umask(0);
+        unlink(path);
+        bind_request.sun_len = sizeof(bind_request);
+        bind_request.sun_family = AF_LOCAL;
+        memcpy(bind_request.sun_path, path, strlen(path));
+    }
+
+    if (err == 0) {
+        err = bind(sock_fd, (struct sockaddr*)&bind_request, SUN_LEN(&bind_request));
+        if (err != 0) {
+            err = errno;
+        }
+        if (err == EADDRINUSE) {
+        }
+    }
+
+    // rwxr-xr-x
+    umask(umask_old);
+
+    free(path_dir);
+
+    return err;
+}
+
+bool
+start_listen(const char* path)
+{
+        event *ev = new event;
+
+        int err = 0;
+        int on = 1;
+        int sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+        if (sock_fd == -1) { 
+            err = errno;
+            perror("socket");
+        } 
+        if (err == 0) {
+            err = setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR,
+                                                (char*)&on, sizeof(on));
+            if (err != 0) {
+                err = errno;
                 perror("setsockopt");
+            }
         }
 
-        memset(&saddr_in, 0, sizeof(saddr_in));
-
-        saddr_in.sin_port = htons(port);
-        saddr_in.sin_family = PF_INET;
-        saddr_in.sin_addr.s_addr = htonl(0x7f000001);
-
-        if (bind(sockfd, (sockaddr*)&saddr_in, sizeof(saddr_in)) < 0) {
-                close(sockfd);
-
-                perror("bind");
-
-                return false;
+        if (err == 0) {
+            err = bind_safe(sock_fd, path);
+            if (err != 0) {
+                err = errno;
+                perror("bind_safe");
+            }
+        }
+        if (err == 0) {
+            if (listen(sock_fd, 10) < 0) {
+                    close(sock_fd);
+                    err = errno;
+                    perror("listen");
+                    return false;
+            }
         }
 
-        if (listen(sockfd, 10) < 0) {
-                close(sockfd);
-
-                perror("listen");
-
-                return false;
-        }
-
-        event_set(ev, sockfd, EV_READ | EV_PERSIST, &callback_accept, NULL);
+        event_set(ev, sock_fd, EV_READ | EV_PERSIST, &callback_accept, NULL);
         event_add(ev, NULL);
 
         return true;

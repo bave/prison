@@ -2,6 +2,7 @@
 
 #include "utils.h"
 #include "common.h"
+#include "category.h"
 
 @interface RaprinsConfig : NSObject
 {

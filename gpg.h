@@ -33,18 +33,17 @@
 #include <gpgme.h>
 #include <gpg-error.h>
 
-#ifdef __linux__
-#ifndef true
-#define true  1
-#endif
-#ifndef false
-#define false 0
-#endif
 #include <sys/stat.h>
+
+#ifdef __linux__
 #endif
 
 #ifdef __MACH__
 #endif
+
+#include "category.h"
+#include "utils.h"
+#include "common.h"
 
 // debug line
 //NSLog(@"debug_%d\n", __LINE__);

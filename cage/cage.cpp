@@ -56,7 +56,7 @@ void do_command(int sockfd, std::string command);
 void process_set_id(int sockfd, esc_tokenizer::iterator &it,
                     const esc_tokenizer::iterator &end);
 void process_new(int sockfd, esc_tokenizer::iterator &it,
-		 const esc_tokenizer::iterator &end);
+                    const esc_tokenizer::iterator &end);
 void process_delete(int sockfd, esc_tokenizer::iterator &it,
                     const esc_tokenizer::iterator &end);
 void process_join(int sockfd, esc_tokenizer::iterator &it,
@@ -133,8 +133,8 @@ main(int argc, char** argv)
     const char* path = NULL;
 
 
-	while ((opt = getopt(argc, argv, "hf:")) != -1) {
-		switch (opt) {
+    while ((opt = getopt(argc, argv, "hf:")) != -1) {
+        switch (opt) {
                 case 'h':
                         usage(argv[0]);
                         return 0;
@@ -291,7 +291,9 @@ bind_safe(int sock_fd, const char* path)
     if (err == 0) {
         umask_old = umask(0);
         unlink(path);
+#ifndef __linux__
         bind_request.sun_len = sizeof(bind_request);
+#endif
         bind_request.sun_family = AF_LOCAL;
         memcpy(bind_request.sun_path, path, strlen(path));
     }

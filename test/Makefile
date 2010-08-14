@@ -66,6 +66,9 @@ mgmt: mgmt.m
 gpgme: gpg.m
 	${CC} ${CFLAGS} gpg.m -lgpgme -lgpg-error
 
+rc: rc.m
+	${CC} ${CFLAGS} rc.m
+
 clean:
 	rm ./a.out
 	rm -rf ./a.out.dSYM

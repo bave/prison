@@ -3,7 +3,6 @@
 
 /*
  * todo
- * - delsig mk return error status 
  * - mk trust
  * - mk revoke
  * - mk templary import

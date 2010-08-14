@@ -6,9 +6,13 @@
 #include "utils.h"
 #include "common.h"
 
+#include "gpg.h"
+
+//extern RaprinsConfig* rc;
 
 @interface keyValueTable : NSObject
 { 
+    GPGME* gpg;
     NSString* kvtPath;
     NSMutableDictionary* kvtDict;
 }
@@ -49,6 +53,7 @@
         // --------------
         // initial coding
         // --------------
+        //gpg = [GMEME initWithDir:[rc gpgmePath]]
         kvtPath = nil;
         kvtDict = [NSMutableDictionary new];
     }

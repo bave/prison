@@ -25,6 +25,14 @@ enum retFlag { success, fail };
 #define INT3 __asm__ __volatile__("int3");
 
 #ifdef __MACH__
+#define ITERATE(element, enumerator) for(id element in enumerator) 
+#else
+#define ITER(element, enumerator)            \
+id element;                                  \
+while (element = [enumerator nextObject])
+#endif
+
+#ifdef __MACH__
 #import <servers/bootstrap.h>
 #define SNOW    DEPRECATED_IN_MAC_OS_X_VERSION_10_6_AND_LATER
 #define LEOPARD DEPRECATED_IN_MAC_OS_X_VERSION_10_5_AND_LATER

@@ -1,7 +1,11 @@
 
 // system includer
 #import <Cocoa/Cocoa.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -9,6 +13,7 @@
 #include <netinet/tcp.h>
 
 // local includer
+//#include "rc.h"
 #include "fw.h"
 #include "op.h"
 #include "obs.h"
@@ -23,16 +28,24 @@
 //#include "utils.h"
 
 // global declaration
-NSLock* extLock;
-FWHooker*  fw;
-Observer* obs;
-Manager* mgmt;
+NSLock*   extLock;
+FWHooker*      fw;
+Observer*     obs;
+Manager*     mgmt;
+//RaprinsConfig* rc;
+
+extern char *optarg;
+extern int optind;
+extern int opterr;
+extern int optopt;
 
 // prototype declaration
+void usage(char *cmd);
 void sig_action(int sig);
 void exit_action(const char* err_name);
 void exit_signal(const char* sig_name);
 int main(int argc, char** argv);
+
 
 // implimentation 
 int main(int argc, char** argv)
@@ -40,6 +53,46 @@ int main(int argc, char** argv)
 
     // initialize declaration
     id pool = [[NSAutoreleasePool alloc] init];
+
+    int opt;
+    pid_t pid;
+    NSString* config_path = nil;
+    bool is_varbose = false;
+    bool is_daemon  = false;
+
+    while ((opt = getopt(argc, argv, "vdhf:")) != -1) {
+        switch (opt) {
+            case 'h':
+                usage(argv[0]);
+                return 0;
+            case 'v':
+                // for run_loop of [mgmt test] 
+                is_varbose = true;
+                break;
+            case 'd':
+                is_daemon  = true;
+                break;
+            case 'f':
+                config_path = [NSString stringWithUTF8String:optarg];
+                break;
+        }
+    }
+
+    if (config_path == nil) {
+        config_path = @"./raprins.conf";
+    }
+
+    if (is_daemon) {
+        if ((pid = fork()) < 0) {
+            return -1;
+        } else {
+            exit(0);
+        }
+        setsid();
+        chdir("/");
+        umask(0);
+    }
+
 
     if (SIG_ERR == signal(SIGPIPE, SIG_IGN)) exit_signal("SIGHUP");
     if (SIG_ERR == signal(SIGHUP, sig_action)) exit_signal("SIGHUP");
@@ -258,7 +311,10 @@ int main(int argc, char** argv)
             ];
         }
 
-        [mgmt test];
+        if (is_varbose) {
+            [mgmt test];
+        }
+
         sleep(5);
 
         [loop_pool drain];
@@ -272,6 +328,15 @@ int main(int argc, char** argv)
     [queue release];
     [pool drain];
     return success;
+}
+
+void usage(char *cmd)
+{
+    printf("%s [-v] [-d] [-f config-file-path]\n", cmd);
+    printf("  -h: show this help\n");
+    printf("  -d: run as daemon\n");
+    printf("  -v: varbose output to stdout\n");
+    printf("  -f: raprins_conf, default value is current directory of raprisn.conf\n");
 }
 
 void sig_action(int sig) {

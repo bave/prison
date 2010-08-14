@@ -4,7 +4,7 @@ cage: cage.cpp
 	g++ -g -Wall -levent -lcage -o ../bin/cage cage.cpp
 
 cli: cli.m
-	gcc -g -Wall -framework Cocoa,AppKIT -o ../bin/cli cli.m
+	gcc -g -Wall -o ../bin/cli cli.m
 
 .PHONY: clean
 clean: clean_current

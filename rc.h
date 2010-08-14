@@ -1,6 +1,5 @@
 #import <Cocoa/Cocoa.h>
 
-#include "category.h"
 #include "utils.h"
 #include "common.h"
 

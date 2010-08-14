@@ -27,8 +27,8 @@ enum retFlag { success, fail };
 #ifdef __MACH__
 #define ITERATE(element, enumerator) for(id element in enumerator) 
 #else
-#define ITER(element, enumerator)            \
-id element;                                  \
+#define ITERATE(element, enumerator)    \
+id element;                             \
 while (element = [enumerator nextObject])
 #endif
 

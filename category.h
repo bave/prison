@@ -1,8 +1,10 @@
 #ifndef __RAPRINS_CATEGORY_H_
 #define __RAPRINS_CATEGORY_H_
 
+#ifdef __MACH__
 #import <Foundation/Foundation.h>
 #import <CommonCrypto/CommonDigest.h>
+#endif
 
 // NSString -----------------------------------------------------------
 @interface NSString (FileOpen)
@@ -12,7 +14,11 @@
 + (id)stringWithFile:(NSString*)path
 {
     NSError* err;
+    #ifdef __MACH__
     return [NSString stringWithContentsOfFile:path encoding:NSASCIIStringEncoding error:&err];
+    #else
+    return [NSString stringWithContentsOfFile:path];
+    #endif
 }
 @end
 
@@ -33,6 +39,7 @@
 // --------------------------------------------------------------------
 
 
+#ifdef __MACH__
 // NSData -------------------------------------------------------------
 @interface NSData(exDigest)
 - (NSData*)sha1Digest;
@@ -78,6 +85,7 @@
     return [NSString stringWithString:stringBuffer];
 }
 @end
+#endif
 // --------------------------------------------------------------------
 
 #endif 

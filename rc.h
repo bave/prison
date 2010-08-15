@@ -75,7 +75,21 @@
 
     NSEnumerator* line_enum = nil;
     line_enum = [line_array objectEnumerator];
+
     ITERATE(line_element, line_enum) {
+        if ([line_element characterAtIndex:0] == '#') {
+            continue;
+        }
+
+        NSComparisonResult compResult;
+        compResult = [line_element compare:@"run_directory"
+                                   options:NSCaseInsensitiveSearch
+                                     range:NSMakeRange(0,[@"run_directory" length])];
+
+        compResult = [line_element compare:@"local_connect"
+                                   options:NSCaseInsensitiveSearch
+                                     range:NSMakeRange(0,[@"local_connect" length])];
+
         NSLog(@"%@\n", line_element);
     }
     

@@ -1,8 +1,16 @@
-Rapidly accessible Port Relation Identifier with Naming Service
+-- RAPRINS --
+Rapidly Accessible Port Relation Identifier with Naming Service
+
+-- temporary --
+prison
+Port Relation Identifier Service with Ovarlay Network
+
+-- jail --
+JAIST A... i... l...
 
 using library
-    libevent
     libcage
+    libevent
     libresolv
     libgpgme
     libstd++

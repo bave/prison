@@ -15,14 +15,14 @@ int main(int argc, char** argv)
 {
     const char* path = NULL;
     if (argc == 1) {
-        path = "/tmp/sock_raprins";
+        path = "/tmp/sock_cage";
     }
     if (argc == 2) {
         path = argv[1];
     }
     if (argc >= 3) {
         printf("usage\n");
-        printf("cli only,,, default sock_path is /tmp/sock_raprins\n");
+        printf("cli only,,, default sock_path is /tmp/sock_cage\n");
         printf("cli [socket_path]\n");
         return 1;
     }
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 
     }
     system("sh -c \"tput clear\"");
-    printf("Now connecting to /tmp/sock_raprins!!\n");
+    printf("Now connecting to /tmp/sock_cage!!\n");
     char buffer[65543];
     for (;;) {
         printf("send_message:");

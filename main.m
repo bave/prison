@@ -79,7 +79,7 @@ int main(int argc, char** argv)
     }
 
     if (config_path == nil) {
-        config_path = @"./raprins.conf";
+        config_path = @"./rc.plist";
     }
 
     if (is_daemon) {
@@ -94,8 +94,9 @@ int main(int argc, char** argv)
     }
 
 
-    if (SIG_ERR == signal(SIGPIPE, SIG_IGN)) exit_signal("SIGHUP");
+    //XXX change to reload and restart programing.... at SIGHUP
     if (SIG_ERR == signal(SIGHUP, sig_action)) exit_signal("SIGHUP");
+    if (SIG_ERR == signal(SIGPIPE, SIG_IGN)) exit_signal("SIGPIPE");
     if (SIG_ERR == signal(SIGINT, sig_action)) exit_signal("SIGINT");
     if (SIG_ERR == signal(SIGTERM, sig_action)) exit_signal("SIGTERM");
 
@@ -108,7 +109,7 @@ int main(int argc, char** argv)
 
         fw = [[FWHooker alloc] init];
 
-        // add 0+bias divert 10000 udp from me to any dst-port 53 ------------------------
+        // add 0+bias divert 10000 udp from me to any dst-port 53 -------------
         [fw setSrcRule:FW_ANY_ADDRESS :0];
         [fw setSrcMaskPrefix:0];
         [fw setDstRule:FW_ANY_ADDRESS :FW_RESOLVER_PORT];
@@ -120,7 +121,7 @@ int main(int argc, char** argv)
         [fw addRule: 0];
         // --------------------------------------------------------------------
 
-        // add 0+bias allow ip from me to 127.0.0.1/32 --------------------------------
+        // add 0+bias allow ip from me to 127.0.0.1/32 ------------------------
         [fw setSrcRule:FW_ANY_ADDRESS :0];
         [fw setSrcMaskPrefix:0];
         [fw setDstRule:"127.0.0.1" :0];
@@ -130,7 +131,7 @@ int main(int argc, char** argv)
         [fw addRule: 0];
         // --------------------------------------------------------------------
 
-        // add 0+bias divert 10001 ip from 127.0.0.1 to 127/8 ---------------------
+        // add 0+bias divert 10001 ip from 127.0.0.1 to 127/8 -----------------
         [fw setSrcRule:"127.0.0.1" :0];
         [fw setSrcMaskPrefix:32];
         [fw setDstRule:"127.0.0.0" :0];
@@ -155,7 +156,7 @@ int main(int argc, char** argv)
         // --------------------------------------------------------------------
     }
     @catch(id ex) {
-         NSLog(@"%@", ex);
+         //NSLog(@"%@", ex);
          exit_action("error->exit : fw routing");
     } 
     @finally { }
@@ -175,7 +176,6 @@ int main(int argc, char** argv)
         exit_action("socket");
     }
     if (bind(divertNAME, (SA*)&sin_divert, sizeof(sin_divert)) < 0) {
-        printf("%d\n", __LINE__);
         perror("bind");
         exit_action("bind");
     }
@@ -198,10 +198,10 @@ int main(int argc, char** argv)
         perror("bind");
         exit_action("bind");
     }
-    // --------------------------------------------------------------------
+    // ------------------------------------------------------------------------
 
 
-    // set divert socket for extarnal to me -------------------------------
+    // set divert socket for extarnal to me -----------------------------------
     memset(&sin_divert, 0,sizeof(sin_divert));
     sin_divert.sin_family = AF_INET;
     sin_divert.sin_port   = htons(FW_EXT2ME_DIVERT);
@@ -213,7 +213,6 @@ int main(int argc, char** argv)
         exit_action("socket");
     }
     if (bind(divertEXT2ME, (SA*)&sin_divert, sizeof(sin_divert)) < 0) {
-        printf("%d\n", __LINE__);
         perror("bind");
         exit_action("bind");
     }
@@ -333,27 +332,36 @@ int main(int argc, char** argv)
 void usage(char *cmd)
 {
     printf("%s [-v] [-d] [-f config-file-path]\n", cmd);
-    printf("  -h: show this help\n");
-    printf("  -d: run as daemon\n");
-    printf("  -v: varbose output to stdout\n");
-    printf("  -f: raprins_conf, default value is current directory of raprisn.conf\n");
+    printf("    -h: show this help\n");
+    printf("    -d: run as daemon\n");
+    printf("    -v: varbose output to stdout\n");
+    printf("    -f: rc.plist, default value is ./rc.plist\n");
 }
 
 void sig_action(int sig) {
-    printf("EXIT: catch signal No.%d\n", sig);
+    fprintf(stderr, "EXIT: catch signal No.%d\n", sig);
     //close(divertNAME);
+    [extLock release];
+    [obs     release];
+    [mgmt    release];
     [fw delAllRule];
-    exit(fail);
-}
-
-void exit_signal(const char* sig_name) {
-    printf("Failed to set signal handler: %s\n", sig_name);
+    [fw release];
     exit(fail);
 }
 
 void exit_action(const char* err_name) {
-    printf("Failed to call: %s\n", err_name);
+    fprintf(stderr, "Failed to call: %s\n", err_name);
     //close(divertNAME);
+    [extLock release];
+    [obs     release];
+    [mgmt    release];
     [fw delAllRule];
+    [fw release];
     exit(fail);
 }
+
+void exit_signal(const char* sig_name) {
+    fprintf(stderr, "Failed to set signal handler: %s\n", sig_name);
+    exit(fail);
+}
+

@@ -168,7 +168,7 @@ main(int argc, char** argv)
         */
         
         if (path == NULL) {
-            path = "/tmp/sock_raprins";
+            path = "/tmp/sock_cage";
         }
 
         //printf("path:%s\n", path);

@@ -39,9 +39,44 @@
 // --------------------------------------------------------------------
 
 
-#ifdef __MACH__
 // NSData -------------------------------------------------------------
-@interface NSData(exDigest)
+@interface NSData (explist)
++ (id)dataWithPlist:(NSString*)file;
+@end
+
+@implementation NSData(explist)
++ (id)dataWithPlist:(NSString*)file
+{
+    id plist = nil;
+    NSString* error = nil;
+    NSPropertyListFormat format = NSPropertyListXMLFormat_v1_0;
+    @try {
+        NSData* file_data = [NSData dataWithContentsOfFile:file];
+        if (file_data == nil) return nil;
+
+        if  ([NSPropertyListSerialization
+                             propertyList:file_data isValidForFormat:format])
+        { 
+            plist = [NSPropertyListSerialization
+                            propertyListFromData:file_data
+                                mutabilityOption:NSPropertyListImmutable
+                                          format:&format
+                                errorDescription:&error];
+        }
+        if (error != nil) {
+            [error autorelease];
+            plist = nil;
+        }
+    }
+    @catch (id err) {
+    }
+    //NSLog(@"%@\n", plist);
+    return plist;
+}
+@end
+
+#ifdef __MACH__
+@interface NSData (exDigest)
 - (NSData*)sha1Digest;
 - (NSData*)md5Digest;
 - (NSString*)hexString;

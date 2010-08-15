@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>run_directory</key>         <string>/tmp/raprins/</string>
+    <key>cage_internal_connect</key> <string>sock_cage</string>
+    <key>cage_external_port</key>    <string>12000</string>
+    <key>cage_seed_host</key>             <string>razgriz.jaist.ac.jp</string>
+    <key>cage_seed_port</key>             <string>12000</string>
+    <key>local_db</key>
+    <dict>
+        <!--
+        <key>NAME.p2p</key>    <string>IP:PORT:L4PROTOCOL</string>
+        -->
+        <key>github.p2p</key>      <string>207.97.227.239:NULL:NULL</string>
+        <key>http:github.p2p</key> <string>207.97.227.239:80:TCP</string>
+        <key>google.p2p</key>      <string>66.249.89.104:NULL:NULL</string>
+        <key>www.google.p2p</key>  <string>66.249.89.104:80:TCP</string>
+    </dict>
+</dict>
+</plist>

@@ -30,6 +30,18 @@ enum retFlag { success, fail };
 #define ITERATE(element, enumerator)    \
 id element;                             \
 while (element = [enumerator nextObject])
+/*
+ * using reference of ITERATE MACRO...
+NSArray* line_array = nil;
+NSEnumerator* line_enum = nil;
+line_array = [(NSString*)file componentsSeparatedByString:@"\n"];
+line_enum =  [line_array objectEnumerator];
+ITERATE(line_element, line_enum) {
+    if ([line_element characterAtIndex:0] == '#') {
+        continue;
+    }
+}
+*/
 #endif
 
 #ifdef __MACH__

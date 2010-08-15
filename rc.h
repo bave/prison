@@ -1,3 +1,6 @@
+#ifndef __RAPRINS_CONFIG_H_
+#define __RAPRINS_CONFIG_H_
+
 #import <Cocoa/Cocoa.h>
 
 #include "utils.h"
@@ -7,16 +10,25 @@
 @interface RaprinsConfig : NSObject
 {
     NSString* rcPath;
-    NSString* rcRun;
-    NSString* rcSock;
-    NSString* rcCagePID;
-    NSString* rcRaprinsPID;
-    NSString* rcLocalDB;
+    NSString* rcRunDir;
+    NSString* rcInternal;
+    NSString* rcExternal;
+    NSString* rcSeedHost;
+    NSString* rcSeedPort;
+    NSDictionary* rcLocalDB;
 }
 
 - (id)init;
 - (id)initWithConf:(NSString*)path;
 - (void)dealloc;
+
+- (NSString*)getPath;
+- (NSString*)getRunDir;
+- (NSString*)getInternal;
+- (NSString*)getExternal;
+- (NSString*)getSeedHost;
+- (NSString*)getSeedPort;
+- (NSDictionary*)getLocalDB;
 
 - (bool)_loadConfig;
 
@@ -32,7 +44,7 @@
         // --------------
         // initial coding
         // --------------
-        rcPath = @"raprins.conf";
+        rcPath = @"rc.plist";
         if ([self _loadConfig] == false) {
             [self dealloc];
             return nil;
@@ -46,7 +58,7 @@
     self = [super init];
     if(self != nil) {
         if (path == nil) {
-            rcPath = @"raprins.conf";
+            rcPath = @"rc.plist";
             if ([self _loadConfig] == false) {
                 [self dealloc];
                 return nil;
@@ -64,45 +76,93 @@
 
 - (bool)_loadConfig
 {
-    NSString* file = nil;
-    file = [[NSString stringWithFile:rcPath] retain];
-    if (file == nil) {
-        return false;
-    }
+    int ret = false;
+    id plist = [NSData dataWithPlist:rcPath];
+    if (plist != nil) ret = true;
 
-    NSArray* line_array = nil;
-    line_array = [file componentsSeparatedByString:@"\n"];
-
-    NSEnumerator* line_enum = nil;
-    line_enum = [line_array objectEnumerator];
-
-    ITERATE(line_element, line_enum) {
-        if ([line_element characterAtIndex:0] == '#') {
-            continue;
-        }
-
-        NSComparisonResult compResult;
-        compResult = [line_element compare:@"run_directory"
-                                   options:NSCaseInsensitiveSearch
-                                     range:NSMakeRange(0,[@"run_directory" length])];
-
-        compResult = [line_element compare:@"local_connect"
-                                   options:NSCaseInsensitiveSearch
-                                     range:NSMakeRange(0,[@"local_connect" length])];
-
-        NSLog(@"%@\n", line_element);
+    if (ret == true) {
+        rcRunDir = [plist objectForKey:@"run_directory"];
+        if (rcRunDir == nil) ret = false;
     }
     
+    if (ret == true) {
+        rcInternal = [plist objectForKey:@"cage_internal_connect"];
+        if (rcInternal == nil) ret = false;
+    }
 
-    return true;
+    if (ret == true) {
+        rcExternal = [plist objectForKey:@"cage_external_port"];
+        if (rcExternal == nil) ret = false;
+    }
+
+    if (ret == true) {
+        rcSeedHost = [plist objectForKey:@"cage_seed_host"];
+        if (rcSeedHost == nil) ret = false;
+    }
+
+    if (ret == true) {
+        rcSeedPort = [plist objectForKey:@"cage_seed_port"];
+        if (rcSeedPort == nil) ret = false;
+    }
+
+    if (ret == true) {
+        rcLocalDB  = [plist objectForKey:@"local_db"];
+        if (rcLocalDB == nil) ret = false;
+    }
+
+    return ret;
 }
 
 - (void)dealloc {
     // --------------
     // release coding
     // --------------
+    [rcPath     release];
+    [rcRunDir   release];
+    [rcInternal release];
+    [rcExternal release];
+    [rcSeedHost release];
+    [rcSeedPort release];
+    [rcLocalDB  release];
     [super dealloc];
     return;
 }
 
+- (NSString*)getPath
+{
+    return rcPath;
+}
+
+- (NSString*)getRunDir;
+{
+    return rcRunDir;
+}
+
+- (NSString*)getInternal;
+{
+    return rcInternal;
+}
+
+- (NSString*)getExternal;
+{
+    return rcExternal;
+}
+
+- (NSString*)getSeedHost;
+{
+    return rcSeedHost;
+}
+
+- (NSString*)getSeedPort;
+{
+    return rcSeedPort;
+}
+
+- (NSDictionary*)getLocalDB;
+{
+    return rcLocalDB;
+}
+
 @end
+
+#endif //__RAPRINS_CONFIG_H_

@@ -13,7 +13,7 @@
         <key>NAME.p2p</key>    <string>IP:PORT:L4PROTOCOL</string>
         -->
         <key>github.p2p</key>      <string>207.97.227.239:NULL:NULL</string>
-        <key>http:github.p2p</key> <string>207.97.227.239:80:TCP</string>
+        <key>http.github.p2p</key> <string>207.97.227.239:80:TCP</string>
         <key>google.p2p</key>      <string>66.249.89.104:NULL:NULL</string>
         <key>www.google.p2p</key>  <string>66.249.89.104:80:TCP</string>
     </dict>

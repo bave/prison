@@ -15,11 +15,13 @@ CFLAGS+= -I/opt/local/include -lgpgme -lgpg-error
 # for utils.h and name.h
 CFLAGS+= -lresolv -lstdc++
 
-all:raprins
+all: caged raprins
 
 raprins:
 	$(MAKE) -C ds
 	${CC} ${CFLAGS} -o bin/raprins main.m
+
+caged:
 	$(MAKE) -C cage
 
 .PHONY: clean

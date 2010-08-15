@@ -13,13 +13,12 @@
 #include <netinet/tcp.h>
 
 // local includer
-//#include "rc.h"
+#include "rc.h"
 #include "fw.h"
 #include "op.h"
 #include "obs.h"
 #include "mgmt.h"
 
-//#include "JSON/JSON.h"
 //#include "name.h"
 //#include "pbuf.h"
 
@@ -32,7 +31,7 @@ NSLock*   extLock;
 FWHooker*      fw;
 Observer*     obs;
 Manager*     mgmt;
-//RaprinsConfig* rc;
+RaprinsConfig* rc;
 
 extern char *optarg;
 extern int optind;
@@ -81,18 +80,26 @@ int main(int argc, char** argv)
     if (config_path == nil) {
         config_path = @"./rc.plist";
     }
+    
+    rc = [[RaprinsConfig alloc] initWithConf:config_path];
+    if (rc == nil) {
+        usage(argv[0]);
+        exit_action("[RaprincConfig init]");
+    }
 
     if (is_daemon) {
         if ((pid = fork()) < 0) {
+            //NSLog(@"cant fork");
             return -1;
-        } else {
+        } else if (pid != 0){
+            //NSLog(@"parent process!!");
             exit(0);
         }
+        //NSLog(@"forked process!!");
         setsid();
-        chdir("/");
+        chdir("/tmp");
         umask(0);
     }
-
 
     //XXX change to reload and restart programing.... at SIGHUP
     if (SIG_ERR == signal(SIGHUP, sig_action)) exit_signal("SIGHUP");

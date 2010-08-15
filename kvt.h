@@ -8,13 +8,14 @@
 
 #include "gpg.h"
 
-//extern RaprinsConfig* rc;
+extern RaprinsConfig* rc;
 
 @interface keyValueTable : NSObject
 { 
     GPGME* gpg;
     NSString* kvtPath;
     NSMutableDictionary* kvtDict;
+    NSMutableDictionary* kvtLocalDB;
 }
 
 // public function
@@ -43,7 +44,8 @@
 
 - (void)_debug_dict
 {
-    NSLog(@"%@",kvtDict);
+    //NSLog(@"%@",kvtDict);
+    NSLog(@"%@",kvtLocalDB);
     return;
 }
 
@@ -55,9 +57,25 @@
         // --------------
         //gpg = [GMEME initWithDir:[rc gpgmePath]]
         kvtPath = nil;
-        kvtDict = [NSMutableDictionary new];
+        kvtDict    = [NSMutableDictionary new];
+        kvtLocalDB = [[NSMutableDictionary alloc] init];
     }
     return self;
+}
+
+- (bool)setLocalDB:(NSDictionary*)db
+{
+    if (db == nil) return false;
+
+    [kvtLocalDB removeAllObjects];
+    NSEnumerator* key_enum;
+    key_enum = [db keyEnumerator];
+    ITERATE(key_element, key_enum) {
+        [kvtLocalDB setObject:[db objectForKey:key_element] forKey:key_element]; 
+    }
+    NSLog(@"\n%@\n", kvtLocalDB);
+
+    return true;
 }
 
 - (bool)setPath:(NSString*)path
@@ -93,7 +111,9 @@
 
 - (NSString*)ip4key:(NSString*)key
 {
-    NSString* value = [kvtDict valueForKey:key];
+    NSString* value;
+    //value = [kvtDict valueForKey:key];
+    value = [kvtLocalDB valueForKey:key];
     if (value == nil) {
         return nil;
     }
@@ -106,7 +126,8 @@
 {
     NSString* port;
     NSString* value;
-    value = [kvtDict valueForKey:key];
+    //value = [kvtDict valueForKey:key];
+    value = [kvtLocalDB valueForKey:key];
     if (value == nil) {
         return nil;
     }
@@ -119,7 +140,8 @@
 
 - (NSString*)value4key:(NSString*)key
 {
-    return [kvtDict valueForKey:key];
+    //return [kvtDict valueForKey:key];
+    return [kvtLocalDB valueForKey:key];
 }
 
 - (void)dealloc {
@@ -128,6 +150,7 @@
     // --------------
     [kvtPath release];
     [kvtDict release];
+    [kvtLocalDB release];
     [super dealloc];
     return;
 }

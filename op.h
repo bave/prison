@@ -210,7 +210,7 @@ extern Observer*   obs;
 
 
             if (type == 1) {
-                // make rapirins-nameDB --------------------------------------------
+                // make raprins-nameDB ---------------------------------------------
                 NSString* lip;
                 lip = [mgmt getFQDN2LIP:fqdn];
                 if (lip == nil) {

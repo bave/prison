@@ -39,6 +39,7 @@ extern NSLock* extLock;
 extern Manager*   mgmt;
 extern FWHooker*    fw;
 extern Observer*   obs;
+extern bool is_verbose;
 
 @interface Operation : NSOperation {
     // if you need set argument
@@ -179,7 +180,9 @@ extern Observer*   obs;
 
         // ネーム空間の分割判定
         fqdn_array = array_split(fqdn, @".");
-        NSLog(@"%@", fqdn_array);
+        if (is_verbose) {
+            NSLog(@"%@", fqdn_array);
+        }
 
 
         if ([[fqdn_array lastObject] isEqualToString:@"p2p"]) {
@@ -589,18 +592,24 @@ extern Observer*   obs;
                 uint8_t PPFlags;
                 PPFlags = [mgmt getPPFlagsWithProtocol:protocol
                                                SrcPort:srcPort];
+
                 if (PPFlags == PPFLAG_ERROR) {
-                    NSLog(@"%d: false:getPPFlags", __LINE__);
+                    if (is_verbose) {
+                        NSLog(@"%d: false:getPPFlags", __LINE__);
+                    }
                 }
 
                 uint8_t condFlag;
                 condFlag = PPFLAG_ME2L_FIN | PPFLAG_EXT2ME_FIN;
                 if ((PPFlags & condFlag) == condFlag) {
+
                     [mgmt delPortPairWithProtocol:protocol
                                           SrcPort:srcPort];
+
                     [mgmt delFID2PPWithProtocol:protocol
                                         SrcPort:srcPort
                                             FID:fid];
+
                     //NSLog(@"ext2me last ack");
                 }
             }
@@ -718,10 +727,13 @@ extern Observer*   obs;
         }
 
         if (flag) {
-            NSLog(@"cahge-log");
-            NSLog(@"default-Router:%@\n", rt);
-            NSLog(@"default-IPaddr:%@\n", ip);
+            if (is_verbose) {
+                NSLog(@"change-log");
+                NSLog(@"default-Router:%@\n", rt);
+                NSLog(@"default-IPaddr:%@\n", ip);
+            }
             /*
+            // XXX
             // DHT の情報を更新するための通知を行う(予定)
             // send notification
             [[NSNotificationCenter defaultCenter]

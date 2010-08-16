@@ -41,7 +41,7 @@ extern RaprinsConfig* rc;
 - (id)init; 
 - (void)dealloc;
 
-- (bool)setPath:(NSString*)path;
+//- (bool)setPath:(NSString*)path;
 - (bool)delFIDINFO:(NSNumber*)fid;
 
 - (bool)setFQDN:(NSString*)fqdn;
@@ -244,7 +244,7 @@ extern RaprinsConfig* rc;
         filter_id = 0;
         local_id  = 1;
         kvt = [keyValueTable new];
-        [kvt setPath:@"./data.conf"];
+        //[kvt setPath:@"./data.conf"];
         [kvt setLocalDB:[rc getLocalDB]];
         mgmtLock = [NSLock new];
         mgmtDictFIDDate    = [NSMutableDictionary new];
@@ -265,10 +265,12 @@ extern RaprinsConfig* rc;
 }       
 
 
+/*
 - (bool)setPath:(NSString*)path
 {
     return [kvt setPath:path];
 }
+*/
 
 
 - (NSString*)_generate_fqdn2ip
@@ -674,6 +676,7 @@ extern RaprinsConfig* rc;
         //NSLog(@"check : %d", __LINE__);
         [mgmtDictPortPair removeObjectForKey:nsProtoPort];
         [mgmtDictPPIdle   removeObjectForKey:nsProtoPort];
+        // XXX PPIdle のゴミ掃除が必要、、wget すると残る．．???
         [mgmtLock unlock];
         [self _delPPFlagsWithProtocol:protocol SrcPort:srcPort];
         return true;
@@ -928,7 +931,7 @@ extern RaprinsConfig* rc;
     [mgmtDictFID2LIP  release];
     [mgmtDictFIDDate  release];
     [mgmtDictFIDIdle  release];
-    [mgmtDictPPIdle    release];
+    [mgmtDictPPIdle   release];
     //[mgmtDictFIDCounter release];
     [mgmtLock release];
     [super dealloc];

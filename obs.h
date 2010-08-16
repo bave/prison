@@ -28,21 +28,22 @@ extern NSLock* extLock;
 
 - (id)init;
 - (void)dealloc;
-- (void)test:(NSNotification*)notif;
+- (void)test:(NSNotification*)notify;
 
 // make ipfw divert filter
-- (bool)obsFW:(NSNotification*)notif;
+- (bool)obsFW:(NSNotification*)notify;
 - (bool)setFwParam:(struct _fw_param*)param;
 
-// make operation thread
-- (void)obsOP:(NSNotification*)notif;
+// make operation thread - not implementation
+- (void)obsOP:(NSNotification*)notify;
 - (void)setOpParam:(struct _op_param*)param;
 
-- (void)obsDS:(NSNotification*)notif;
+// call flushcachce...
+- (void)obsDS:(NSNotification*)notify;
 
 // close session
-- (void)obsFWT:(NSNotification*)notif;
-- (void)obsPPT:(NSNotification*)notif;
+- (void)obsFWT:(NSNotification*)notify;
+- (void)obsPPT:(NSNotification*)notify;
 
 @end
 
@@ -69,8 +70,7 @@ extern NSLock* extLock;
 }
 
 
-
-- (void)test:(NSNotification*)notif
+- (void)test:(NSNotification*)notify
 {
     //NSLog(@"%d\n", __LINE__); 
     printf("sel1 was called by main loop\n");
@@ -89,7 +89,7 @@ extern NSLock* extLock;
     return true;
 }
 
-- (bool)obsFW:(NSNotification*)notif
+- (bool)obsFW:(NSNotification*)notify
 {
     [fwLock lock];
     @try {
@@ -115,27 +115,28 @@ extern NSLock* extLock;
     return;
 }
 
-- (void)obsOP:(NSNotification*)notif
+- (void)obsOP:(NSNotification*)notify
 {
     return;
 }
 
-- (void)obsDS:(NSNotification*)notif
+- (void)obsDS:(NSNotification*)notify
 {
     flushcache();
     return;
 }
 
 
-- (void)obsFWT:(NSNotification*)notif
+// FWT : fire wall table
+- (void)obsFWT:(NSNotification*)notify
 {
     [extLock lock];
     //NSLog(@"chekc : %d", __LINE__);
     uint16_t port;
     uint16_t protocol;
     NSArray* array_i;
-    // notif object is timeout filter number array list
-    array_i = [notif object];
+    // notify object is timeout filter number array list
+    array_i = [notify object];
     NSEnumerator* enumerate_i;
     enumerate_i = [array_i objectEnumerator];
     for (id obj in enumerate_i) {
@@ -163,14 +164,14 @@ extern NSLock* extLock;
 }
 
 
-- (void)obsPPT:(NSNotification*)notif
+- (void)obsPPT:(NSNotification*)notify
 {
     [extLock lock];
     uint16_t port;
     uint16_t protocol;
     NSArray* array;
     // notif object is timeout filter number array list
-    array = [notif object];
+    array = [notify object];
     NSEnumerator* enumerate;
     enumerate = [array objectEnumerator];
     for (id obj in enumerate) {

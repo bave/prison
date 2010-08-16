@@ -8,7 +8,7 @@ jail
 JAIST A... i... l...
 
 using library
-    libcage
+    libcage - branch of uniqe
     libevent
     libresolv
     libgpgme

@@ -325,14 +325,14 @@ start_listen(const char* path)
         int sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
         if (sock_fd == -1) { 
             err = errno;
-            perror("socket");
+            //perror("socket");
         } 
         if (err == 0) {
             err = setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR,
                                                 (char*)&on, sizeof(on));
             if (err != 0) {
                 err = errno;
-                perror("setsockopt");
+                //perror("setsockopt");
             }
         }
 
@@ -341,7 +341,7 @@ start_listen(const char* path)
             if (err != 0) {
                 err = errno;
                 close(sock_fd);
-                perror("bind_safe");
+                //perror("bind_safe");
                 return false;
             }
         }
@@ -349,7 +349,7 @@ start_listen(const char* path)
             if (listen(sock_fd, 10) < 0) {
                     close(sock_fd);
                     err = errno;
-                    perror("listen");
+                    //perror("listen");
                     return false;
             }
         }

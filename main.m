@@ -18,6 +18,7 @@
 #include "op.h"
 #include "obs.h"
 #include "mgmt.h"
+#include "timer.h"
 
 //#include "name.h"
 //#include "pbuf.h"
@@ -32,6 +33,7 @@ FWHooker*      fw;
 Observer*     obs;
 Manager*     mgmt;
 RaprinsConfig* rc;
+bool is_verbose;
 
 extern char *optarg;
 extern int optind;
@@ -52,11 +54,12 @@ int main(int argc, char** argv)
 
     // initialize declaration
     id pool = [[NSAutoreleasePool alloc] init];
+    [NSApplication sharedApplication];
 
     int opt;
     pid_t pid;
     NSString* config_path = nil;
-    bool is_varbose = false;
+    is_verbose = false;
     bool is_daemon  = false;
 
     while ((opt = getopt(argc, argv, "vdhf:")) != -1) {
@@ -66,7 +69,7 @@ int main(int argc, char** argv)
                 return 0;
             case 'v':
                 // for run_loop of [mgmt test] 
-                is_varbose = true;
+                is_verbose = true;
                 break;
             case 'd':
                 is_daemon  = true;
@@ -108,8 +111,16 @@ int main(int argc, char** argv)
     if (SIG_ERR == signal(SIGTERM, sig_action)) exit_signal("SIGTERM");
 
     // initialize Class -------------------------------------------------------
-    mgmt = [Manager new];
-    extLock = [NSLock new];
+    @try {
+        mgmt = [Manager new];
+        extLock = [NSLock new];
+            
+    }
+    @catch (id err) {
+        NSString* err_str;
+        err_str = [NSString stringWithFormat:@"%@%@\n", @"init error: ", err];
+        exit_action([err_str UTF8String]);
+    }
     // ------------------------------------------------------------------------
 
     @try {
@@ -287,7 +298,6 @@ int main(int argc, char** argv)
         object:nil
     ];
 
-
     // post notificaiton message
     // flushcache
     [[NSNotificationCenter defaultCenter]
@@ -296,6 +306,20 @@ int main(int argc, char** argv)
     ];
 
 
+
+    // - event loop ------------------------------------------
+    Timer* t = [Timer new];
+
+    if (is_verbose) {
+        [t setVerboseTimer:5];
+    }
+    [t setIdieTimer:5];
+    [t setPerTimer:5];
+
+    [NSApp run];
+    // -------------------------------------------------------
+ 
+    /*
     for (;;) {
         id loop_pool = [NSAutoreleasePool new];
 
@@ -317,7 +341,7 @@ int main(int argc, char** argv)
             ];
         }
 
-        if (is_varbose) {
+        if (is_verbose) {
             [mgmt test];
         }
 
@@ -325,6 +349,7 @@ int main(int argc, char** argv)
 
         [loop_pool drain];
     }
+    */
 
     [fw delAllRule];
     close(divertNAME);

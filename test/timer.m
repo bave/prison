@@ -4,18 +4,27 @@
 
 
 @interface myObject : NSObject {
-    id mainThread;
     NSTimer* timer;
     int count;
 }
 - (id)init;
 - (void)dealloc;
 - (void)action:(NSTimer*)t;
-- (void)setMainThread:(id)sender;
+- (void)setTimer;
 @end
 
 @implementation myObject
 
+- (void)setTimer
+{
+    timer = [NSTimer
+                scheduledTimerWithTimeInterval:1
+                target:self
+                selector:@selector(action:)
+                userInfo:nil
+                repeats:YES];
+    return;
+}
 
 
 - (id)init {
@@ -24,15 +33,6 @@
         // --------------
         // initial coding
         // --------------
-        timer = [[NSTimer
-                    scheduledTimerWithTimeInterval:1
-                    target:self
-                    selector:@selector(action:)
-                    userInfo:nil
-                    repeats:YES]
-                  retain
-                ];
-
     }
     return self;
 }
@@ -52,13 +52,8 @@
     count++;
     NSLog(@"%d\n", count);
     if (count==5) {
-        [NSApp terminate:mainThread];
+        [NSApp terminate:NSApp];
     }
-    return;
-}
-
-- (void)setMainThread:(id)sender {
-    mainThread = sender; 
     return;
 }
 
@@ -68,14 +63,9 @@ int main(int argc, const char **argv)
 {
     id pool = [NSAutoreleasePool new];
     [NSApplication sharedApplication];
-
-    if([NSBundle loadNibNamed:nil owner:NSApp]) {
-        id m = [myObject new];
-        [m setMainThread:NSApp];
-        //[NSApp setDelegate:];
-        [NSApp run];
-    }
-
+    id m = [myObject new];
+    [m setTimer];
+    [NSApp run];
     [pool drain];
     return 0;
     //return NSApplicationMain(argc, argv);

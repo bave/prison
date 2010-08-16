@@ -1,7 +1,7 @@
 #ifndef __RAPRINS_COMMON_H_
 #define __RAPRINS_COMMON_H_
 
-#define FW_PROGRAM_NAME     "raprins"  // cant cahnge
+#define FW_PROGRAM_NAME     "raprins"  // cant change
 #define FW_ANY_ADDRESS      "0.0.0.0"  // cant change
 #define FW_BIAS_RULE_NUMBER 50         // start ipfw rule number
 #define FW_UPPER_LIMIT      50         // it can be make upper limit of ipfw filters

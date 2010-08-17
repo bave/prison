@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_TIMER_H_
-#define __RAPRINS_TIMER_H_
+#ifndef __PRISON_TIMER_H_
+#define __PRISON_TIMER_H_
 
 #import <Cocoa/Cocoa.h>
 

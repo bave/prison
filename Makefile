@@ -15,11 +15,11 @@ CFLAGS+= -I/opt/local/include -lgpgme -lgpg-error
 # for utils.h and name.h
 CFLAGS+= -lresolv -lstdc++
 
-all: caged raprins
+all: caged prison
 
-raprins:
+prison:
 	$(MAKE) -C ds
-	${CC} ${CFLAGS} -o bin/raprins main.m
+	${CC} ${CFLAGS} -o bin/prison main.m
 
 caged:
 	$(MAKE) -C cage
@@ -28,8 +28,8 @@ caged:
 clean: clean_ds clean_current
 
 clean_current:
-	rm ./bin/raprins &
-	rm -rf ./bin/raprins.dSYM &
+	rm ./bin/prison &
+	rm -rf ./bin/prison.dSYM &
 
 clean_ds:
 	$(MAKE) -C ds clean

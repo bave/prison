@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_NAME_H_
-#define __RAPRINS_NAME_H_
+#ifndef __PRISON_NAME_H_
+#define __PRISON_NAME_H_
 
 /*
  * Copyright (C) 2009, t-inoue@jaist.ac.jp

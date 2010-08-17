@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_RT_H_
-#define __RAPRINS_RT_H_
+#ifndef __PRISON_RT_H_
+#define __PRISON_RT_H_
 
 #import  <Cocoa/Cocoa.h>
 
@@ -974,4 +974,4 @@ struct _eth {
 
 @end //implementation
 
-#endif //__RAPRINS_RT_H_
+#endif //__PRISON_RT_H_

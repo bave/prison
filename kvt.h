@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_KVT_H_
-#define __RAPRINS_KVT_H_
+#ifndef __PRISON_KVT_H_
+#define __PRISON_KVT_H_
 
 #import <Cocoa/Cocoa.h>
 #include "category.h"
@@ -8,7 +8,7 @@
 
 #include "gpg.h"
 
-extern RaprinsConfig* rc;
+extern ResourceConfig* rc;
 
 @interface keyValueTable : NSObject
 { 
@@ -192,6 +192,14 @@ extern RaprinsConfig* rc;
         [kvtTask setStandardError:task_pipe];
         [kvtTask setArguments:args];
         [kvtTask launch];
+
+        if([kvtTask isRunning]) {
+            //@throw @"cant launch cage. maybe mistake path??";
+        } else {
+            NSLog(@"mistake!!\n");
+            @throw @"cant launch cage. maybe mistake path??";
+        }
+
 
 
         [[NSNotificationCenter defaultCenter]

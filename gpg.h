@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_GPGME_H_
-#define __RAPRINS_GPGME_H_
+#ifndef __PRISON_GPGME_H_
+#define __PRISON_GPGME_H_
 
 /*
  * todo
@@ -1694,7 +1694,7 @@ static gpgme_error_t _passwd_cb(void* object,
             mail,
             passwd,
             "0",
-            "RaprinsKey");
+            "PrisonKey");
             //[pubring UTF8String],
             //[secring UTF8String]);
 
@@ -2926,4 +2926,4 @@ static gpgme_error_t _passwd_cb(void* object,
 
 @end
 
-#endif //__RAPRINS_GPGME_H_
+#endif //__PRISON_GPGME_H_

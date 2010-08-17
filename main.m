@@ -32,7 +32,7 @@ NSLock*   extLock;
 FWHooker*      fw;
 Observer*     obs;
 Manager*     mgmt;
-RaprinsConfig* rc;
+ResourceConfig* rc;
 bool is_verbose;
 
 extern char *optarg;
@@ -84,11 +84,19 @@ int main(int argc, char** argv)
         config_path = @"./rc.plist";
     }
     
-    rc = [[RaprinsConfig alloc] initWithConf:config_path];
+    rc = [[ResourceConfig alloc] initWithConf:config_path];
     if (rc == nil) {
         usage(argv[0]);
         exit_action("[RaprincConfig init]");
     }
+
+    //XXX change to reload and restart programing.... at SIGHUP
+    if (SIG_ERR == signal(SIGHUP, sig_action)) exit_signal("SIGHUP");
+    if (SIG_ERR == signal(SIGCHLD, SIG_IGN)) exit_signal("SIGCHLD");
+    if (SIG_ERR == signal(SIGPIPE, SIG_IGN)) exit_signal("SIGPIPE");
+    if (SIG_ERR == signal(SIGINT, sig_action)) exit_signal("SIGINT");
+    if (SIG_ERR == signal(SIGTERM, sig_action)) exit_signal("SIGTERM");
+
 
     if (is_daemon) {
         if ((pid = fork()) < 0) {
@@ -97,18 +105,46 @@ int main(int argc, char** argv)
         } else if (pid != 0){
             //NSLog(@"parent process!!");
             exit(0);
-        }
-        //NSLog(@"forked process!!");
-        setsid();
-        chdir("/tmp");
-        umask(0);
-    }
+        } else {
+            //NSLog(@"forked process!!");
+            setsid();
+            chdir([currentdir() UTF8String]);
+            //chdir("/tmp");
 
-    //XXX change to reload and restart programing.... at SIGHUP
-    if (SIG_ERR == signal(SIGHUP, sig_action)) exit_signal("SIGHUP");
-    if (SIG_ERR == signal(SIGPIPE, SIG_IGN)) exit_signal("SIGPIPE");
-    if (SIG_ERR == signal(SIGINT, sig_action)) exit_signal("SIGINT");
-    if (SIG_ERR == signal(SIGTERM, sig_action)) exit_signal("SIGTERM");
+            char* arg0 = (char*)argv[0];
+            char* arg1 = NULL;
+            char* arg2 = NULL;
+            char* args[4];
+            bool is_break = false;
+
+            int i;
+            for (i=1; i<=argc; i++) {
+                if (strcmp(argv[i], "-f") == 0) {
+                    arg1 = (char*)argv[i];
+                    arg2 = (char*)argv[i+1];
+                    is_break = true;
+                    break;
+                }
+            }
+
+            if (is_break) {
+                args[0] = arg0;
+                args[1] = arg1;
+                args[2] = arg2;
+                args[3] = (char*)NULL;
+            } else {
+                args[0] = arg0;
+                args[1] = (char*)NULL;
+                args[2] = (char*)NULL;
+                args[3] = (char*)NULL;
+            }
+
+            umask(0);
+            execvp(arg0, args);
+            fprintf(stderr, "child error!!\n");
+            return -1;
+        }
+    }
 
     // initialize Class -------------------------------------------------------
     @try {

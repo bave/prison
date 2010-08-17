@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_CONFIG_H_
-#define __RAPRINS_CONFIG_H_
+#ifndef __PRISON_CONFIG_H_
+#define __PRISON_CONFIG_H_
 
 #import <Cocoa/Cocoa.h>
 
@@ -7,7 +7,7 @@
 #include "common.h"
 #include "category.h"
 
-@interface RaprinsConfig : NSObject
+@interface ResourceConfig : NSObject
 {
     NSString* rcPath;
     NSString* rcRunDir;
@@ -35,7 +35,7 @@
 @end
 
 
-@implementation RaprinsConfig
+@implementation ResourceConfig
 
 - (id)init
 {
@@ -165,4 +165,4 @@
 
 @end
 
-#endif //__RAPRINS_CONFIG_H_
+#endif //__PRISON_CONFIG_H_

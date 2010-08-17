@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_MGMT_H_
-#define __RAPRINS_MGMT_H_
+#ifndef __PRISON_MGMT_H_
+#define __PRISON_MGMT_H_
 
 #import <Cocoa/Cocoa.h>
 
@@ -13,7 +13,7 @@
 
 #include "fw.h"
 extern FWHooker* fw;
-extern RaprinsConfig* rc;
+extern ResourceConfig* rc;
 
 
 @interface Manager : NSObject

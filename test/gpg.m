@@ -65,7 +65,7 @@ int main()
                             :@"RSA"
                             :@"1024"
                             :@"test"
-                            :@"test@raprins"];
+                            :@"test@prison"];
 
             [gpg setPasswd:@"test"];
             NSLog(@"set_params\n");
@@ -98,7 +98,7 @@ int main()
         // all keyring
         //NSLog(@"all keyring \n%@\n", [gpg export:nil]);
         // user pubring
-        NSLog(@"export keyring\n%@\n", [gpg export:@"test@raprins"]);
+        NSLog(@"export keyring\n%@\n", [gpg export:@"test@prison"]);
     }
     @catch (id e) {
         NSLog(@"%@\n", e);
@@ -123,7 +123,7 @@ int main()
 
     //encryptForce
     @try {
-        NSLog(@"force encrypt message\n%@\n", [gpg encryptForce:@"tetete" :@"hage@raprins"]);
+        NSLog(@"force encrypt message\n%@\n", [gpg encryptForce:@"tetete" :@"hage@prison"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -142,7 +142,7 @@ int main()
     // decrypt
     @try {
         NSLog(@"decrypt mesg\n%@\n\n",
-                [gpg decrypt:[gpg encrypt:@"tetete" :@"test@raprins"]]);
+                [gpg decrypt:[gpg encrypt:@"tetete" :@"test@prison"]]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -175,7 +175,7 @@ int main()
     // signkey
     @try {
         [gpg setPasswd:@"test"];
-        NSLog(@"sigkey:%d\n", [gpg signkey:@"hage@raprins"]);
+        NSLog(@"sigkey:%d\n", [gpg signkey:@"hage@prison"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -183,8 +183,8 @@ int main()
 
     // delsig
     @try {
-        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"hage@raprins"]);
-        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"test@raprins"]);
+        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@prison" :@"hage@prison"]);
+        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@prison" :@"test@prison"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -200,7 +200,7 @@ int main()
 
     // delkey
     @try {
-        NSLog(@"delkey:%d\n", [gpg delkey:@"hage@raprins"]);
+        NSLog(@"delkey:%d\n", [gpg delkey:@"hage@prison"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);

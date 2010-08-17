@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_PBUF_H_
-#define __RAPRINS_PBUF_H_
+#ifndef __PRISON_PBUF_H_
+#define __PRISON_PBUF_H_
 
 // a brief sketch if pbuf
 #import <Cocoa/Cocoa.h>

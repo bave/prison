@@ -5,10 +5,10 @@
 int main(int argc, char *argv[])
 {
     id pool = [NSAutoreleasePool new];
-    RaprinsConfig* rc;
+    ResourceConfig* rc;
 
-    //rc = [[RaprinsConfig alloc] init];
-    rc = [[RaprinsConfig alloc] initWithConf:@"../rc.plist"];
+    //rc = [[ResourceConfig alloc] init];
+    rc = [[ResourceConfig alloc] initWithConf:@"../rc.plist"];
 
     //NSLog(@"rc :%@\n", rc);
 

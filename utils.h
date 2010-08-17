@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_UTILS_H_
-#define __RAPRINS_UTILS_H_
+#ifndef __PRISON_UTILS_H_
+#define __PRISON_UTILS_H_
 
 #import <Cocoa/Cocoa.h>
 
@@ -393,4 +393,4 @@ void memdump(void *mem, int i)
 
 
 
-#endif // __RAPRINS_UTILS_H
+#endif // __PRISON_UTILS_H

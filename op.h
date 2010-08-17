@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_OP_H_
-#define __RAPRINS_OP_H_
+#ifndef __PRISON_OP_H_
+#define __PRISON_OP_H_
 
 #import <Cocoa/Cocoa.h>
 
@@ -213,7 +213,7 @@ extern bool is_verbose;
 
 
             if (type == 1) {
-                // make raprins-nameDB ---------------------------------------------
+                // make prison-nameDB ---------------------------------------------
                 NSString* lip;
                 lip = [mgmt getFQDN2LIP:fqdn];
                 if (lip == nil) {
@@ -808,4 +808,4 @@ int main(int argc, char** argv) {
     return 0;
 }
 */
-#endif //__RAPRINS_OP_H_
+#endif //__PRISON_OP_H_

@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_OBS_H_
-#define __RAPRINS_OBS_H_
+#ifndef __PRISON_OBS_H_
+#define __PRISON_OBS_H_
 
 #import <Cocoa/Cocoa.h>
 #import <servers/bootstrap.h>

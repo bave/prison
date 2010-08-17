@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>run_directory</key>         <string>/tmp/raprins/</string>
+    <key>run_directory</key>         <string>/tmp/prison/</string>
     <key>cage_internal_connect</key> <string>sock_cage</string>
     <key>cage_external_port</key>    <string>12000</string>
     <key>cage_seed_host</key>             <string>razgriz.jaist.ac.jp</string>

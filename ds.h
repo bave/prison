@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_DS_H_
-#define __RAPRINS_DS_H_
+#ifndef __PRISON_DS_H_
+#define __PRISON_DS_H_
 
 #import <servers/bootstrap.h>
 #include <string.h>

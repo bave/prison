@@ -1,5 +1,5 @@
-#ifndef __RAPRINS_CATEGORY_H_
-#define __RAPRINS_CATEGORY_H_
+#ifndef __PRISON_CATEGORY_H_
+#define __PRISON_CATEGORY_H_
 
 #ifdef __MACH__
 #import <Foundation/Foundation.h>

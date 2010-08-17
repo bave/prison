@@ -313,8 +313,8 @@ int main(int argc, char** argv)
     if (is_verbose) {
         [t setVerboseTimer:5];
     }
-    [t setIdieTimer:5];
-    [t setPerTimer:5];
+    [t setIdieTimer:-FW_IDLE_TIMEOUT];
+    [t setPerTimer:-PP_IDLE_TIMEOUT];
 
     [NSApp run];
     // -------------------------------------------------------

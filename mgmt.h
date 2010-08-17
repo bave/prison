@@ -192,7 +192,8 @@ extern RaprinsConfig* rc;
     NSEnumerator* enumerate;
     enumerate = [mgmtDictFIDIdle keyEnumerator];
     for (id key in enumerate) {
-        if ([[mgmtDictFIDIdle objectForKey:key] timeIntervalSinceNow] < FW_IDLE_TIMEOUT) {
+        if ([[mgmtDictFIDIdle objectForKey:key]
+                    timeIntervalSinceNow] < FW_IDLE_TIMEOUT) {
             [set addObject:key];
         }
     }
@@ -208,7 +209,8 @@ extern RaprinsConfig* rc;
     NSEnumerator* enumerate;
     enumerate = [mgmtDictPPIdle keyEnumerator];
     for (id key in enumerate) {
-        if ([[mgmtDictPPIdle objectForKey:key] timeIntervalSinceNow] < PP_IDLE_TIMEOUT) {
+        if ([[mgmtDictPPIdle objectForKey:key]
+                        timeIntervalSinceNow] < PP_IDLE_TIMEOUT) {
             [set addObject:key];
         }
     }
@@ -328,14 +330,16 @@ extern RaprinsConfig* rc;
     NSNumber* counter;
     counter = [mgmtDictFIDCounter objectForKey:fid];
     if (counter == nil) {
-        [mgmtDictFIDCounter setObject:[NSNumber numberWithUnsignedShort:0] forKey:fid];
+        [mgmtDictFIDCounter
+                setObject:[NSNumber numberWithUnsignedShort:0] forKey:fid];
     } else {
         // XXX この条件ブロックいらないかもしれない．．
         // XXX adjusting するときは初めて使われるため．．．
         uint16_t tcounter;
         tcounter = [counter unsignedShortValue];
         tcounter++;
-        [mgmtDictFIDCounter setObject:[NSNumber numberWithUnsignedShort:tcounter] forKey:fid];
+        [mgmtDictFIDCounter
+                setObject:[NSNumber numberWithUnsignedShort:tcounter] forKey:fid];
     }
     */
 
@@ -348,7 +352,6 @@ extern RaprinsConfig* rc;
     //NSLog(@"adjust:%@", fid);
     return fid;
 }
-
 
 - (uint16_t)_local_id_resolv
 {
@@ -672,11 +675,42 @@ extern RaprinsConfig* rc;
     NSNumber* nsProtoPort;
     nsProtoPort = [NSNumber numberWithUnsignedLong:ProtoPort];
 
-    if ([mgmtDictPortPair objectForKey:nsProtoPort] != nil) {
+    if ([mgmtDictPortPair objectForKey:nsProtoPort] != nil || 
+        [mgmtDictPPIdle   objectForKey:nsProtoPort] != nil)
+    {
         //NSLog(@"check : %d", __LINE__);
         [mgmtDictPortPair removeObjectForKey:nsProtoPort];
         [mgmtDictPPIdle   removeObjectForKey:nsProtoPort];
-        // XXX PPIdle のゴミ掃除が必要、、wget すると残る．．???
+
+
+        /*
+        unsigned int pp = [mgmtDictPortPair count];
+        unsigned int ppidle = [mgmtDictPPIdle count];
+        if (pp != ppidle) {
+            NSEnumerator* key_enum;
+            if (pp > ppidle) {
+                key_enum = [mgmtDictPortPair keyEnumerator];
+                ITERATE(element_pp, key_enum) {
+                    id content;
+                    content = [mgmtDictPPIdle objectForKey:element_pp];
+                    if (content == nil) {
+                        [mgmtDictPortPair removeObjectForKey:element_pp];
+                    }
+                }
+            }
+            if (ppidle > pp) {
+                key_enum = [mgmtDictPPIdle keyEnumerator];
+                ITERATE(element_ppidle, key_enum) {
+                    id content;
+                    content = [mgmtDictPortPair objectForKey:element_ppidle];
+                    if (content == nil) {
+                        [mgmtDictPPIdle removeObjectForKey:element_ppidle];
+                    }
+                }
+            }
+        }
+        */
+
         [mgmtLock unlock];
         [self _delPPFlagsWithProtocol:protocol SrcPort:srcPort];
         return true;

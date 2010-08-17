@@ -16,6 +16,10 @@
         <key>http.github.p2p</key> <string>207.97.227.239:80:TCP</string>
         <key>google.p2p</key>      <string>66.249.89.104:NULL:NULL</string>
         <key>www.google.p2p</key>  <string>66.249.89.104:80:TCP</string>
+        <key>aris.p2p</key>        <string>150.65.32.83:NULL:NULL</string>
+        <key>test0.aris.p2p</key>  <string>150.65.32.83:10000:TCP</string>
+        <key>test1.aris.p2p</key>  <string>150.65.32.83:10001:TCP</string>
+        <key>test2.aris.p2p</key>  <string>150.65.32.83:10002:TCP</string>
     </dict>
 </dict>
 </plist>

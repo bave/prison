@@ -126,7 +126,6 @@ extern NSLock* extLock;
     return;
 }
 
-
 // FWT : fire wall table
 - (void)obsFWT:(NSNotification*)notify
 {
@@ -163,7 +162,6 @@ extern NSLock* extLock;
     return;
 }
 
-
 - (void)obsPPT:(NSNotification*)notify
 {
     [extLock lock];
@@ -175,12 +173,21 @@ extern NSLock* extLock;
     NSEnumerator* enumerate;
     enumerate = [array objectEnumerator];
     for (id obj in enumerate) {
+
         uint32_t ProtoPort;
         ProtoPort = [obj unsignedIntValue];
+        //NSLog(@"ProtoPort:%u\n", ProtoPort);
+
         protocol = ((ProtoPort>>16)&0x0000FFFF);
         port = (ProtoPort&0x0000FFFF);
+
+        //NSLog(@"protocol:%u\n", protocol);
+        //NSLog(@"port:%u\n", port);
+        //NSLog(@"and:%u\n", (protocol<<16)|port);
+
         [mgmt delPortPairWithProtocol:protocol SrcPort:port];
         [mgmt delFID2PPWithProtocol:protocol SrcPort:port FID:nil];
+
     }
     [extLock unlock];
     return;

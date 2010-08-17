@@ -1,5 +1,5 @@
-#ifndef _RDTSC_H_
-#define _RDTSC_H_
+#ifndef __PRISON_RDTSC_H_
+#define __PRISON_RDTSC_H_
 
 #include <stdint.h>
 
@@ -37,4 +37,4 @@ inline uint64_t tsc(void)
     return __tsc;
 }
 
-#endif //_RDTSC_H_
+#endif //__PRISON_RDTSC_H_

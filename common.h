@@ -31,7 +31,8 @@
 #define PP_IDLE_TIMEOUT (-4)
 
 // reduce declaration
-#define SA   struct sockaddr
-#define SAIN struct sockaddr_in
+#define SA    struct sockaddr
+#define SAIN  struct sockaddr_in
+#define SAIN6 struct sockaddr_in6
 
 #endif

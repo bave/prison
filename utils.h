@@ -18,6 +18,8 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 
+#include "common.h"
+
 enum retFlag { success, fail };
 
 // Macro Code
@@ -76,9 +78,13 @@ const char* ip_ntoa(NSString* ns_str, NSData* ns_data);
 // transform address to numerical
 NSData* ip_aton(NSString* type, NSString* addr);
 
+// hostname to IPAddr(4&6) String
+NSString* getHost2Addr(NSString* type, NSString* hostname);
+
 
 // directory management
 NSString* currentdir(void);
+
 #ifdef __MACH__
 //bool mkdir(NSString* dir);
 #endif
@@ -90,6 +96,9 @@ bool memswap(void* s1, void* s2, size_t size);
 //compare
 // fcomp's flag is @"A.B.C.D." & @"B"
 bool fcomp(NSString* flags, NSString* flag);
+
+// for ipv4 code
+bool is_ip4addr(NSString*ip);
 bool ip4comp(NSString* addr1, NSString* addr2);
 
 // for ipv6 code
@@ -98,6 +107,7 @@ void fillscopeid(struct sockaddr_in6 *sin6);
 // now ipv4 only
 // 127.1.1.1 255.0.0.0 -> 127.0.0.0
 NSString* addrmask(NSString* addr, NSString* mask);
+
 
 // implementation --------------------------------------------------------------
 
@@ -141,6 +151,75 @@ NSString* currentdir(void)
     return path;
 }
 
+NSString* getHost2Addr(NSString* type, NSString* hostname)
+{
+    struct addrinfo hints, *res;
+
+
+    if ([type isEqualToString:@"IPv4"]) { 
+        struct in_addr addr;
+        int err;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_family = AF_INET;
+
+        if ((err = getaddrinfo([hostname UTF8String], NULL, &hints, &res)) != 0) {
+            //printf("error %d\n", err);
+            return nil;
+        }
+
+        memcpy(&addr, &((SAIN*)(res->ai_addr))->sin_addr, sizeof(addr));
+        freeaddrinfo(res);
+
+        //printf("ip address : %s\n", inet_ntoa(addr));
+
+        NSData* ns_addr;
+        ns_addr = [NSData dataWithBytes:&addr.s_addr length:sizeof(struct in_addr)];
+        return [NSString stringWithUTF8String:ip_ntoa(type, ns_addr)];
+    }
+    if ([type isEqualToString:@"IPv6"]) { 
+        struct in6_addr addr6;
+        int err;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_family = AF_INET6;
+
+        if ((err = getaddrinfo([hostname UTF8String], NULL, &hints, &res)) != 0) {
+            //printf("error %d\n", err);
+            return nil;
+        }
+
+        memcpy(&addr6, &((SAIN6*)(res->ai_addr))->sin6_addr, sizeof(addr6));
+        freeaddrinfo(res);
+
+        NSData* ns_addr;
+        ns_addr = [NSData dataWithBytes:&addr6.s6_addr length:sizeof(struct in6_addr)];
+        return [NSString stringWithUTF8String:ip_ntoa(type, ns_addr)];
+    }
+    return nil;
+}
+
+bool is_ip4addr(NSString*ip)
+{
+    NSString* segment   = @"([0-9]|[01]?[0-9][0-9]|2[0-4][0-9]|25[0-5])";
+    //NSString* separater = @"\\.";
+    NSString* regexp_ipaddr = [NSString stringWithFormat:@"%@.%@.%@.%@",
+                                                segment, segment, segment, segment];
+    NSPredicate* sep_regexp;
+    sep_regexp = [NSPredicate predicateWithFormat:@"SELF matches %@", regexp_ipaddr];
+
+    // reference http://userguide.icu-project.org/strings/regexp
+    // ^ : head
+    // $ : tail
+    // | : or
+    // [0-9]           :0-9
+    // [01]?[0-9][0-9] :00-199
+    // 2[0-4][0-9]     :200-249
+    // 25[0-5]         :250-255
+
+    //NSLog(@"%d", [sep_regexp evaluateWithObject:s]);
+    return [sep_regexp evaluateWithObject:ip];
+}
 
 bool ip4comp(NSString* addr1, NSString* addr2)
 {

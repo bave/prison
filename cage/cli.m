@@ -29,7 +29,8 @@ int main(int argc, char** argv)
 
     int err = 0;
     int on = 1;
-    int sock_fd = sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+    int sock_fd;
+    sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
     if (sock_fd == -1) { 
         err = errno;
         perror("socket");

@@ -2,10 +2,15 @@
 #define __PRISON_KVT_H_
 
 #import <Cocoa/Cocoa.h>
+
+#include <sys/socket.h>
+#include <sys/un.h>
+
+#include <string.h>
+
 #include "category.h"
 #include "utils.h"
 #include "common.h"
-
 #include "gpg.h"
 
 extern ResourceConfig* rc;
@@ -63,7 +68,7 @@ extern ResourceConfig* rc;
         // --------------
         // initial coding
         // --------------
-        //gpg = [GMEME initWithDir:[rc gpgmePath]]
+        gpg = [GMEME initWithDir:[rc getPurityPath]];
         //kvtPath = nil;
         //kvtDict    = [NSMutableDictionary new];
         kvtLocalDB = [[NSMutableDictionary alloc] init];
@@ -79,6 +84,7 @@ extern ResourceConfig* rc;
     }
     return self;
 }
+
 
 - (bool)setLocalDB:(NSDictionary*)db
 {
@@ -270,6 +276,76 @@ extern ResourceConfig* rc;
     }
     //[task_file readInBackgroundAndNotify];
     return;
+}
+
+- (bool)_init_connect_to_cage()
+{
+    int err = 0;
+    struct sockaddr_un conn_request;
+    memset(&conn_request, 0, sizeof(conn_request));
+
+    int cage_sock_fd;
+    cage_sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+    if (cage_sock_fd == -1) {
+        err = errno;
+        //perror("socket");
+    }
+
+    if (err == 0) {
+        #ifndef __linux__
+        conn_request.sun_len = sizeof(conn_request);
+        #endif
+        conn_request.sun_family = AF_LOCAL;
+        memcpy(conn_request.sun_path, [rc getInteral], [[rc getInternal] length]);
+    }
+
+    if (err == 0) {
+        err = connect(cage_sock_fd, (SA*)&conn_request, SUN_LEN(&conn_request));
+        if (err != 0) {
+            err = errno;
+            close(cage_sock_fd);
+        }
+    }
+
+    /*
+    // -------------------------------------------------------------------------------
+    // ---  cage intilalize message ---
+
+    if (err == 0)
+    {
+        buffer[65535];
+        memset(buffer, 0, sizeof(buffer));
+        NSString* init_message;
+
+        if ([ni isGlobal]) {
+            init_message = [NSString stringWithFormat:@"new,%@,%@,global",
+                                        [rc getHostname], [rc getExtarnal]];
+        } else {
+            init_message = [NSString stringWithFormat:@"new,%@,%@",
+                                        [rc getHostname], [rc getExtarnal]];
+        }
+
+        memcpy(buffer, [init_message UTF8String], [init_message length]);
+        err = send(cage_sock_fd, buffer, (socklen_t)sizeof(buffer), 0);
+        if (err == -1) {
+            err = false;
+        }
+
+        if (err == 0) {
+            memset(buffer, 0, sizeof(buffer));
+            //select... and timeout...
+            recv(sock_fd, buffer, sizeof(buffer), 0);
+        }
+    }
+
+    // -------------------------------------------------------------------------------
+    */
+
+    if (err == 0) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 /*

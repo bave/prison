@@ -3,14 +3,19 @@
 
 #import <Cocoa/Cocoa.h>
 
+
 #include "utils.h"
 #include "common.h"
 #include "category.h"
+
+#include <sys/stat.h>
+
 
 @interface ResourceConfig : NSObject
 {
     NSString* rcPath;
     NSString* rcRunDir;
+    NSString* rcPurityPath;
     NSString* rcInternal;
     NSString* rcExternal;
     NSString* rcSeedHost;
@@ -24,6 +29,7 @@
 
 - (NSString*)getPath;
 - (NSString*)getRunDir;
+- (NSString*)getPurityPath;
 - (NSString*)getInternal;
 - (NSString*)getExternal;
 - (NSString*)getSeedHost;
@@ -76,18 +82,87 @@
 
 - (bool)_loadConfig
 {
+
+    //static const mode_t mode_required =
+    //               S_ISVTX | S_IRWXU | (S_IRGRP | S_IXGRP) | (S_IROTH | S_IXOTH);
+    static const mode_t mode_required = S_IRWXU;
+    NSFileManager* manager;
+    manager = [NSFileManager defaultManager];
+
     int ret = false;
     id plist = [NSData dataWithPlist:rcPath];
     if (plist != nil) ret = true;
 
     if (ret == true) {
         rcRunDir = [plist objectForKey:@"run_directory"];
-        if (rcRunDir == nil) ret = false;
+        if (rcRunDir == nil) {
+            ret = false;
+        } else {
+            BOOL isExist;
+            BOOL isDir;
+            isExist = [manager fileExistsAtPath:rcRunDir isDirectory:&isDir];
+
+            if (isExist == true && isDir == true) {
+                ret = true;
+                goto rcRunDir_Leave;
+            }
+            if (isExist == true && isDir == false) {
+                ret = false;
+                goto rcRunDir_Leave;
+            }
+            if (isExist == false) {
+                int err;
+                err = mkdir([rcRunDir UTF8String], mode_required);
+                if (err == -1) {
+                    ret = false;
+                    NSLog(@"cant make dir\n");
+                    goto rcRunDir_Leave;
+                } else {
+                    ret = true;
+                    goto rcRunDir_Leave;
+                }
+            }
+
+        }
+
     }
-    
+    rcRunDir_Leave:
+
+
     if (ret == true) {
-        rcInternal = [plist objectForKey:@"cage_internal_connect"];
-        if (rcInternal == nil) ret = false;
+        rcPurityPath = [rcRunDir stringByAppendingPathComponent:@"PurityKey"];
+        [rcPurityPath retain];
+
+        BOOL isExist;
+        BOOL isDir;
+        isExist = [manager fileExistsAtPath:rcPurityPath isDirectory:&isDir];
+        if (isExist == true && isDir == true) {
+            ret = true;
+        }
+        else if (isExist == true && isDir == false) {
+            ret = false;
+        }
+        else if (isExist == false) {
+            int err;
+            err = mkdir([rcPurityPath UTF8String], mode_required);
+            if (err == -1) {
+                ret = false;
+            } else {
+                ret = true;
+            }
+        }
+    }
+
+    if (ret == true) {
+        NSString* internal;
+        internal = [plist objectForKey:@"cage_internal_connect"];
+        if (internal == nil) {
+            ret = false;
+        } else {
+            rcInternal = [rcRunDir stringByAppendingPathComponent:internal];
+            [rcInternal retain];
+            ret = true;
+        }
     }
 
     if (ret == true) {
@@ -117,13 +192,14 @@
     // --------------
     // release coding
     // --------------
-    [rcPath     release];
-    [rcRunDir   release];
-    [rcInternal release];
-    [rcExternal release];
-    [rcSeedHost release];
-    [rcSeedPort release];
-    [rcLocalDB  release];
+    [rcPath       release];
+    [rcRunDir     release];
+    [rcPurityPath release];
+    [rcInternal   release];
+    [rcExternal   release];
+    [rcSeedHost   release];
+    [rcSeedPort   release];
+    [rcLocalDB    release];
     [super dealloc];
     return;
 }
@@ -136,6 +212,11 @@
 - (NSString*)getRunDir;
 {
     return rcRunDir;
+}
+
+- (NSString*)getPurityPath
+{
+    return rcPurityPath;
 }
 
 - (NSString*)getInternal;

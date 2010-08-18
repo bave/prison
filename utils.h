@@ -42,6 +42,7 @@ ITERATE(line_element, line_enum) {
     }
 }
 */
+
 #endif
 
 #ifdef __MACH__
@@ -79,7 +80,7 @@ NSData* ip_aton(NSString* type, NSString* addr);
 // directory management
 NSString* currentdir(void);
 #ifdef __MACH__
-bool mkdir(NSString* dir);
+//bool mkdir(NSString* dir);
 #endif
 
 // memory 
@@ -101,6 +102,7 @@ NSString* addrmask(NSString* addr, NSString* mask);
 // implementation --------------------------------------------------------------
 
 #ifdef __MACH__
+/*
 bool mkdir(NSString* dir)
 {
     id pool = [NSAutoreleasePool new];
@@ -122,6 +124,7 @@ bool mkdir(NSString* dir)
     [pool drain];
     return true;
 }
+*/
 #endif
 
 NSString* currentdir(void)

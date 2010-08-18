@@ -1,13 +1,15 @@
 -- PRISON --
-Rapidly Accessible Port Relation Identifier with Naming Service
-
--- temporary --
-prison
 Port Relation Identifier Service with Ovarlay Network
-jail
-JAIST A... i... l...
 
-using library
+- turn down naming... 
+jail
+    JAIST A... i... l...
+
+RAPRINS
+    Rapidly Accessible Port Relation Identifier with Naming Service
+
+
+- using library
     libcage - branch of uniqe
     libevent
     libresolv
@@ -15,19 +17,24 @@ using library
     libstd++
     boost
 
-framework
+- using framework
     Cocoa
     Appkit
 
-ToDo
+- ToDo
+    prison
+        mk coding at using of kvt...
+
 	libcage
         -> uniqe [fin]
         -> multi [fin]
 
-	hostRRR
-	GroupRRR
-	serviceRRR
+    RRR(ResourceRecordRegister)
+        hostRRR
+        GroupRRR
+        serviceRRR
 
-	host viewer
-	Group viewer
-	Service viewer
+    FrontEnd
+        host viewer
+        Group viewer
+        Service viewer

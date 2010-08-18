@@ -33,12 +33,10 @@ extern ResourceConfig* rc;
 
 - (BOOL)isCageRun;
 
-
 // private function
 - (void)_debug_dict;
 - (BOOL)_run_cage;
-- (void)_recv_file_handler:(NSNotification*)notify;
-
+- (void)_cage_recv_handler:(NSNotification*)notify;
 
 // trush function
 //- (bool)setPath:(NSString*)path;
@@ -204,7 +202,7 @@ extern ResourceConfig* rc;
 
         [[NSNotificationCenter defaultCenter]
             addObserver:self
-            selector:@selector(_recv_file_handler:)
+            selector:@selector(_cage_recv_handler:)
             name:NSFileHandleReadCompletionNotification
             object:task_file
         ];
@@ -254,7 +252,7 @@ extern ResourceConfig* rc;
     return [kvtTask isRunning];
 }
 
-- (void)_recv_file_handler:(NSNotification*)notify
+- (void)_cage_recv_handler:(NSNotification*)notify
 {
     //NSLog(@"\n%@\n", notify);
     if(![[notify userInfo] objectForKey:@"NSFileHandleError"]) {

@@ -246,7 +246,6 @@ extern ResourceConfig* rc;
         filter_id = 0;
         local_id  = 1;
         kvt = [keyValueTable new];
-        //[kvt setPath:@"./data.conf"];
         [kvt setLocalDB:[rc getLocalDB]];
         mgmtLock = [NSLock new];
         mgmtDictFIDDate    = [NSMutableDictionary new];

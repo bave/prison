@@ -69,8 +69,12 @@ int main() {
 
     NSLog(@"%@\n", currentdir());
     //NSLog(@"%d\n", mkdir(@"tetete"));
-    NSLog(@"A    - www.wide.ad.jp:%@\n",getHost2Addr(@"IPv4", @"www.wide.ad.jp"));
-    NSLog(@"AAAA - www.wide.ad.jp:%@\n",getHost2Addr(@"IPv6", @"www.wide.ad.jp"));
+    NSLog(@"A    - www.wide.ad.jp:%@\n", getHost2Addr(@"IPv4", @"www.wide.ad.jp"));
+    NSLog(@"AAAA - www.wide.ad.jp:%@\n", getHost2Addr(@"IPv6", @"www.wide.ad.jp"));
+
+
+    NSLog(@"%d\n", is_local(@"172.16.1.1"));
+    NSLog(@"%d\n", is_global(@"172.16.1.1"));
 
     [pool release];
     return 0;

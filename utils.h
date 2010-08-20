@@ -99,6 +99,8 @@ bool fcomp(NSString* flags, NSString* flag);
 
 // for ipv4 code
 bool is_ip4addr(NSString*ip);
+bool is_local(NSString*ip);
+bool is_global(NSString*ip);
 bool ip4comp(NSString* addr1, NSString* addr2);
 
 // for ipv6 code
@@ -199,7 +201,7 @@ NSString* getHost2Addr(NSString* type, NSString* hostname)
     return nil;
 }
 
-bool is_ip4addr(NSString*ip)
+bool is_ip4addr(NSString* ip)
 {
     NSString* segment   = @"([0-9]|[01]?[0-9][0-9]|2[0-4][0-9]|25[0-5])";
     //NSString* separater = @"\\.";
@@ -213,12 +215,76 @@ bool is_ip4addr(NSString*ip)
     // $ : tail
     // | : or
     // [0-9]           :0-9
-    // [01]?[0-9][0-9] :00-199
+    // [01]?[0-9][0-9] :000-199
     // 2[0-4][0-9]     :200-249
     // 25[0-5]         :250-255
 
     //NSLog(@"%d", [sep_regexp evaluateWithObject:s]);
     return [sep_regexp evaluateWithObject:ip];
+}
+
+bool is_local(NSString* ip)
+{
+    //ClassA 10.0.0.0 - 10.255.255.255
+    //ClassB 172.16.0.0 - 172.31.255.255
+    //ClassB 192.168.0.0 - 192.168.255.255
+    if (is_ip4addr(ip)) {
+
+        NSArray* array;
+        array = [ip componentsSeparatedByString:@"."];
+
+        // class A
+        if([[array objectAtIndex:0] isEqualToString:@"10"]) {
+            return true;
+        }
+
+        // class B
+        if([[array objectAtIndex:0] isEqualToString:@"172"]) {
+            int seg2;
+            seg2 = [[array objectAtIndex:1] intValue];
+            if (seg2 >= 16 && seg2 <= 31) {
+                return true;
+            }
+        }
+
+        // class C
+        if( [[array objectAtIndex:0] isEqualToString:@"192"] &&
+            [[array objectAtIndex:1] isEqualToString:@"168"] ) 
+        {
+            return true;
+        }
+
+    }
+    return false;
+}
+
+bool is_global(NSString* ip)
+{
+    if (!is_local(ip)) {
+
+        NSArray* array;
+        array = [ip componentsSeparatedByString:@"."];
+
+        // AutoIP
+        if( [[array objectAtIndex:0] isEqualToString:@"169"] &&
+            [[array objectAtIndex:1] isEqualToString:@"254"] ) 
+        {
+            return false;
+        }
+
+        // multicasst : 239, 232, 228, 226, 225, 224
+        // experiment : 240 - 255
+        int seg1;
+        seg1 = [[array objectAtIndex:0] intValue];
+        if (seg1 >= 224 && seg1 <= 255) 
+        {
+            return false;
+        }
+
+        return true;
+
+    }
+    return false;
 }
 
 bool ip4comp(NSString* addr1, NSString* addr2)

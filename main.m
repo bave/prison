@@ -28,11 +28,13 @@
 //#include "utils.h"
 
 // global declaration
-NSLock*   extLock;
-FWHooker*      fw;
-Observer*     obs;
-Manager*     mgmt;
+NSLock*    extLock;
+NetInfo*        ni; 
+FWHooker*       fw;
 ResourceConfig* rc;
+Observer*      obs;
+Manager*      mgmt;
+
 bool is_verbose;
 
 extern char *optarg;
@@ -148,9 +150,9 @@ int main(int argc, char** argv)
 
     // initialize Class -------------------------------------------------------
     @try {
+        ni = [NetInfo new];
         mgmt = [Manager new];
         extLock = [NSLock new];
-            
     }
     @catch (id err) {
         NSString* err_str;
@@ -411,6 +413,7 @@ void sig_action(int sig) {
     //close(divertNAME);
     [extLock release];
     [obs     release];
+    [ni      release];
     [mgmt    release];
     [fw delAllRule];
     [fw release];
@@ -422,6 +425,7 @@ void exit_action(const char* err_name) {
     //close(divertNAME);
     [extLock release];
     [obs     release];
+    [ni      release];
     [mgmt    release];
     [fw delAllRule];
     [fw release];

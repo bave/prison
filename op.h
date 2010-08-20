@@ -37,6 +37,7 @@
 
 extern NSLock* extLock;
 extern Manager*   mgmt;
+extern NetInfo*     ni; 
 extern FWHooker*    fw;
 extern Observer*   obs;
 extern bool is_verbose;
@@ -674,7 +675,6 @@ extern bool is_verbose;
 - (void)routeOperation
 {
     id pool = [NSAutoreleasePool new];
-    id ni = [NetInfo new];
 
     int kq;
     kq = kqueue();
@@ -784,7 +784,6 @@ extern bool is_verbose;
         [loop_pool drain];
     }
 
-    [ni release];
     [pool drain];
     return;
 }

@@ -188,10 +188,10 @@ main(int argc, char** argv)
 void
 usage(char *cmd)
 {
-        printf("%s [-d] [-p port]\n", cmd);
+        printf("%s [-d] [-f port]\n", cmd);
         printf("    -d: run as daemon\n");
         printf("    -h: show this help\n");
-        printf("    -p: the port number to listen, default value is 12080\n");
+        printf("    -f: af_local socket, default is /tmp/sock_cage\n");
 }
 
 int
@@ -353,6 +353,8 @@ start_listen(const char* path)
                     return false;
             }
         }
+
+        fprintf(stderr, "cage: preparations for listen");
 
         event_set(ev, sock_fd, EV_READ | EV_PERSIST, &callback_accept, NULL);
         event_add(ev, NULL);

@@ -15,6 +15,8 @@
 {
     NSString* rcPath;
     NSString* rcRunDir;
+    NSString* rcPasswd;
+    NSString* rcPrisonName;
     NSString* rcPurityPath;
     NSString* rcInternal;
     NSString* rcExternal;
@@ -83,9 +85,9 @@
 - (bool)_loadConfig
 {
 
-    //static const mode_t mode_required =
-    //               S_ISVTX | S_IRWXU | (S_IRGRP | S_IXGRP) | (S_IROTH | S_IXOTH);
-    static const mode_t mode_required = S_IRWXU;
+    static const mode_t mode_rwxr_xr_x =
+                   S_ISVTX | S_IRWXU | (S_IRGRP | S_IXGRP) | (S_IROTH | S_IXOTH);
+    static const mode_t mode_rwx______ = S_IRWXU;
     NSFileManager* manager;
     manager = [NSFileManager defaultManager];
 
@@ -112,7 +114,7 @@
             }
             if (isExist == false) {
                 int err;
-                err = mkdir([rcRunDir UTF8String], mode_required);
+                err = mkdir([rcRunDir UTF8String], mode_rwxr_xr_x);
                 if (err == -1) {
                     ret = false;
                     NSLog(@"cant make dir\n");
@@ -144,7 +146,7 @@
         }
         else if (isExist == false) {
             int err;
-            err = mkdir([rcPurityPath UTF8String], mode_required);
+            err = mkdir([rcPurityPath UTF8String], mode_rwx______);
             if (err == -1) {
                 ret = false;
             } else {
@@ -163,6 +165,16 @@
             [rcInternal retain];
             ret = true;
         }
+    }
+
+    if (ret == true) {
+        rcPasswd = [plist objectForKey:@"pass_phrase"];
+        if (rcPasswd == nil) ret = false;
+    }
+
+    if (ret == true) {
+        rcPrisonName = [plist objectForKey:@"prison_name"];
+        if (rcPrisonName == nil) ret = false;
     }
 
     if (ret == true) {
@@ -194,6 +206,8 @@
     // --------------
     [rcPath       release];
     [rcRunDir     release];
+    [rcPasswd     release];
+    [rcPrisonName release];
     [rcPurityPath release];
     [rcInternal   release];
     [rcExternal   release];
@@ -212,6 +226,16 @@
 - (NSString*)getRunDir;
 {
     return rcRunDir;
+}
+
+- (NSString*)getPasswd;
+{
+    return rcPasswd;
+}
+
+- (NSString*)getPrisonName;
+{
+    return rcPrisonName;
 }
 
 - (NSString*)getPurityPath

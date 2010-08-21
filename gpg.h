@@ -71,6 +71,12 @@
 
 // public function
 
++ (NSString*)trimContentFromArmor:(NSString*)armorTxt;
++ (NSString*)appendPublicFrame:(NSString*)content;
++ (NSString*)appendPrivateFrame:(NSString*)content;
++ (NSString*)appendMessageFrame:(NSString*)content;
++ (NSString*)appendSignatureFrame:(NSString*)content;
+
 - (id)init;
 - (id)initWithDir:(NSString*)dir;
 - (void)dealloc;
@@ -136,6 +142,7 @@
 
 @implementation GPGME
 
+
 // gpgme callback function ------------------------------------------------------
 static gpgme_error_t _passwd_cb(void* object,
                                 const char* uid_hint,
@@ -143,7 +150,7 @@ static gpgme_error_t _passwd_cb(void* object,
                                 int prev_was_bad,
                                 int fd)
 {
-     id pool = [NSAutoreleasePool new];
+    id pool = [NSAutoreleasePool new];
     GPGME* gpg = (GPGME*)object;
 
     //NSLog(@"passphrase:%@\n", [(GPGME*)object getPass]);
@@ -159,7 +166,82 @@ static gpgme_error_t _passwd_cb(void* object,
 }
 // ------------------------------------------------------------------------------
 
+
 // public function
++ (NSString*)appendSignatureFrame:(NSString*)content
+{
+    NSString* header = @"-----BEGIN PGP SIGNATURE-----\n";
+    NSString* footer = @"-----END PGP SIGNATURE-----\n";
+
+    return [NSString stringWithFormat:@"%@\n%@\n%@", header, content, footer];
+}
+
++ (NSString*)appendPrivateFrame:(NSString*)content
+{
+    NSString* header = @"-----BEGIN PGP PRIVATE KEY BLOCK-----\n";
+    NSString* footer = @"-----END PGP PRIVATE KEY BLOCK-----\n";
+
+    return [NSString stringWithFormat:@"%@\n%@\n%@", header, content, footer];
+}
+
++ (NSString*)appendPublicFrame:(NSString*)content
+{
+    NSString* header = @"-----BEGIN PGP PUBLIC KEY BLOCK-----\n";
+    NSString* footer = @"-----END PGP PUBLIC KEY BLOCK-----\n";
+
+    return [NSString stringWithFormat:@"%@\n%@\n%@", header, content, footer];
+}
+
++ (NSString*)appendMessageFrame:(NSString*)content
+{
+    NSString* header = @"-----BEGIN PGP MESSAGE-----\n";
+    NSString* footer = @"-----END PGP MESSAGE-----\n";
+
+    return [NSString stringWithFormat:@"%@\n%@\n%@", header, content, footer];
+}
+
++ (NSString*)trimContentFromArmor:(NSString*)armorTxt
+{
+    id pool = [NSAutoreleasePool new];
+    NSMutableString* tmp_string = [NSMutableString new];
+
+    NSArray* armor_array = [armorTxt componentsSeparatedByString:@"\n"]; 
+    NSEnumerator* line_enum = [armor_array objectEnumerator];
+    ITERATE(line_element, line_enum) {
+        //NSLog(@"%@\n", line_element);
+
+        if ([line_element length] == 0) {
+            continue;
+        }
+
+        NSComparisonResult compResult;
+        if ([line_element length] >= [@"-----" length]) {
+            compResult = [line_element compare:@"-----"
+                                       options:NSCaseInsensitiveSearch
+                                         range:NSMakeRange(0,[@"-----" length])];
+            if (compResult == NSOrderedSame) {
+                continue;
+            }
+        }
+
+        if ([line_element length] >= [@"Version:" length]) {
+            compResult = [line_element compare:@"Version:"
+                                       options:NSCaseInsensitiveSearch
+                                         range:NSMakeRange(0,[@"Version:" length])];
+            if (compResult == NSOrderedSame) {
+                continue;
+            }
+        }
+
+        [tmp_string appendString:line_element];
+
+    }
+    NSString* ret_string = [[NSString alloc] initWithString:tmp_string];
+    [pool drain];
+    [ret_string autorelease];
+    return ret_string;
+}
+
 - (BOOL)getValid
 {
     return gpgValid;
@@ -1429,7 +1511,7 @@ static gpgme_error_t _passwd_cb(void* object,
         }
         [buf_str appendString:@"save\n"];
         //NSLog(@"valid_count:%d\n", valid_count);
-        //NSLog(@"%@\n", buf_str);
+        NSLog(@"%@\n", buf_str);
 
         // task
         NSTask* task;
@@ -1481,7 +1563,7 @@ static gpgme_error_t _passwd_cb(void* object,
         err_data = [err_file readDataToEndOfFile];
         err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
         [err_string autorelease];
-        //NSLog(@"err:\n%@\n", err_string);
+        NSLog(@"err:\n%@\n", err_string);
 
         ret_array = [err_string componentsSeparatedByString:@"\n"]; 
         line_enum = [ret_array objectEnumerator];

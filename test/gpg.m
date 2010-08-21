@@ -29,8 +29,12 @@ int main()
     #else
     sig = [NSString stringWithContentsOfFile:sigpath];
     #endif
-    NSLog(@"sign_file :%@\n",sigpath);
-    NSLog(@"sign_file :\n%@\n",sig);
+    NSLog(@"sign_file :%@\n", sigpath);
+    //NSLog(@"sign_file :\n%@\n",[GPGME appendMessageFrame:[GPGME trimContentFromArmor:sig]]);
+    //NSLog(@"sign_file :\n%@\n",[GPGME appendPublicFrame:[GPGME trimContentFromArmor:sig]]);
+    //NSLog(@"sign_file :\n%@\n",[GPGME appendPrivateFrame:[GPGME trimContentFromArmor:sig]]);
+    //NSLog(@"sign_file :\n%@\n",[GPGME appendSignatureFrame:[GPGME trimContentFromArmor:sig]]);
+    NSLog(@"sign_file :\n%@\n", sig);
 
     NSString* key = nil;
     NSString* keypath = nil;
@@ -123,7 +127,7 @@ int main()
 
     //encryptForce
     @try {
-        NSLog(@"force encrypt message\n%@\n", [gpg encryptForce:@"tetete" :@"hage@prison"]);
+        NSLog(@"force encrypt message\n%@\n", [gpg encryptForce:@"tetete" :@"hage@raprins"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -175,7 +179,7 @@ int main()
     // signkey
     @try {
         [gpg setPasswd:@"test"];
-        NSLog(@"sigkey:%d\n", [gpg signkey:@"hage@prison"]);
+        NSLog(@"sigkey:%d\n", [gpg signkey:@"hage@raprins"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -183,8 +187,8 @@ int main()
 
     // delsig
     @try {
-        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@prison" :@"hage@prison"]);
-        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@prison" :@"test@prison"]);
+        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"hage@raprin"]);
+        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"test@prison"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);
@@ -200,7 +204,7 @@ int main()
 
     // delkey
     @try {
-        NSLog(@"delkey:%d\n", [gpg delkey:@"hage@prison"]);
+        NSLog(@"delkey:%d\n", [gpg delkey:@"hage@raprins"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);

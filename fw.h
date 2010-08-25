@@ -141,6 +141,25 @@ struct ip_fw {
     return self;
 }
 
+- (id)init_test
+{
+    self = [super init];
+    if(self != nil) {
+        // --------------
+        // initial coding
+        // --------------
+        fwSock = socket(AF_INET, SOCK_DGRAM, 0);
+        if (fwSock == -1) {
+            @throw @"[fw init] : Conuld not open rawSocket!\n";
+             // you wait for ...
+             // @catch (id ex) {} or @catch (NSString ex) {}
+        }
+        fwList = [[NSMutableSet alloc] init];
+        [self _formatRule];
+    }
+    return self;
+}
+
 - (void)dealloc
 {
     // --------------

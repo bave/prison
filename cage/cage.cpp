@@ -82,7 +82,7 @@ static const char* const ERR_JOIN_NO_SUCH_NODE = "405";
 static const char* const ERR_JOIN_FAILED       = "406";
 static const char* const ERR_PUT_NO_SUCH_NODE  = "407";
 static const char* const ERR_GET_NO_SUCH_NODE  = "408";
-static const char* const ERR_GET               = "409";
+static const char* const ERR_GET_FAILURE       = "409";
 
 /*
   escape character: "\"
@@ -119,8 +119,8 @@ static const char* const ERR_GET               = "409";
   get,NODE_NAME,key
   -> 204,get,NODE_NAME,KEY,VALUE1,VALUE2,VALUE3,... |
      400 | 401,COMMENT |
-     408,get,KEY,COMMENT |
-     409,get,KEY
+     408,get,NODE_NAME,KEY,COMMENT |
+     409,get,NODE_NAME,KEY
  */
 
 int
@@ -988,7 +988,7 @@ public:
                         // format: 409,get,NODE_NAME,KEY
                         snprintf(result, sizeof(result),
                                  "%s,get,%s,%s\n",
-                                 ERR_GET, esc_node_name.c_str(),
+                                 ERR_GET_FAILURE, esc_node_name.c_str(),
                                  esc_key.c_str());
                         send(sockfd, result, strlen(result), 0);
                 }

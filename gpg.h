@@ -27,13 +27,20 @@
 
 #import <Cocoa/Cocoa.h>
 
-#include <string.h>
+#include <stdio.h>
+#include <errno.h>
 #include <locale.h>
+#include <unistd.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <gpgme.h>
 #include <gpg-error.h>
 
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/types.h>
 
 #ifdef __linux__
 #endif
@@ -106,7 +113,8 @@
 - (BOOL)delsig:(NSString*)keyuid :(NSString*)siguid;
 
 - (int)import:(NSString*)key;
-- (NSString*)export:(NSString*)uid;
+- (NSString*)exportPubring:(NSString*)uid;
+- (NSString*)exportSecring:(NSString*)uid;
 
 - (NSDictionary*)signedlist;
 - (NSArray*)userlist;
@@ -166,6 +174,128 @@ static gpgme_error_t _passwd_cb(void* object,
 }
 // ------------------------------------------------------------------------------
 
+// c lang function --------------------------------------------------------------
+#define R (0)
+#define W (1)
+
+static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_pp)
+{
+    int ret = 0;
+
+    int pipe_out[2];
+    int pipe_err[2];
+    int pipe_in[2];
+    int pipe_pp[2];
+
+    pid_t pid;
+
+    //Create pipes. -------------------------------
+    if (ret == 0) {
+        if (pipe(pipe_out) == -1) {
+            ret = errno;
+        }
+    }
+
+    if (ret == 0) {
+        if (pipe(pipe_err) == -1) {
+            close(pipe_out[R]);
+            close(pipe_out[W]);
+            ret = errno;
+        }
+    }
+
+    if (ret == 0) {
+        if (pipe(pipe_in) == -1) {
+            close(pipe_out[R]);
+            close(pipe_out[W]);
+            close(pipe_err[R]);
+            close(pipe_err[W]);
+            ret = errno;
+        }
+    }
+
+    if (ret == 0) {
+        if(pipe(pipe_pp) == -1) {
+            close(pipe_out[R]);
+            close(pipe_out[W]);
+            close(pipe_err[R]);
+            close(pipe_err[W]);
+            close(pipe_in[R]);
+            close(pipe_in[W]);
+            ret = errno;
+        }
+    }
+
+    if (ret != 0) {
+        perror("pipe");
+        ret = -ret;
+    }
+    //---------------------------------------------
+
+
+    // Invoke fork process
+    if (ret == 0) {
+        if ((pid = fork()) == -1) {
+            ret = -errno;
+            perror("fork");
+        }
+    }
+
+    // child process
+    if (pid == 0) {
+
+        close(pipe_in[W]);
+        close(pipe_out[R]);
+        close(pipe_err[R]);
+        close(pipe_pp[W]);
+
+        dup2(pipe_in[R], 0);
+        close(pipe_in[R]);
+
+        dup2(pipe_out[W], 1);
+        close(pipe_out[W]);
+
+        dup2(pipe_err[W], 2);
+        close(pipe_err[W]);
+
+        dup2(pipe_pp[R], 3);
+        close(pipe_pp[R]);
+
+        /*
+        char buffer[4000];
+        memset(buffer, 0, 4000);
+        read(3, buffer, 4000);
+        printf("pass:::%s\n", buffer);
+        */
+
+        if (execvp(args[0], args) == -1) {
+            close(pipe_in[R]);
+            close(pipe_out[W]);
+            close(pipe_err[W]);
+            close(pipe_pp[R]);
+            exit(1);
+        }
+        exit(0);
+    }
+
+    // parent process
+    else {
+        close(pipe_in[R]);
+        close(pipe_out[W]);
+        close(pipe_err[W]);
+        close(pipe_pp[R]);
+
+        if (fd_in  != NULL) *fd_in  = pipe_in[W];
+        if (fd_out != NULL) *fd_out = pipe_out[R];
+        if (fd_err != NULL) *fd_err = pipe_err[R];
+        if (fd_pp  != NULL) *fd_pp  = pipe_pp[W];
+    }
+
+    return(pid);
+}
+#undef R
+#undef W
+// ------------------------------------------------------------------------------
 
 // public function
 + (NSString*)appendSignatureFrame:(NSString*)content
@@ -777,6 +907,11 @@ static gpgme_error_t _passwd_cb(void* object,
 
 - (NSString*)decrypt:(NSString*)sig
 {
+
+#ifdef __PRISON__
+    return nil;
+#else
+
     id pool = [NSAutoreleasePool new];
 
     gpgme_ctx_t ctx;
@@ -842,10 +977,101 @@ static gpgme_error_t _passwd_cb(void* object,
     [out_string autorelease];
 
     return out_string;
+#endif
 }
 
 - (NSString*)sign:(NSString*)txt
 {
+
+#ifndef  __PRISON__
+
+    pid_t ch;
+    int ch_fd_in;
+    int ch_fd_out;
+    int ch_fd_err;
+    int ch_fd_pp;
+    int status;
+
+    if (txt == nil) {
+        @throw @"error: [gpg sign] txt data is nil";
+    }
+
+    if ([txt length] == 0) {
+        @throw @"error: [gpg sign] nonexistent txt data";
+    }
+
+    id pool = [NSAutoreleasePool new];
+
+    NSMutableArray* arg_array = [NSMutableArray array];
+    [arg_array addObject:gpgExe];
+    [arg_array addObject:@"--homedir"];
+    [arg_array addObject:gpgDir];
+    [arg_array addObject:@"--passphrase-fd"];
+    [arg_array addObject:@"3"];
+    [arg_array addObject:@"--no-tty"];
+    [arg_array addObject:@"--batch"];
+    [arg_array addObject:@"--armor"];
+    [arg_array addObject:@"--sign"];
+
+    NSLog(@"%@\n", arg_array);
+
+    unsigned int count = [arg_array count];
+    char* args[count];
+    for (unsigned int i=0; i<count; i++) {
+        args[i] = (char*)[[arg_array objectAtIndex:i] UTF8String];
+    }
+    args[count] = NULL;
+
+    ch = popen4(args, &ch_fd_in, &ch_fd_out, &ch_fd_err, &ch_fd_pp);
+
+    write(ch_fd_in, [txt UTF8String], [txt length]);
+    close(ch_fd_in);
+
+    //NSLog(@"%s\n", [[self getPass] UTF8String]);
+    //NSLog(@"%d\n", [[self getPass] length]);
+    write(ch_fd_pp, [[self getPass] UTF8String], [[self getPass] length]);
+    close(ch_fd_pp);
+
+    NSLog(@"start-wait\n");
+    waitpid(ch, &status, 0);
+    NSLog(@"end-wait\n");
+
+    int is_correct_terminate;
+    is_correct_terminate = WIFEXITED(status);
+
+    /*
+    if (is_correct_terminate != 1) {
+        close(ch_fd_out);
+        close(ch_fd_err);
+        @throw @"error: [gpg sign] violation error";
+    }
+
+    int terminate_status;
+    terminate_status = WEXITSTATUS(status);
+
+    if (terminate_status != 0) {
+        close(ch_fd_out);
+        close(ch_fd_err);
+        @throw @"error: [gpg sign] miss passphrase";
+    }
+    */
+
+    NSFileHandle* out_file = [[NSFileHandle alloc] initWithFileDescriptor:ch_fd_out];
+    const NSStringEncoding* encode = [NSString availableStringEncodings];
+    NSData* out_data = [out_file readDataToEndOfFile];
+    NSString* out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+    NSLog(@"%@\n", out_string);
+
+    close(ch_fd_out);
+    close(ch_fd_err);
+    [out_file release];
+    [pool drain];
+    [out_string autorelease];
+
+    return out_string;
+
+#else
+
     id pool = [NSAutoreleasePool new];
 
     gpgme_ctx_t ctx;
@@ -900,9 +1126,10 @@ static gpgme_error_t _passwd_cb(void* object,
     [out_string autorelease];
 
     return out_string;
+#endif
 }
 
-- (NSString*)export:(NSString*)uid
+- (NSString*)exportPubring:(NSString*)uid
 {
 #ifdef __MACH__
     // batch mode code
@@ -910,7 +1137,7 @@ static gpgme_error_t _passwd_cb(void* object,
     id pool = [NSAutoreleasePool new];
 
     NSMutableArray* args;
-    args = [ NSMutableArray array];
+    args = [NSMutableArray array];
     [args addObject:@"--homedir"];
     [args addObject:gpgDir];
     //NSLog(@"%@\n", gpgDir);
@@ -982,11 +1209,11 @@ static gpgme_error_t _passwd_cb(void* object,
     [pool drain];
 
     if ([out_string length] == 0) {
-        @throw @"error: [gpg export] nonexistent user";
+        @throw @"error: [gpg exportPubring] nonexistent user";
     }
 
     if (ret != 0) {
-        @throw @"error: [gpg export] violation error";
+        @throw @"error: [gpg exportPubring] violation error";
     }
 
     [out_string autorelease];
@@ -1014,7 +1241,7 @@ static gpgme_error_t _passwd_cb(void* object,
     if (gpgErr) {
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        @throw @"error: [gpg export] violation error";
+        @throw @"error: [gpg exportPubring] violation error";
     }
 
     //[self _print_data:out_data];
@@ -1025,7 +1252,7 @@ static gpgme_error_t _passwd_cb(void* object,
     if ([out_nsdata length] == 0) {
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        @throw @"error: [gpg export] nonexistent user";
+        @throw @"error: [gpg exportPubring] nonexistent user";
     }
 
     gpgme_data_release(out_data);
@@ -1223,6 +1450,127 @@ static gpgme_error_t _passwd_cb(void* object,
     }
 
     return;
+}
+
+- (NSString*)exportSecring:(NSString*)uid
+{
+    id pool = [NSAutoreleasePool new];
+    id saved_err = nil;
+
+    const NSStringEncoding* encode;
+
+    /*
+    NSPipe* in_pipe = nil;;
+    NSFileHandle* in_file = nil;
+    NSData* in_data = nil;
+    */
+
+    NSPipe* out_pipe = nil;
+    NSFileHandle* out_file = nil;
+    NSData* out_data = nil;
+
+    NSPipe* err_pipe = nil;
+    NSFileHandle* err_file = nil;
+    //NSData* err_data = nil;
+
+
+    NSString* out_string = nil;
+    //NSString* err_string = nil;
+
+    NSTask* task = nil;
+
+    @try{
+
+        /*
+        // input pipe
+        in_pipe = [NSPipe pipe];
+        in_file = [in_pipe fileHandleForWriting];
+        */
+
+        // output pipe
+        out_pipe = [NSPipe pipe];
+        out_file = [out_pipe fileHandleForReading];
+
+        // error pipe
+        err_pipe = [NSPipe pipe];
+        err_file = [err_pipe fileHandleForReading];
+
+        NSMutableArray* args;
+        args = [NSMutableArray array];
+        [args addObject:@"--armor"];
+        [args addObject:@"--homedir"];
+        [args addObject:gpgDir];
+        [args addObject:@"--export-secret-keys"];
+        if (uid != nil) {
+            [args addObject:uid];
+        }
+
+        // task
+        NSTask* task;
+        task = [[NSTask alloc] init];
+        [task setLaunchPath:gpgExe];
+        //[task setStandardInput:in_pipe];
+        [task setStandardOutput:out_pipe];
+        [task setStandardError:err_pipe];
+        [task setArguments:args];
+        [task launch];
+
+        // encoding
+        encode = [NSString availableStringEncodings];
+
+        /*
+        // stdin
+        in_data = [buf_str dataUsingEncoding:*encode];
+        [in_file writeData:in_data];
+        [in_file closeFile];
+        */
+
+        int ret;
+        [task waitUntilExit];
+        ret = [task terminationStatus];
+
+        if (ret != 0) {
+            @throw @"violation error";
+        }
+
+
+
+        // stdout
+        //out_data = [out_file availableData];
+        out_data = [out_file readDataToEndOfFile];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+        //NSLog(@"out:\n%@\n", out_string);
+
+        /*
+        // stderr
+        err_data = [err_file readDataToEndOfFile];
+        err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
+        [err_string autorelease];
+        //NSLog(@"err:\n%@\n", err_string);
+        */
+    }
+
+    @catch (NSString* err) {
+        NSString* err_string = [NSString stringWithFormat:
+                                @"error: [gpg exportSecring] %@", err];
+        saved_err = [err retain];
+        @throw err_string;
+    }
+
+    @catch (id err) {
+        saved_err = [err retain];
+        @throw err;
+    }
+    @finally {
+        [out_file closeFile];
+        [err_file closeFile];
+        [task release];
+        [pool drain];
+        [saved_err autorelease];
+    }
+
+    [out_string autorelease];
+    return out_string;
 }
 
 - (BOOL)signkey:(NSString*)uid
@@ -1511,7 +1859,7 @@ static gpgme_error_t _passwd_cb(void* object,
         }
         [buf_str appendString:@"save\n"];
         //NSLog(@"valid_count:%d\n", valid_count);
-        NSLog(@"%@\n", buf_str);
+        //NSLog(@"%@\n", buf_str);
 
         // task
         NSTask* task;
@@ -1563,7 +1911,7 @@ static gpgme_error_t _passwd_cb(void* object,
         err_data = [err_file readDataToEndOfFile];
         err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
         [err_string autorelease];
-        NSLog(@"err:\n%@\n", err_string);
+        //NSLog(@"err:\n%@\n", err_string);
 
         ret_array = [err_string componentsSeparatedByString:@"\n"]; 
         line_enum = [ret_array objectEnumerator];
@@ -2642,7 +2990,7 @@ static gpgme_error_t _passwd_cb(void* object,
         @throw err_string;
     }
     @catch (id err) {
-        NSLog(@"internal error:%@\n", err);
+        //NSLog(@"internal error:%@\n", err);
         saved_err = [err retain];
         @throw err;
     }
@@ -2744,7 +3092,7 @@ static gpgme_error_t _passwd_cb(void* object,
         @throw err_string;
     }
     @catch (id err) {
-        NSLog(@"internal error:%@\n", err);
+        //NSLog(@"internal error:%@\n", err);
         saved_err = [err retain];
         @throw err;
     }
@@ -2848,7 +3196,7 @@ static gpgme_error_t _passwd_cb(void* object,
     }
 
     @catch (id err) {
-        NSLog(@"internal error:%@\n", err);
+        //NSLog(@"internal error:%@\n", err);
         saved_err = [err retain];
         @throw err;
     }
@@ -2985,7 +3333,7 @@ static gpgme_error_t _passwd_cb(void* object,
         @throw err_string;
     }
     @catch (id err) {
-        NSLog(@"internal error:%@\n", err);
+        //NSLog(@"internal error:%@\n", err);
         saved_err = [err retain];
         @throw err;
     }

@@ -9,6 +9,8 @@
 // gpg  (GnuPG) 1.4.10
 
 
+#define __PRISON__
+
 
 int main()
 {
@@ -102,7 +104,7 @@ int main()
         // all keyring
         //NSLog(@"all keyring \n%@\n", [gpg export:nil]);
         // user pubring
-        NSLog(@"export keyring\n%@\n", [gpg export:@"test@prison"]);
+        NSLog(@"export keyring\n%@\n", [gpg exportPubring:@"test@prison"]);
     }
     @catch (id e) {
         NSLog(@"%@\n", e);
@@ -124,6 +126,7 @@ int main()
     @catch (id e){
         NSLog(@"%@\n", e);
     }
+    exit(1);
 
     //encryptForce
     @try {
@@ -187,7 +190,7 @@ int main()
 
     // delsig
     @try {
-        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"hage@raprin"]);
+        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"hage@raprins"]);
         NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"test@prison"]);
     }
     @catch (id e){
@@ -205,6 +208,14 @@ int main()
     // delkey
     @try {
         NSLog(@"delkey:%d\n", [gpg delkey:@"hage@raprins"]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    // exportSecring
+    @try {
+        NSLog(@"exportSecring:\n%@\n", [gpg exportSecring:nil]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);

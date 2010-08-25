@@ -10,8 +10,9 @@
 #include "category.h"
 
 #include "kvt.h"
-
 #include "fw.h"
+#include "rc.h"
+
 extern FWHooker* fw;
 extern ResourceConfig* rc;
 
@@ -39,6 +40,7 @@ extern ResourceConfig* rc;
 
 // public function
 - (id)init; 
+- (id)init_test;
 - (void)dealloc;
 
 //- (bool)setPath:(NSString*)path;
@@ -235,6 +237,34 @@ extern ResourceConfig* rc;
     return true;
 }
     
+- (id)init_test
+{
+    self = [super init];
+    if (self != nil) {
+        // --------------
+        // initial coding
+        // --------------
+        filter_id = 0;
+        local_id  = 1;
+        mgmtLock = [NSLock new];
+        kvt = [[keyValueTable alloc] init_test];
+        [kvt setLocalDB:[rc getLocalDB]];
+        mgmtDictFIDDate    = [NSMutableDictionary new];
+        mgmtDictFIDIdle    = [NSMutableDictionary new];
+        mgmtDictPPIdle     = [NSMutableDictionary new];
+        //mgmtDictFIDCounter = [NSMutableDictionary new];
+        mgmtDictLIP2FID    = [NSMutableDictionary new];
+        mgmtDictFID2LIP    = [NSMutableDictionary new];
+        mgmtDictFQDN2LIP   = [NSMutableDictionary new];
+        mgmtDictLIP2FQDN   = [NSMutableDictionary new];
+        mgmtDictFID2PP     = [NSMutableDictionary new];
+        mgmtDictPortPair   = [NSMutableDictionary new];
+        mgmtDictPPFlags    = [NSMutableDictionary new];
+        defaultIP = nil;
+        defaultRT = nil;
+    }   
+    return self;
+}       
 
 - (id)init
 {

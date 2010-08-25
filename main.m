@@ -27,6 +27,8 @@
 //#include "category.h"
 //#include "utils.h"
 
+#define __PRISON__
+
 // global declaration
 NSLock*    extLock;
 NetInfo*        ni; 
@@ -94,7 +96,7 @@ int main(int argc, char** argv)
 
     //XXX change to reload and restart programing.... at SIGHUP
     if (SIG_ERR == signal(SIGHUP, sig_action)) exit_signal("SIGHUP");
-    if (SIG_ERR == signal(SIGCHLD, SIG_IGN)) exit_signal("SIGCHLD");
+    //if (SIG_ERR == signal(SIGCHLD, SIG_IGN)) exit_signal("SIGCHLD");
     if (SIG_ERR == signal(SIGPIPE, SIG_IGN)) exit_signal("SIGPIPE");
     if (SIG_ERR == signal(SIGINT, sig_action)) exit_signal("SIGINT");
     if (SIG_ERR == signal(SIGTERM, sig_action)) exit_signal("SIGTERM");

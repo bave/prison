@@ -1,28 +1,43 @@
 #import <Cocoa/Cocoa.h>
 
+#include "../ni.h"
+#include "../rc.h"
 #include "../mgmt.h"
+
+FWHooker* fw;
+ResourceConfig* rc;
+NetInfo* ni;
+bool is_verbose;
 
 
 int main()
 {
     id pool = [NSAutoreleasePool new];
     bool ret;
-
+    is_verbose = true;
     Manager* mgmt;
-    NSLog(@"%d", __LINE__);
-    mgmt = [Manager new];
-    ret = [mgmt setPath:@"../data.conf"];
-    ret = [mgmt setFQDN:@"torrent.razgriz.p2p"];
-    NSLog(@"torrent.razgriz.p2p:%@",[mgmt getFQDN2LIP:@"torrent.razgriz.p2p"]);
-    NSLog(@"torrent.razgriz.p2p:%@",[mgmt getFQDN2GIP:@"torrent.razgriz.p2p"]);
-    NSLog(@"torrent.razgriz.p2p:%@",[mgmt getFQDN2PORT:@"torrent.razgriz.p2p"]);
+    @try {
+        rc = [[ResourceConfig alloc] initWithConf:@"../rc.plist"];
+        ni = [NetInfo new];
+        fw = [[FWHooker alloc] init_test];
+        mgmt = [[Manager alloc] init_test];
+        //mgmt = [Manager new];
+    } @catch (id err) {
+        NSLog(@"%@\n", err);
+    }
+
+
+    ret = [mgmt setFQDN:@"test0.aris.p2p"];
+    NSLog(@"test0.aris.p2p:%@",[mgmt getFQDN2LIP:@"test0.aris.p2p"]);
+    NSLog(@"test0.aris.p2p:%@",[mgmt getFQDN2GIP:@"test0.aris.p2p"]);
+    NSLog(@"test0.aris.p2p:%@",[mgmt getFQDN2PORT:@"test0.aris.p2p"]);
     NSLog(@"127.0.0.2:%@", [mgmt getLIP2FQDN:@"127.0.0.2"]);
     NSLog(@"127.0.0.2:%@", [mgmt getLIP2GIP:@"127.0.0.2"]);
     NSLog(@"127.0.0.2:%@", [mgmt getLIP2PORT:@"127.0.0.2"]);
-    ret = [mgmt delFQDN:@"torrent.razgriz.p2p"];
-    NSLog(@"torrent.razgriz.p2p:%@",[mgmt getFQDN2LIP:@"torrent.razgriz.p2p"]);
-    NSLog(@"torrent.razgriz.p2p:%@",[mgmt getFQDN2GIP:@"torrent.razgriz.p2p"]);
-    NSLog(@"torrent.razgriz.p2p:%@",[mgmt getFQDN2PORT:@"torrent.razgriz.p2p"]);
+    ret = [mgmt delFQDN:@"test0.aris.p2p"];
+    NSLog(@"test0.aris.p2p:%@",[mgmt getFQDN2LIP:@"test0.aris.p2p"]);
+    NSLog(@"test0.aris.p2p:%@",[mgmt getFQDN2GIP:@"test0.aris.p2p"]);
+    NSLog(@"test0.aris.p2p:%@",[mgmt getFQDN2PORT:@"test0.aris.p2p"]);
     NSLog(@"127.0.0.2:%@", [mgmt getLIP2FQDN:@"127.0.0.2"]);
     NSLog(@"127.0.0.2:%@", [mgmt getLIP2GIP:@"127.0.0.2"]);
     NSLog(@"127.0.0.2:%@", [mgmt getLIP2PORT:@"127.0.0.2"]);
@@ -30,13 +45,10 @@ int main()
 
     NSLog(@"PortPair_test");
     bool re1;
-    re1 = [mgmt setPortPairWithProtocol:IPPROTO_TCP
-        SrcPort:50000
-        DstPort:6969];
+    NSNumber* n = [NSNumber numberWithInt:1];
+    re1 = [mgmt setPortPairWithProtocol:IPPROTO_TCP SrcPort:50000 DstPort:6969 FID:n];
     NSLog(@"ret:%d", ret);
-    re1 = [mgmt setPortPairWithProtocol:IPPROTO_UDP
-        SrcPort:50001
-        DstPort:4949];
+    re1 = [mgmt setPortPairWithProtocol:IPPROTO_UDP SrcPort:50001 DstPort:4949 FID:n];
     NSLog(@"ret:%d", ret);
     uint16_t dstPort;
     dstPort = [mgmt getPairPortWithProtocol:IPPROTO_TCP
@@ -52,16 +64,6 @@ int main()
     [mgmt resetPPFlagsWithProtocol:6 SrcPort:6];
     ppflags = [mgmt getPPFlagsWithProtocol:6 SrcPort:6];
     NSLog(@"%d", ppflags);
-
-    /*
-       int i=0;
-       for (;;i++) {
-       id loop_pool = [NSAutoreleasePool new];
-       [loop_pool drain];
-       sleep(1);
-       }
-       */
-
 
 
     [mgmt release];

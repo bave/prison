@@ -57,11 +57,9 @@ ni: ni.m
 timer: timer.m
 	${CC} ${CFLAGS} timer.m
 
-kvt: kvt.m
-	${CC} ${CFLAGS} kvt.m
 
-mgmt: mgmt.m
-	${CC} ${CFLAGS} mgmt.m
+kvt: kvt.m
+	${CC} ${CFLAGS} kvt.m -lgpgme -lgpg-error
 
 gpgme: gpg.m
 	${CC} ${CFLAGS} gpg.m -lgpgme -lgpg-error
@@ -69,6 +67,10 @@ gpgme: gpg.m
 rc: rc.m
 	${CC} ${CFLAGS} rc.m
 
+mgmt: mgmt.m
+	${CC} ${CFLAGS} mgmt.m -lgpgme -lgpg-error
+
 clean:
 	rm ./a.out
 	rm -rf ./a.out.dSYM
+

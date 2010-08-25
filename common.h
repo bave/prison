@@ -27,8 +27,10 @@
 #define PPFLAG_ERROR      0x80
 
 #define INITIALLY_TIMEOUT (-60) // unused
-#define FW_IDLE_TIMEOUT (-10)
-#define PP_IDLE_TIMEOUT (-4)
+#define FW_IDLE_TIMEOUT   (-10)
+#define PP_IDLE_TIMEOUT   (-4)
+#define KVT_CAGE_TIMEOUT  (10)
+#define KVT_CAGE_TTL      120 // 2minutes
 
 // reduce declaration
 #define SA    struct sockaddr

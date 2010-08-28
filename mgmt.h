@@ -100,6 +100,9 @@ extern ResourceConfig* rc;
 - (void)test;
 - (NSArray*)idle_timeout;
 - (NSArray*)per_timeout;
+
+// for timer.h
+- (NSArray*)dequeuePutList;
             
 // private function
 - (NSString*)_generate_fqdn2ip;
@@ -111,6 +114,16 @@ extern ResourceConfig* rc;
 @end    
     
 @implementation Manager
+
+- (bool)putCage:(NSString*)message
+{
+    return [kvt sendMessage:message];
+}
+
+- (NSArray*)dequeuePutList
+{
+    return [kvt dequeueReput];
+}
 
 - (void)test
 {
@@ -127,6 +140,8 @@ extern ResourceConfig* rc;
     NSLog(@"FID2PP%@", mgmtDictFID2PP);
     NSLog(@"PortPair%@", mgmtDictPortPair);
     NSLog(@"PPFlags %@", mgmtDictPPFlags);
+    NSLog(@"kvtRequestQueue%@", [kvt getRequestQueue]);
+    NSLog(@"kvtReputQueue%@", [kvt getReputQueue]);
     printf("-----------------------------------------\n");
     printf("\n");
     return;
@@ -246,6 +261,8 @@ extern ResourceConfig* rc;
         // --------------
         filter_id = 0;
         local_id  = 1;
+        defaultIP = nil;
+        defaultRT = nil;
         mgmtLock = [NSLock new];
         kvt = [[keyValueTable alloc] init_test];
         [kvt setLocalDB:[rc getLocalDB]];
@@ -260,8 +277,6 @@ extern ResourceConfig* rc;
         mgmtDictFID2PP     = [NSMutableDictionary new];
         mgmtDictPortPair   = [NSMutableDictionary new];
         mgmtDictPPFlags    = [NSMutableDictionary new];
-        defaultIP = nil;
-        defaultRT = nil;
     }   
     return self;
 }       
@@ -275,6 +290,8 @@ extern ResourceConfig* rc;
         // --------------
         filter_id = 0;
         local_id  = 1;
+        defaultIP = nil;
+        defaultRT = nil;
         kvt = [keyValueTable new];
         [kvt setLocalDB:[rc getLocalDB]];
         mgmtLock = [NSLock new];
@@ -289,8 +306,6 @@ extern ResourceConfig* rc;
         mgmtDictFID2PP     = [NSMutableDictionary new];
         mgmtDictPortPair   = [NSMutableDictionary new];
         mgmtDictPPFlags    = [NSMutableDictionary new];
-        defaultIP = nil;
-        defaultRT = nil;
     }   
     return self;
 }       

@@ -96,7 +96,6 @@ int main(int argc, char** argv)
 
     //XXX change to reload and restart programing.... at SIGHUP
     if (SIG_ERR == signal(SIGHUP, sig_action)) exit_signal("SIGHUP");
-    //if (SIG_ERR == signal(SIGCHLD, SIG_IGN)) exit_signal("SIGCHLD");
     if (SIG_ERR == signal(SIGPIPE, SIG_IGN)) exit_signal("SIGPIPE");
     if (SIG_ERR == signal(SIGINT, sig_action)) exit_signal("SIGINT");
     if (SIG_ERR == signal(SIGTERM, sig_action)) exit_signal("SIGTERM");
@@ -355,6 +354,7 @@ int main(int argc, char** argv)
     }
     [t setIdieTimer:-FW_IDLE_TIMEOUT];
     [t setPerTimer:-PP_IDLE_TIMEOUT];
+    [t setReputTimer:KVT_CAGE_TTL-10];
 
     [NSApp run];
     // -------------------------------------------------------

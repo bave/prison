@@ -698,6 +698,15 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSString*)encrypt:(NSString*)txt :(NSString*)uid
 {
+#ifdef __PRISON__
+
+    pid_t ch;
+    int ch_fd_in;
+    int ch_fd_out;
+    int ch_fd_err;
+    int ch_fd_pp;
+    int status;
+
     if (txt == nil) {
         @throw @"error:[gpg encrypt] nonexistent txt";
     }
@@ -710,8 +719,87 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         @throw @"error:[gpg encrypt] nonexistent uid";
     }
 
+    id pool = [NSAutoreleasePool new];
+
+    NSMutableArray* arg_array = [NSMutableArray array];
+    [arg_array addObject:gpgExe];
+    [arg_array addObject:@"--homedir"];
+    [arg_array addObject:gpgDir];
+    [arg_array addObject:@"--batch"];
+    [arg_array addObject:@"--armor"];
+    [arg_array addObject:@"-r"];
+    [arg_array addObject:uid];
+    [arg_array addObject:@"--encrypt"];
+
+    //NSLog(@"%@\n", arg_array);
+
+    unsigned int count = [arg_array count];
+    char* args[count];
+    for (unsigned int i=0; i<count; i++) {
+        args[i] = (char*)[[arg_array objectAtIndex:i] UTF8String];
+    }
+    args[count] = NULL;
+
+    ch = popen4(args, &ch_fd_in, &ch_fd_out, &ch_fd_err, &ch_fd_pp);
+
+    write(ch_fd_in, [txt UTF8String], [txt length]);
+    close(ch_fd_in);
+
+    //NSLog(@"%s\n", [[self getPass] UTF8String]);
+    //NSLog(@"%d\n", [[self getPass] length]);
+    write(ch_fd_pp, [[self getPass] UTF8String], [[self getPass] length]);
+    close(ch_fd_pp);
+
+    waitpid(ch, &status, 0);
+
+    int is_correct_terminate;
+    is_correct_terminate = WIFEXITED(status);
+
+    if (is_correct_terminate != 1) {
+        close(ch_fd_out);
+        close(ch_fd_err);
+        @throw @"error: [gpg encrypt] violation error";
+    }
+
+    int terminate_status;
+    terminate_status = WEXITSTATUS(status);
+
+    if (terminate_status != 0) {
+        close(ch_fd_out);
+        close(ch_fd_err);
+        @throw @"error: [gpg encrypt] miss passphrase";
+    }
+
+    NSFileHandle* out_file = [[NSFileHandle alloc] initWithFileDescriptor:ch_fd_out];
+    const NSStringEncoding* encode = [NSString availableStringEncodings];
+    NSData* out_data = [out_file readDataToEndOfFile];
+    NSString* out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+    //NSLog(@"%@\n", out_string);
+
+    close(ch_fd_out);
+    close(ch_fd_err);
+    [out_file release];
+    [pool drain];
+    [out_string autorelease];
+
+    return out_string;
+
+#else
+
+    if (txt == nil) {
+        @throw @"error: [gpg encrypt] nonexistent txt";
+    }
+
+    if ([txt length] == 0) {
+        @throw @"error: [gpg encrypt] nonexistent txt";
+    }
+
+    if (uid == nil) {
+        @throw @"error: [gpg encrypt] nonexistent uid";
+    }
+
     if ([uid length] == 0) {
-        @throw @"error:[gpg encrypt] nonexistent uid";
+        @throw @"error: [gpg encrypt] nonexistent uid";
     }
 
     // ----------------------------------------
@@ -788,7 +876,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     if (ret != 0) {
         [task release];
         [pool drain];
-        @throw @"error:[gpg encrypt] violation error";
+        @throw @"error: [gpg encrypt] violation error";
     }
 
 
@@ -798,10 +886,100 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     [out_string autorelease];
 
     return out_string;
+
+#endif
 }
 
 - (NSString*)encryptForce:(NSString*)txt :(NSString*)uid
 {
+#ifdef __PRISON__
+    pid_t ch;
+    int ch_fd_in;
+    int ch_fd_out;
+    int ch_fd_err;
+    int ch_fd_pp;
+    int status;
+
+    if (txt == nil) {
+        @throw @"error:[gpg encrypt] nonexistent txt";
+    }
+
+    if ([txt length] == 0) {
+        @throw @"error:[gpg encrypt] nonexistent txt";
+    }
+
+    if (uid == nil) {
+        @throw @"error:[gpg encrypt] nonexistent uid";
+    }
+
+    id pool = [NSAutoreleasePool new];
+
+    NSMutableArray* arg_array = [NSMutableArray array];
+    [arg_array addObject:gpgExe];
+    [arg_array addObject:@"--homedir"];
+    [arg_array addObject:gpgDir];
+    [arg_array addObject:@"--batch"];
+    [arg_array addObject:@"--always-trust"];
+    [arg_array addObject:@"--armor"];
+    [arg_array addObject:@"-r"];
+    [arg_array addObject:uid];
+    [arg_array addObject:@"--encrypt"];
+
+    //NSLog(@"%@\n", arg_array);
+
+    unsigned int count = [arg_array count];
+    char* args[count];
+    for (unsigned int i=0; i<count; i++) {
+        args[i] = (char*)[[arg_array objectAtIndex:i] UTF8String];
+    }
+    args[count] = NULL;
+
+    ch = popen4(args, &ch_fd_in, &ch_fd_out, &ch_fd_err, &ch_fd_pp);
+
+    write(ch_fd_in, [txt UTF8String], [txt length]);
+    close(ch_fd_in);
+
+    //NSLog(@"%s\n", [[self getPass] UTF8String]);
+    //NSLog(@"%d\n", [[self getPass] length]);
+    write(ch_fd_pp, [[self getPass] UTF8String], [[self getPass] length]);
+    close(ch_fd_pp);
+
+    waitpid(ch, &status, 0);
+
+    int is_correct_terminate;
+    is_correct_terminate = WIFEXITED(status);
+
+    if (is_correct_terminate != 1) {
+        close(ch_fd_out);
+        close(ch_fd_err);
+        @throw @"error: [gpg encrypt] violation error";
+    }
+
+    int terminate_status;
+    terminate_status = WEXITSTATUS(status);
+
+    if (terminate_status != 0) {
+        close(ch_fd_out);
+        close(ch_fd_err);
+        @throw @"error: [gpg encrypt] miss passphrase";
+    }
+
+    NSFileHandle* out_file = [[NSFileHandle alloc] initWithFileDescriptor:ch_fd_out];
+    const NSStringEncoding* encode = [NSString availableStringEncodings];
+    NSData* out_data = [out_file readDataToEndOfFile];
+    NSString* out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+    //NSLog(@"%@\n", out_string);
+
+    close(ch_fd_out);
+    close(ch_fd_err);
+    [out_file release];
+    [pool drain];
+    [out_string autorelease];
+
+    return out_string;
+
+#else
+
     if (txt == nil) {
         @throw @"error:[gpg encrypt] nonexistent txt";
     }
@@ -903,14 +1081,12 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     [out_string autorelease];
 
     return out_string;
+
+#endif
 }
 
 - (NSString*)decrypt:(NSString*)sig
 {
-
-#ifdef __PRISON__
-    return nil;
-#else
 
     id pool = [NSAutoreleasePool new];
 
@@ -977,7 +1153,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     [out_string autorelease];
 
     return out_string;
-#endif
 }
 
 - (NSString*)sign:(NSString*)txt
@@ -1013,7 +1188,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     [arg_array addObject:@"--armor"];
     [arg_array addObject:@"--sign"];
 
-    NSLog(@"%@\n", arg_array);
+    //NSLog(@"%@\n", arg_array);
 
     unsigned int count = [arg_array count];
     char* args[count];
@@ -1032,14 +1207,11 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     write(ch_fd_pp, [[self getPass] UTF8String], [[self getPass] length]);
     close(ch_fd_pp);
 
-    NSLog(@"start-wait\n");
     waitpid(ch, &status, 0);
-    NSLog(@"end-wait\n");
 
     int is_correct_terminate;
     is_correct_terminate = WIFEXITED(status);
 
-    /*
     if (is_correct_terminate != 1) {
         close(ch_fd_out);
         close(ch_fd_err);
@@ -1054,13 +1226,12 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         close(ch_fd_err);
         @throw @"error: [gpg sign] miss passphrase";
     }
-    */
 
     NSFileHandle* out_file = [[NSFileHandle alloc] initWithFileDescriptor:ch_fd_out];
     const NSStringEncoding* encode = [NSString availableStringEncodings];
     NSData* out_data = [out_file readDataToEndOfFile];
     NSString* out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
-    NSLog(@"%@\n", out_string);
+    //NSLog(@"%@\n", out_string);
 
     close(ch_fd_out);
     close(ch_fd_err);
@@ -1126,6 +1297,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     [out_string autorelease];
 
     return out_string;
+
 #endif
 }
 

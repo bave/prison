@@ -32,10 +32,11 @@ extern bool is_verbose;
     NSFileHandle* task_file;
     NSFileHandle* cage_file;
 
+    NSLock* kvtLock;
     NSMutableSet* kvtRequestQueue;
+    NSMutableArray* kvtReputQueue;
 
     GPGME* gpg;
-
     NSMutableDictionary* kvtLocalDB;
 }
 
@@ -47,10 +48,16 @@ extern bool is_verbose;
 - (NSString*)ip4key:(NSString*)key;
 - (NSString*)port4key:(NSString*)key;
 - (NSString*)value4key:(NSString*)key;
+
+- (NSSet*)getRequestQueue;
+- (NSArray*)dequeueReput;
+- (NSArray*)getReputQueue;
 //- (void)storeKVT:(NSString*)key :(NSString*)valeu;
 
 - (bool)setTaskPath:(NSString*)path;
+
 - (bool)isCageRun;
+- (bool)sendMessage:(NSString*)message;
 
 // private function
 - (void)_debug_dict;
@@ -64,11 +71,11 @@ extern bool is_verbose;
 - (bool)_cage_node_new;
 - (bool)_cage_join;
 
+
 - (void)_cage_console_handler:(NSNotification*)notify;
 - (void)_cage_recv_handler:(NSNotification*)notify;
 
 - (NSString*)_commit_message:(NSString*)message;
-- (bool)_cage_send_message:(NSString*)message;
 
 // trush function
 //- (bool)setPath:(NSString*)path;
@@ -85,6 +92,25 @@ extern bool is_verbose;
     return;
 }
 
+- (NSSet*)getRequestQueue
+{
+    return [NSSet setWithSet:kvtRequestQueue];
+}
+
+- (NSArray*)dequeueReput
+{
+    NSArray* ret_array = [NSArray arrayWithArray:kvtReputQueue];
+    [kvtLock lock];
+    [kvtReputQueue removeAllObjects];
+    [kvtLock unlock];
+    return ret_array; 
+}
+
+- (NSArray*)getReputQueue;
+{
+    return [NSArray arrayWithArray:kvtReputQueue];
+}
+
 - (id)init
 {
     self = [super init];
@@ -92,7 +118,10 @@ extern bool is_verbose;
         // --------------
         // initial coding
         // --------------
+        kvtLock = [NSLock new];
         kvtLocalDB = [[NSMutableDictionary alloc] init];
+        kvtRequestQueue = [[NSMutableSet alloc] init];
+        kvtReputQueue = [[NSMutableArray alloc] init];
         [self _gpg_init];
         [self _cage_init:nil];
     }
@@ -106,8 +135,10 @@ extern bool is_verbose;
         // --------------
         // initial coding
         // --------------
+        kvtLock = [NSLock new];
         kvtLocalDB = [[NSMutableDictionary alloc] init];
         kvtRequestQueue = [[NSMutableSet alloc] init];
+        kvtReputQueue = [[NSMutableArray alloc] init];
         [self _gpg_init];
         [self _cage_init:path];
     }
@@ -118,7 +149,10 @@ extern bool is_verbose;
 {
     self = [super init];
     if(self != nil) {
+        kvtLock = [NSLock new];
         kvtLocalDB = [[NSMutableDictionary alloc] init];
+        kvtRequestQueue = [[NSMutableSet alloc] init];
+        kvtReputQueue = [[NSMutableArray alloc] init];
         // --------------
         // initial coding
         // --------------
@@ -194,7 +228,9 @@ extern bool is_verbose;
     [kvtTaskPath release];
     [kvtTask release];
     [gpg release];
+    [kvtLock release];
     [kvtRequestQueue release];
+    [kvtReputQueue release];
     [kvtLocalDB release];
     [super dealloc];
     return;
@@ -377,7 +413,8 @@ extern bool is_verbose;
 
 - (void)_cage_recv_handler:(NSNotification*)notify
 {
-    if (![[notify userInfo] objectForKey:@"NSFileHandleError"]) {
+    if (![[notify userInfo] objectForKey:@"NSFileHandleError"])
+    {
         NSData *data;
         NSString *buf_string;
         const NSStringEncoding* encode;
@@ -388,22 +425,31 @@ extern bool is_verbose;
 
         if (buf_string != nil) {
             NSArray* buf_array = [buf_string componentsSeparatedByString:@","];
+            NSString* req_string = [NSString stringWithFormat:@"%@,%@",
+                                     [buf_array objectAtIndex:1],
+                                     [buf_array objectAtIndex:3]];
 
-            //SUCCEEDED_PUT = "203"
-            if ([[buf_array objectAtIndex:0] isEqualToString:@"202"]) { 
-            }
+            if ([kvtRequestQueue member:req_string] != nil) {
+                [kvtRequestQueue removeObject:req_string];
 
-            //SUCCEEDED_GET = "204"
-            else if ([[buf_array objectAtIndex:0] isEqualToString:@"204"]) {
-            }
+                //SUCCEEDED_PUT = "203"
+                if ([[buf_array objectAtIndex:0] isEqualToString:@"203"]) { 
+                    [kvtLock lock];
+                    [kvtReputQueue addObject:[buf_string substringFromIndex:4]];
+                    [kvtLock unlock];
+                }
 
-            //ERR_GET_FAILURE = "409"
-            else if ([[buf_array objectAtIndex:0] isEqualToString:@"409"]) {
+                //SUCCEEDED_GET = "204"
+                else if ([[buf_array objectAtIndex:0] isEqualToString:@"204"]) {
+                }
+
+                //ERR_GET_FAILURE = "409"
+                else if ([[buf_array objectAtIndex:0] isEqualToString:@"409"]) {
+                }
             }
         }
 
     }
-
     [cage_file readInBackgroundAndNotify];
 
     return;
@@ -475,31 +521,24 @@ extern bool is_verbose;
         @throw @"cant join to seed host";
     }
 
-    NSLog(@"_cage_join\n");
     cage_file = [[NSFileHandle alloc] initWithFileDescriptor:cage_sock_fd];
-    NSLog(@"_cage_mk_handler\n");
     [[NSNotificationCenter defaultCenter]
         addObserver:self
         selector:@selector(_cage_recv_handler:)
         name:NSFileHandleReadCompletionNotification
         object:cage_file
     ];
-    NSLog(@"_cage_set_observer\n");
+    [cage_file readInBackgroundAndNotify];
 
     // put on default_hostname for cage.
     NSString* key = [NSString stringWithFormat:@"%@.p2p", [rc getPrisonName]];
-    NSLog(@"_cage_mk_key_message\n");
     NSString* value = [NSString stringWithFormat:@"%@.p2p:NULL:NULL", [ni defaultIP4]];
-    NSLog(@"_cage_mk_value_message\n");
     //[gpg setPasswd:@"passhprase"];
-    NSLog(@"%@\n", [gpg getPass]);
+    //NSLog(@"%@\n", [gpg getPass]);
     NSString* sign = [gpg sign:value];
     NSString* value_sign = [GPGME trimContentFromArmor:sign];
-    NSLog(@"_cage_mk_value_sign_message\n");
-    [self _cage_send_message: [NSString stringWithFormat:
+    [self sendMessage: [NSString stringWithFormat:
                         @"put,prison,%@,%@,%d,unique", key, value_sign, KVT_CAGE_TTL]];
-    NSLog(@"_cage_pute\n");
-
 
     return;
 }
@@ -677,19 +716,18 @@ extern bool is_verbose;
     return ret;
 }
 
-- (bool)_cage_send_message:(NSString*)message
+- (bool)sendMessage:(NSString*)message
 {
-    NSLog(@"_cage_send_message\n");
-    char buffer[65535];
-    memset(buffer, 0, sizeof(buffer));
-    memcpy(buffer, [message UTF8String], [message length]);
-
-    [kvtRequestQueue addObject:message];
-    NSLog(@"_cage_send_message\n");
+    NSArray* mesg_array = [message componentsSeparatedByString:@","];
+    NSString* req_string;
+    req_string = [NSString stringWithFormat:@"%@,%@",
+                  [mesg_array objectAtIndex:0],
+                  [mesg_array objectAtIndex:2]];
+    //NSLog(@"sendMessage:req_string:%@\n", req_string);
+    [kvtRequestQueue addObject:req_string];
 
     int ret = true;
-    ret = send(cage_sock_fd, buffer, (socklen_t)sizeof(buffer), 0);
-    NSLog(@"_cage_raw_send\n");
+    ret = send(cage_sock_fd, [message UTF8String], [message length], 0);
     if (ret == -1) {
         ret = false;
     } else {

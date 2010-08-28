@@ -126,7 +126,6 @@ int main()
     @catch (id e){
         NSLog(@"%@\n", e);
     }
-    exit(1);
 
     //encryptForce
     @try {
@@ -135,6 +134,7 @@ int main()
     @catch (id e){
         NSLog(@"%@\n", e);
     }
+    exit(1);
 
     /*
     //encrypt

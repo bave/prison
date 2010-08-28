@@ -9,26 +9,30 @@
 #include "common.h"
 #include "category.h"
 
-extern Manager*   mgmt;
+extern Manager* mgmt;
 
 @interface Timer : NSObject
 {
     NSTimer* idle_timer;
     NSTimer* per_timer;
     NSTimer* verbose_timer;
+    NSTimer* reput_timer;
 }
 
 - (void)setIdieTimer:(NSTimeInterval)interval;
 - (void)setPerTimer:(NSTimeInterval)interval;
 - (void)setVerboseTimer:(NSTimeInterval)interval;
+- (void)setReputTimer:(NSTimeInterval)interval;
 
 - (void)idle_action:(NSTimer*)timer;
 - (void)per_action:(NSTimer*)timer;
 - (void)verbose_action:(NSTimer*)timer;
+- (void)reput_action:(NSTimeInterval)interval;
 
 - (void)stopIdieTimer;
 - (void)stopPerTimer;
 - (void)stopVerboseTimer;
+- (void)stopReputTimer;
 
 - (id)init;
 - (void)dealloc;
@@ -122,6 +126,35 @@ extern Manager*   mgmt;
     [verbose_timer release];
     return;
 }
+
+- (void)setReputTimer:(NSTimeInterval)interval
+{
+    reput_timer = [NSTimer
+        scheduledTimerWithTimeInterval:interval
+        target:self
+        selector:@selector(reput_action:)
+        userInfo:nil
+        repeats:YES];
+    return;
+}
+
+- (void)reput_action:(NSTimeInterval)interval
+{ 
+    NSArray* reput_array = [mgmt dequeuePutList];
+    NSEnumerator* reput_enum = [reput_array objectEnumerator];
+    ITERATE (reput_element, reput_enum) {
+        [mgmt putCage:reput_element];
+    }
+    return;
+}
+
+- (void)stopReputTimer
+{
+    [reput_timer invalidate];
+    [reput_timer release];
+    return;
+}
+
 
 - (id)init {
     self = [super init];

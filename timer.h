@@ -116,7 +116,9 @@ extern Manager* mgmt;
 
 - (void)verbose_action:(NSTimer*)timer
 {
+    id pool = [NSAutoreleasePool new];
     [mgmt test];
+    [pool drain];
     return;
 }
 
@@ -140,11 +142,14 @@ extern Manager* mgmt;
 
 - (void)reput_action:(NSTimeInterval)interval
 { 
+
+    id pool = [NSAutoreleasePool new];
     NSArray* reput_array = [mgmt dequeuePutList];
     NSEnumerator* reput_enum = [reput_array objectEnumerator];
     ITERATE (reput_element, reput_enum) {
         [mgmt putCage:reput_element];
     }
+    [pool drain];
     return;
 }
 

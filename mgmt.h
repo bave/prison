@@ -8,7 +8,7 @@
 #include "utils.h"
 #include "common.h"
 #include "category.h"
-
+#include "pbuf.h"
 #include "kvt.h"
 #include "fw.h"
 #include "rc.h"
@@ -34,6 +34,7 @@ extern ResourceConfig* rc;
     NSMutableDictionary* mgmtDictFID2PP;
     NSMutableDictionary* mgmtDictPortPair;
     NSMutableDictionary* mgmtDictPPFlags;
+    NSMutableDictionary* mgmtRequestA;
     NSString* defaultIP;
     NSString* defaultRT;
 }       
@@ -50,9 +51,11 @@ extern ResourceConfig* rc;
 - (bool)delFQDN:(NSString*)fqdn;
 
 - (NSString*)getFQDN2LIP:(NSString*)fqdn;
-- (NSString*)getFQDN2Value:(NSString*)fqdn;
+//- (NSString*)getFQDN2Value:(NSString*)fqdn;
 - (NSString*)getFQDN2GIP:(NSString*)fqdn;
 - (NSString*)getFQDN2PORT:(NSString*)fqdn;
+
+- (bool)isExistLocalDB:(NSString*)fqdn;
 
 - (NSString*)getLIP2FQDN:(NSString*)lip;
 - (NSString*)getLIP2Value:(NSString*)lip;
@@ -103,6 +106,17 @@ extern ResourceConfig* rc;
 
 // for timer.h
 - (NSArray*)dequeuePutList;
+
+// related cage function
+- (bool)enqueueRequestA:(NSString*)fqdn
+                       :(PacketBuffer*)pbuf
+                       :(int)socketFD
+                       :(SA*)sa
+                       :(int)nid;
+- (NSArray*)dequeueRequestA:(NSString*)fqdn;
+
+//- (NSArray)getNameRequestForFQDN:(NSString*)fqdn;
+//- (bool)delNameRequestForFQDN:(NSString*)fqdn;
             
 // private function
 - (NSString*)_generate_fqdn2ip;
@@ -139,7 +153,8 @@ extern ResourceConfig* rc;
     NSLog(@"FID2LIP%@", mgmtDictFID2LIP);
     NSLog(@"FID2PP%@", mgmtDictFID2PP);
     NSLog(@"PortPair%@", mgmtDictPortPair);
-    NSLog(@"PPFlags %@", mgmtDictPPFlags);
+    NSLog(@"PPFlags%@", mgmtDictPPFlags);
+    NSLog(@"RequestA%@", [mgmtRequestA allKeys]);
     NSLog(@"kvtRequestQueue%@", [kvt getRequestQueue]);
     NSLog(@"kvtReputQueue%@", [kvt getReputQueue]);
     printf("-----------------------------------------\n");
@@ -277,6 +292,7 @@ extern ResourceConfig* rc;
         mgmtDictFID2PP     = [NSMutableDictionary new];
         mgmtDictPortPair   = [NSMutableDictionary new];
         mgmtDictPPFlags    = [NSMutableDictionary new];
+        mgmtRequestA       = [NSMutableDictionary new];
     }   
     return self;
 }       
@@ -306,6 +322,7 @@ extern ResourceConfig* rc;
         mgmtDictFID2PP     = [NSMutableDictionary new];
         mgmtDictPortPair   = [NSMutableDictionary new];
         mgmtDictPPFlags    = [NSMutableDictionary new];
+        mgmtRequestA       = [NSMutableDictionary new];
     }   
     return self;
 }       
@@ -416,6 +433,36 @@ extern ResourceConfig* rc;
     return [fw getEmptyNum:true];
 }
 
+-(NSArray*)dequeueRequestA:(NSString*)fqdn
+{
+    //NSLog(@"key:%@\n", fqdn);
+    NSArray* array = [[[mgmtRequestA objectForKey:fqdn] copy] autorelease];
+    array = [mgmtRequestA objectForKey:fqdn];
+    [mgmtRequestA removeObjectForKey:fqdn];
+    return array;
+}
+
+- (bool)enqueueRequestA:(NSString*)fqdn
+                       :(PacketBuffer*)pbuf
+                       :(int)socketFD
+                       :(SA*)sa
+                       :(int)name_id
+{
+    NSNumber* sock = [NSNumber numberWithInt:socketFD];
+    NSData* sa_data = [NSData dataWithBytes:sa length:sizeof(SAST)];
+    NSNumber* nid = [NSNumber numberWithInt:name_id];
+    NSArray* tmp_object = [NSArray arrayWithObjects:
+                            fqdn, sock, sa_data, [pbuf data], nid,nil];
+    //NSLog(@"enqueuRequestA:%@\n", tmp_object);
+
+    if ([mgmtRequestA objectForKey:fqdn] == nil) {
+        [mgmtRequestA setObject:tmp_object forKey:fqdn];
+        [kvt sendMessage:[NSString stringWithFormat:@"get,prison,%@\n", fqdn]];
+        return true;
+    }
+    return false;
+}
+
 - (bool)setFQDN:(NSString*)fqdn 
 {
     [mgmtLock lock];
@@ -499,12 +546,23 @@ extern ResourceConfig* rc;
     return true;
 }
 
+- (bool)isExistLocalDB:(NSString*)fqdn
+{
+    [kvt waitLock];
+    if ([kvt value4key:fqdn] == nil) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 - (NSString*)getFQDN2LIP:(NSString*)fqdn 
 {
     return [mgmtDictFQDN2LIP valueForKey:fqdn];
 }
 
 
+/*
 - (NSString*)getFQDN2Value:(NSString*)fqdn
 {
     NSString* lip;
@@ -516,6 +574,7 @@ extern ResourceConfig* rc;
 
     return [kvt value4key:fqdn];
 }
+*/
 
 - (NSString*)getFQDN2GIP:(NSString*)fqdn
 {
@@ -1010,6 +1069,7 @@ extern ResourceConfig* rc;
     [mgmtDictFIDDate  release];
     [mgmtDictFIDIdle  release];
     [mgmtDictPPIdle   release];
+    [mgmtRequestA     release];
     //[mgmtDictFIDCounter release];
     [mgmtLock release];
     [super dealloc];

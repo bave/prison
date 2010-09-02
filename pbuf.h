@@ -49,6 +49,7 @@
 - (id)init;
 - (void)dealloc;
 - (const void*)bytes;
+- (NSData*)data;
 - (size_t)length;
 - (bool)sync;
 - (bool)withBytes:(unsigned char*)buf :(size_t)len;
@@ -486,11 +487,13 @@
     return [pbufData bytes];
 }
 
-
 - (size_t)length {
     return [pbufData length];
 }
 
+- (NSData*)data {
+    return [NSData dataWithData:pbufData];
+}
 
 - (uint8_t*)getL3 {
     //printf("getL3->%d:%p\n", __LINE__, pbufL3);

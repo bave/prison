@@ -336,6 +336,12 @@ int main(int argc, char** argv)
         name:@"notify://obs.PPTimeout"
         object:nil
     ];
+    [[NSNotificationCenter defaultCenter]
+        addObserver:obs
+        selector:@selector(obsNameReply:)
+        name:@"notify://obs.NameReply"
+        object:nil
+    ];
 
     // post notificaiton message
     // flushcache

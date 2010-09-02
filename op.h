@@ -136,7 +136,8 @@ extern bool is_verbose;
 
     int name_id;
     ns_msg ns_handle;
-    struct sockaddr_in sin_recv;
+    //struct sockaddr_in sin_recv;
+    struct sockaddr_storage sin_recv;
     socklen_t len;
     ssize_t  size;
     uint8_t  buf[SIZE_RECV_BUFFER];
@@ -187,7 +188,6 @@ extern bool is_verbose;
 
 
         if ([[fqdn_array lastObject] isEqualToString:@"p2p"]) {
-
             // address swapping ------------------------------------------------
             struct ip* ip;
             ip = (struct ip*)[pbuf getL3];
@@ -196,7 +196,6 @@ extern bool is_verbose;
             udp = (struct udphdr*)[pbuf getL4];
             memswap(&udp->uh_sport, &udp->uh_dport, sizeof(uint16_t));
             // -----------------------------------------------------------------
-
 
             if (type == 28) {
                 //NSLog(@"AAAA");
@@ -218,23 +217,21 @@ extern bool is_verbose;
                 NSString* lip;
                 lip = [mgmt getFQDN2LIP:fqdn];
                 if (lip == nil) {
-                    bool ret_setFQDN;
-                    ret_setFQDN = [mgmt setFQDN:fqdn];
-                    if (ret_setFQDN) {
-                        //NSLog(@"DEBUG:setFQDN->%s:%d", __FILE__, __LINE__);
+                    if ([mgmt isExistLocalDB:fqdn] == true) {
+                        //NSLog(@"existLockDB\n");
+                        [mgmt setFQDN:fqdn];
+                        lip = [mgmt getFQDN2LIP:fqdn];
                     } else {
-                        //NSLog(@"DEBUG:unsetFQDN->%s:%d", __FILE__, __LINE__);
+                        //NSLog(@"non existLockDB\n");
                     }
-                    lip = [mgmt getFQDN2LIP:fqdn];
                 }
-                //NSLog(@"%d:lip->%@", __LINE__, lip);
                 // -----------------------------------------------------------------
 
 
                 // generate name reply message -------------------------------------
                 if (lip != nil) {
-                    // correct query 
-                    id name=[[NamePacket alloc] init];
+                    // reply from localDB
+                    id name = [[NamePacket alloc] init];
                     [name n_set_id:name_id];
                     [name n_set_flags:QR|AA|RA];
                     [name n_create_rr_questionA:fqdn];
@@ -243,20 +240,35 @@ extern bool is_verbose;
                     [pbuf setL7:[name n_payload] :[name n_payload_size]];
                     [name release];
                 }
+
                 else {
+                    // query to cage
+                    [mgmt enqueueRequestA:fqdn 
+                                         :pbuf
+                                         :socketFD
+                                         :(sockaddr*)&sin_recv
+                                         :name_id];
+                    //enqueue return following
+                    //true : to query cage...
+                    //false: already request in request Queue.
+                    if ([self isCancelled] == YES) {
+                        [loop_pool drain];
+                        break;
+                    }
+                    [loop_pool drain];
+                    continue;
                     // replay NSDomain
-                    id name=[[NamePacket alloc] init];
-                    [name n_set_id:name_id];
-                    [name n_set_flags:QR|AA|RE_Error];
-                    [name n_create_rr_questionA:fqdn];
-                    [name n_build_payload];
-                    [pbuf setL7:[name n_payload] :[name n_payload_size]];
-                    [name release];
+                    //id name = [[NamePacket alloc] init];
+                    //[name n_set_id:name_id];
+                    //[name n_set_flags:QR|AA|RE_Error];
+                    //[name n_create_rr_questionA:fqdn];
+                    //[name n_build_payload];
+                    //[pbuf setL7:[name n_payload] :[name n_payload_size]];
+                    //[name release];
                 }
                 // -----------------------------------------------------------------
             }
         }
-
         
         size = sendto(socketFD, [pbuf bytes], [pbuf length], 0, (SA*)&sin_recv, len);
 
@@ -629,7 +641,7 @@ extern bool is_verbose;
             ip = (struct ip*)[pbuf getL3];
             memset(&sin_recv, 0, sizeof(sin_recv));
             sin_recv.sin_family=AF_INET;
-            sin_recv.sin_addr.s_addr=ip->ip_dst.s_addr ;
+            sin_recv.sin_addr.s_addr=ip->ip_dst.s_addr;
             // -----------------------------------------------------------------
         }
 

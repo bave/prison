@@ -26,15 +26,16 @@
 //#define PPFLAG_huge     0x40
 #define PPFLAG_ERROR      0x80
 
-#define INITIALLY_TIMEOUT (-60) // unused
+#define INITIALLY_TIMEOUT (-60)
 #define FW_IDLE_TIMEOUT   (-10)
 #define PP_IDLE_TIMEOUT   (-4)
 #define KVT_CAGE_TIMEOUT  (10)
-#define KVT_CAGE_TTL      120 // 2minutes
+#define KVT_CAGE_TTL 120
 
 // reduce declaration
 #define SA    struct sockaddr
 #define SAIN  struct sockaddr_in
 #define SAIN6 struct sockaddr_in6
+#define SAST  struct sockaddr_storage
 
 #endif

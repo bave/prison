@@ -8,6 +8,9 @@
 #include "ds.h"
 #include "fw.h"
 #include "mgmt.h"
+#include "name.h"
+#include "pbuf.h"
+
 
 
 #include "utils.h"
@@ -41,9 +44,12 @@ extern NSLock* extLock;
 // call flushcachce...
 - (void)obsDS:(NSNotification*)notify;
 
-// close session
+// timer event
 - (void)obsFWT:(NSNotification*)notify;
 - (void)obsPPT:(NSNotification*)notify;
+
+// name event
+- (void)obsNameReply:(NSNotification*)notify;
 
 @end
 
@@ -190,6 +196,90 @@ extern NSLock* extLock;
 
     }
     [extLock unlock];
+    return;
+}
+
+- (void)obsNameReply:(NSNotification*)notify
+{
+    NSLog(@"notification to obsNameReply");
+    //id name = [notify name];
+    //NSLog(@"objectNotifyName:%@\n", name);
+
+    NSString* message = [notify object];
+    //NSLog(@"object:%@\n", object);
+
+    //id user = [notify userInfo];
+    //NSLog(@"userInfo:%@\n", user);
+
+    //204,get,NodeName,Key,Value
+    NSArray* message_array = [message componentsSeparatedByString:@","];
+    NSString* code = [message_array objectAtIndex:0];
+    //NSString* command = [message_array objectAtIndex:1];
+    //NSString* node_name = [message_array objectAtIndex:2];
+    NSString* key = [message_array objectAtIndex:3];
+    //NSString* value = [message_array objectAtIndex:4];
+
+    NSArray* request_array = [mgmt dequeueRequestA:key];
+    //0: fqdn
+    //1: socket descriptor
+    //2: sa_data - sockaddr_in
+    //3: request divert socket payload
+    //4: name_id
+
+    NSLog(@"code:%@\n", code);
+    NSLog(@"request_array:%@\n", request_array);
+
+    NSString* fqdn = [request_array objectAtIndex:0];
+    int sock = [[request_array objectAtIndex:1] intValue];
+    SAIN* sin = (SAIN*)[[request_array objectAtIndex:2] bytes];
+    PacketBuffer* pbuf = [[[PacketBuffer alloc] init] autorelease];
+    [pbuf withData:[request_array objectAtIndex:3]];
+    int name_id = [[request_array objectAtIndex:4] intValue];
+
+    NSString* lip = nil;
+    if ([code isEqualToString:@"204"] == YES) {
+        [mgmt setFQDN:fqdn];
+        lip = [mgmt getFQDN2LIP:fqdn];
+    }
+    else if ([code isEqualToString:@"409"] == YES) {
+        NSLog(@"%@\n", code);
+    }
+
+    if (lip != nil) {
+        // reply from localDB
+        id name = [[NamePacket alloc] init];
+        [name n_set_id:name_id];
+        [name n_set_flags:QR|AA|RA];
+        [name n_create_rr_questionA:fqdn];
+        [name n_create_rr_answer:lip];
+        [name n_build_payload];
+        [pbuf setL7:[name n_payload] :[name n_payload_size]];
+        [name release];
+    }
+
+    else {
+        // replay NXDomain
+        NSLog(@"NXDOMAIN\n", code);
+        NSLog(@"name_id:%d\n", name_id);
+        NSLog(@"fqdn:%@\n", fqdn);
+        id name = [[NamePacket alloc] init];
+        [name n_set_id:name_id];
+        [name n_set_flags:QR|AA|RA|RE_Error];
+        [name n_create_rr_questionA:fqdn];
+        [name n_build_payload];
+        [pbuf setL7:[name n_payload] :[name n_payload_size]];
+        [name release];
+    }
+
+    socklen_t len;
+    len = (socklen_t)sizeof(SAST);
+    size_t size;
+    size = sendto(sock, [pbuf bytes], [pbuf length], 0, (SA*)sin, len);
+    if ((int)size == -1) {
+        perror("sendto");
+    }
+    NSLog(@"sendto size:%d\n", size);
+
     return;
 }
 

@@ -385,7 +385,7 @@ void
 callback_read(int sockfd, short ev, void *arg)
 {
         ssize_t size;
-        char    buf[1024 * 4];
+        char    buf[1024 * 64];
 
         if (ev == EV_READ) {
         retry:
@@ -406,6 +406,8 @@ callback_read(int sockfd, short ev, void *arg)
 
                         return;
                 }
+
+                //fprintf(stderr, "cage_read:%lu:%s\n", strlen(buf), buf);
 
                 buf[size - 1] = '\0';
 
@@ -465,7 +467,7 @@ do_command(int sockfd, std::string command)
         } else {
                 D(std::cout << "unknown command: " << *it << std::endl);
 
-                char result[1024];
+                char result[1024*64];
 
                 // format: 400,COMMENT
                 snprintf(result, sizeof(result), 
@@ -482,7 +484,7 @@ process_set_id(int sockfd, esc_tokenizer::iterator &it,
         name2node_type::iterator it_n2n;
         std::string node_name;
         std::string esc_node_name;
-        char        result[1024 * 4];
+        char        result[1024 * 64];
 
         // read node_name
         if (it == end || it->length() == 0) {
@@ -538,7 +540,7 @@ process_new(int sockfd, esc_tokenizer::iterator &it,
         std::string node_name;
         std::string esc_node_name;
         int         port;
-        char        result[1024 * 4];
+        char        result[1024 * 64];
         bool        is_global = false;
 
         // read node_name
@@ -644,7 +646,7 @@ process_delete(int sockfd, esc_tokenizer::iterator &it,
         name2node_type::iterator it_n2n;
         std::string node_name;
         std::string esc_node_name;
-        char        result[1024 * 4];
+        char        result[1024 * 64];
 
 
         if (it == end) {
@@ -694,7 +696,7 @@ public:
 
         void operator() (bool is_join) {
                 sock2ev_type::iterator it;
-                char result[1024 * 4];
+                char result[1024 * 64];
 
                 it = sock2ev.find(sockfd);
                 if (it == sock2ev.end()) {
@@ -731,7 +733,7 @@ void process_join(int sockfd, esc_tokenizer::iterator &it,
         std::string esc_host;
         int         port;
         func_join   func;
-        char        result[1024 * 4];
+        char        result[1024 * 64];
         name2node_type::iterator it_n2n;
 
         if (it == end) {
@@ -820,7 +822,7 @@ void process_put(int sockfd, esc_tokenizer::iterator &it,
         std::string esc_key, esc_value;
         uint16_t    ttl;
         bool        is_unique = false;
-        char        result[1024 * 4];
+        char        result[1024 * 64];
 
         if (it == end) {
                 // there is no node_name
@@ -935,6 +937,7 @@ void process_put(int sockfd, esc_tokenizer::iterator &it,
                          esc_key.c_str(), esc_value.c_str(), ttl);
         }
 
+        fprintf(stderr, "cage_put:%lu:%s\n", strlen(result), result);
         send(sockfd, result, strlen(result), 0);
 }
 
@@ -1002,7 +1005,7 @@ void process_get(int sockfd, esc_tokenizer::iterator &it,
         std::string esc_node_name;
         std::string key;
         std::string esc_key;
-        char        result[1024 * 4];
+        char        result[1024 * 64];
         func_get    func;
 
         if (it == end) {

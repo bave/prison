@@ -214,7 +214,7 @@ struct ip_fw {
 - (NSData*)getRuleForNum:(uint16_t)ruleNumber
 {
 
-    // start of get ipfw rule list ---------------------------------------------------------
+    // start of get ipfw rule list ---------------------------------------------------
     struct ip_fw* rules;
     int indicateDataSize;
     int actualDataSize;
@@ -246,7 +246,7 @@ struct ip_fw {
         numRules++;
 
     } while( indicateDataSize == actualDataSize );
-    // end of get ipfw rule list ----------------------------------------------------------
+    // end of get ipfw rule list -----------------------------------------------------
 
     int i;
     int matchingNumber;
@@ -367,6 +367,21 @@ struct ip_fw {
         @throw @"[delRule] : Didn't ipfw have argument Number Rule!\n";
     }
     [self _formatRule];
+    return;
+}
+
+- (void)delExtraRule {
+    int i;
+    uint16_t num;
+    NSArray* array;
+    array = [fwList allObjects];
+    for (i=0; i<[array icount]; i++) {
+        num = [[array objectAtIndex:i] unsignedShortValue]-FW_BIAS_RULE_NUMBER;
+        if (num == 0) {
+            continue;
+        }
+        [self delRule:num];
+    }
     return;
 }
 

@@ -36,6 +36,7 @@
 #define OP_ROUTE  3
 
 extern NSLock* extLock;
+extern NSLock*  niLock;
 extern Manager*   mgmt;
 extern NetInfo*     ni; 
 extern FWHooker*    fw;
@@ -154,6 +155,11 @@ extern bool is_verbose;
             raise(SIGINT);
         }
         // ---------------------------------------------------------------------
+
+        if (is_linking == false) {
+            [loop_pool drain];
+            continue;
+        }
 
         // set packetbuffer ----------------------------------------------------
         id pbuf = [[[PacketBuffer alloc] init] autorelease];
@@ -327,7 +333,9 @@ extern bool is_verbose;
         }
 
         NSString* nsSrcIP;
-        nsSrcIP = [mgmt getDefaultIP];
+        [niLock lock];
+        nsSrcIP = [NSString stringWithString:[ni defaultIP4]];
+        [niLock unlock];
         //NSLog(@"srcIP%@", nsSrcIP);
         if (nsSrcIP == nil) {
             [loop_pool drain];
@@ -713,88 +721,98 @@ extern bool is_verbose;
         raise(SIGINT);
     }
 
-    for (;;) {
 
-        id loop_pool = [NSAutoreleasePool new];
+   //[mgmt setDefaultRT:[ni defaultRoute4]];
+   //[mgmt setDefaultIP:[ni defaultIP4]];
 
-        [ni refresh];
+   for (;;) {
 
-        NSString* ip;
-        NSString* rt;
-        rt = [ni defaultRoute4];
-        ip = [ni defaultIP4];
+       id loop_pool = [NSAutoreleasePool new];
 
-        int flag;
-        flag = false;
-        if (!ip4comp(rt, [mgmt getDefaultRT])) {
+       NSString* ip;
+       NSString* rt;
+
+       [niLock lock];
+       [ni refresh];
+       rt = [ni defaultRoute4];
+       ip = [ni defaultIP4];
+       [niLock unlock];
+
+       if (ip == nil && rt == nil) {
+           is_linking = false;
+       } else {
+           is_linking = true;
+       }
+
+       int flag;
+       flag = false;
+
+       if (!ip4comp(rt, [mgmt getDefaultRT])) {
            //NSLog(@"%d", __LINE__);
            [mgmt setDefaultRT:rt];
            flag = true;
-        }
-        
-        if (!ip4comp(ip, [mgmt getDefaultIP])) {
+       }
+
+       if (!ip4comp(ip, [mgmt getDefaultIP])) {
            //NSLog(@"%d", __LINE__);
            [mgmt setDefaultIP:ip];
            flag = true;
-        }
+       }
 
-        if (flag) {
-            if (is_verbose) {
-                NSLog(@"change-log");
-                NSLog(@"default-Router:%@\n", rt);
-                NSLog(@"default-IPaddr:%@\n", ip);
-            }
-            /*
-            // XXX
-            // DHT の情報を更新するための通知を行う(予定)
-            // send notification
-            [[NSNotificationCenter defaultCenter]
-                postNotificationName:@"stat://obs.updateDHT"
-                object:nil
-                userInfo:nil
-            ];
-            */
-        }
+       if (flag) {
+           if (is_verbose) {
+               NSLog(@"change-log");
+               NSLog(@"default-Router:%@\n", rt);
+               NSLog(@"default-IPaddr:%@\n", ip);
+           }
+           /*
+           NSLog(@"change netinfo");
+           [fw delExtraRule];
+           NSLog(@"fw delExtraRule");
+           //[mgmt recage];
+           //NSLog(@"mgmt recage");
+           */
+       }
 
 
-        #define KEV_BUF_SIZE 128
-        char buf[KEV_BUF_SIZE];
-        memset(buf, 0, sizeof(buf));
+#define KEV_BUF_SIZE 128
+       char buf[KEV_BUF_SIZE];
+       memset(buf, 0, sizeof(buf));
 
-        struct timespec wait;
-        wait.tv_sec = 2;
-        wait.tv_nsec = 0;
+       struct timespec wait;
+       wait.tv_sec = 2;
+       wait.tv_nsec = 0;
 
-        size_t read_size;
-        read_size = 0;
+       size_t read_size;
+       read_size = 0;
 
-        // block wait
-        ret = kevent(kq, NULL, 0, &kev, 1, NULL);
-        read_size = read((int)kev.ident, buf, sizeof(buf));
-        // throw away noise message without catching
-        for (;;) {
-            ret = kevent(kq, NULL, 0, &kev, 1, &wait);
-            if (kev.flags & EV_ERROR) {
-                perror("kevent-block");
-                raise(SIGINT);
-            }
-            if (ret == 0) {
-                // TimeOver
-                break;
-            }
-            read_size  = read((int)kev.ident, buf, sizeof(buf));
-            //printf("event -> ret:%d -> buf:%s\n", ret, buf);
-        }
+       // block wait
+       ret = kevent(kq, NULL, 0, &kev, 1, NULL);
+       read_size = read((int)kev.ident, buf, sizeof(buf));
+       // throw away noise message without catching
+       for (;;) {
+           ret = kevent(kq, NULL, 0, &kev, 1, &wait);
+           if (kev.flags & EV_ERROR) {
+               perror("kevent-block");
+               raise(SIGINT);
+           }
+           if (ret == 0) {
+               // TimeOver
+               break;
+           }
+           read_size  = read((int)kev.ident, buf, sizeof(buf));
+           //printf("event -> ret:%d -> buf:%s\n", ret, buf);
+       }
 
-        //memdump(buf, KEV_BUF_SIZE);
-        #undef KEV_BUF_SIZE
+       //memdump(buf, KEV_BUF_SIZE);
+#undef KEV_BUF_SIZE
 
-        if ([self isCancelled] == YES) {
-            break;
-        }
+       if ([self isCancelled] == YES) {
+           break;
+       }
 
-        [loop_pool drain];
-    }
+       [loop_pool drain];
+   }
 
     [pool drain];
     return;

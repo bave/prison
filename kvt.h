@@ -18,7 +18,8 @@
 #include "ni.h"
 
 extern ResourceConfig* rc;
-extern NetInfo* ni;
+extern NetInfo*     ni;
+extern NSLock*  niLock;
 extern bool is_verbose;
 
 @interface keyValueTable : NSObject
@@ -126,6 +127,14 @@ extern bool is_verbose;
 
 - (id)init
 {
+    if (ni == nil) {
+        return nil;
+    }
+
+    if ([ni defaultIP4] == nil) {
+        return nil;
+    }
+
     self = [super init];
     if(self != nil) {
         // --------------
@@ -144,6 +153,14 @@ extern bool is_verbose;
 
 - (id)init:(NSString*)path
 {
+    if (ni == nil) {
+        return nil;
+    }
+
+    if ([ni defaultIP4] == nil) {
+        return nil;
+    }
+
     self = [super init];
     if(self != nil) {
         // --------------
@@ -162,6 +179,14 @@ extern bool is_verbose;
 
 - (id)init_test
 {
+    if (ni == nil) {
+        return nil;
+    }
+
+    if ([ni defaultIP4] == nil) {
+        return nil;
+    }
+
     self = [super init];
     if(self != nil) {
         kvtLock = [NSLock new];
@@ -394,6 +419,7 @@ extern bool is_verbose;
         encode = [NSString availableStringEncodings];
         err_data = [task_file availableData];
         err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
+        [err_string autorelease];
 
         if (is_verbose) {
             NSLog(@"_cage_console_handler(!preparation):\n%@\n", err_string);
@@ -424,6 +450,7 @@ extern bool is_verbose;
         encode = [NSString availableStringEncodings];
         data = [[notify userInfo] objectForKey:NSFileHandleNotificationDataItem];
         string = [[NSString alloc] initWithData: data encoding:*encode];
+        [string autorelease];
 
         if (is_verbose) {
             NSLog(@"_cage_console_handler(preparation):\n%@\n", string);
@@ -454,6 +481,7 @@ extern bool is_verbose;
         encode = [NSString availableStringEncodings];
         data = [[notify userInfo] objectForKey:NSFileHandleNotificationDataItem];
         buf_string = [[NSString alloc] initWithData:data encoding:*encode];
+        [buf_string autorelease];
         if (is_verbose) NSLog(@"_cage_recv_handler:\n%@\n", buf_string);
 
         if ([self _dequeueRequest:buf_string]) {
@@ -470,7 +498,7 @@ extern bool is_verbose;
             //SUCCEEDED_PUT = "203"
             if ([[m_array objectAtIndex:0] isEqualToString:@"203"]) { 
                 [kvtLock lock];
-                [kvtReputQueue addObject:[m substringFromIndex:4]];
+                [kvtReputQueue addObject:[buf_string substringFromIndex:4]];
                 [kvtLock unlock];
             }
 
@@ -581,7 +609,9 @@ extern bool is_verbose;
 
     // put on default_hostname for cage.
     NSString* key = [NSString stringWithFormat:@"%@.p2p", [rc getPrisonName]];
+    [niLock lock];
     NSString* value = [NSString stringWithFormat:@"%@:NULL:NULL", [ni defaultIP4]];
+    [niLock unlock];
     //[gpg setPasswd:@"passhprase"];
     //NSLog(@"%@\n", [gpg getPass]);
     NSString* sign = [gpg sign:value];
@@ -735,6 +765,7 @@ extern bool is_verbose;
     }
 
     NSString* init_message;
+    [niLock lock];
     if (is_global([ni defaultIP4])) {
         init_message = [NSString 
                     stringWithFormat:@"new,prison,%@,global\n", [rc getExternal]];
@@ -742,6 +773,7 @@ extern bool is_verbose;
         init_message = [NSString
                     stringWithFormat:@"new,prison,%@\n", [rc getExternal]];
     }
+    [niLock unlock];
 
     int ret;
     NSString* buf_string = [self _commit_message:init_message];
@@ -915,6 +947,7 @@ extern bool is_verbose;
 {
     int ret = [self _enqueueRequest:message];
 
+    NSLog(@"sendMessage:\n%@\n", message);
     if (ret == true) {
         ret = send(cage_sock_fd, [message UTF8String], [message length], 0);
         if (ret == -1) {

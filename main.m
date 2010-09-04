@@ -31,6 +31,7 @@
 
 // global declaration
 NSLock*    extLock;
+NSLock*     niLock;
 NetInfo*        ni; 
 FWHooker*       fw;
 ResourceConfig* rc;
@@ -38,6 +39,7 @@ Observer*      obs;
 Manager*      mgmt;
 
 bool is_verbose;
+bool is_linking;
 
 extern char *optarg;
 extern int optind;
@@ -64,6 +66,7 @@ int main(int argc, char** argv)
     pid_t pid;
     NSString* config_path = nil;
     is_verbose = false;
+    is_linking = false;
     bool is_daemon  = false;
 
     while ((opt = getopt(argc, argv, "vdhf:")) != -1) {
@@ -152,8 +155,12 @@ int main(int argc, char** argv)
     // initialize Class -------------------------------------------------------
     @try {
         ni = [NetInfo new];
+        if ([ni defaultIP4] != nil) {
+            is_linking = true;
+        }
         mgmt = [Manager new];
         extLock = [NSLock new];
+        niLock = [NSLock new];
     }
     @catch (id err) {
         NSString* err_str;
@@ -402,6 +409,7 @@ int main(int argc, char** argv)
     close(divertME2L);
     close(divertEXT2ME);
     [extLock release];
+    [niLock release];
     [queue release];
     [pool drain];
     return success;
@@ -420,6 +428,7 @@ void sig_action(int sig) {
     fprintf(stderr, "EXIT: catch signal No.%d\n", sig);
     //close(divertNAME);
     [extLock release];
+    [niLock release];
     [obs     release];
     [ni      release];
     [mgmt    release];
@@ -432,6 +441,7 @@ void exit_action(const char* err_name) {
     fprintf(stderr, "Failed to call: %s\n", err_name);
     //close(divertNAME);
     [extLock release];
+    [niLock release];
     [obs     release];
     [ni      release];
     [mgmt    release];

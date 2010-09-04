@@ -294,12 +294,10 @@ bool ip4comp(NSString* addr1, NSString* addr2)
     if ((addr1 == nil) & (addr2 == nil)) {
         [pool drain];
         return true;
-    }
-    if (addr1 == nil) {
+    } else if (addr1 == nil) {
         [pool drain];
         return false;
-    }
-    if (addr2 == nil) {
+    } else if (addr2 == nil) {
         [pool drain];
         return false;
     }

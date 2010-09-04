@@ -15,6 +15,7 @@
 
 extern FWHooker* fw;
 extern ResourceConfig* rc;
+extern bool is_linking;
 
 
 @interface Manager : NSObject
@@ -108,6 +109,8 @@ extern ResourceConfig* rc;
 - (NSArray*)dequeuePutList;
 
 // related cage function
+- (bool)recage;
+- (bool)is_cage_enable;
 - (bool)enqueueRequestA:(NSString*)fqdn
                        :(PacketBuffer*)pbuf
                        :(int)socketFD
@@ -279,12 +282,13 @@ extern ResourceConfig* rc;
         defaultIP = nil;
         defaultRT = nil;
         mgmtLock = [NSLock new];
-        kvt = [[keyValueTable alloc] init_test];
-        [kvt setLocalDB:[rc getLocalDB]];
+        if (is_linking) {
+            kvt = [[keyValueTable alloc] init_test];
+            [kvt setLocalDB:[rc getLocalDB]];
+        }
         mgmtDictFIDDate    = [NSMutableDictionary new];
         mgmtDictFIDIdle    = [NSMutableDictionary new];
         mgmtDictPPIdle     = [NSMutableDictionary new];
-        //mgmtDictFIDCounter = [NSMutableDictionary new];
         mgmtDictLIP2FID    = [NSMutableDictionary new];
         mgmtDictFID2LIP    = [NSMutableDictionary new];
         mgmtDictFQDN2LIP   = [NSMutableDictionary new];
@@ -308,13 +312,14 @@ extern ResourceConfig* rc;
         local_id  = 1;
         defaultIP = nil;
         defaultRT = nil;
-        kvt = [keyValueTable new];
-        [kvt setLocalDB:[rc getLocalDB]];
+        if (is_linking) {
+            kvt = [keyValueTable new];
+            [kvt setLocalDB:[rc getLocalDB]];
+        }
         mgmtLock = [NSLock new];
         mgmtDictFIDDate    = [NSMutableDictionary new];
         mgmtDictFIDIdle    = [NSMutableDictionary new];
         mgmtDictPPIdle     = [NSMutableDictionary new];
-        //mgmtDictFIDCounter = [NSMutableDictionary new];
         mgmtDictLIP2FID    = [NSMutableDictionary new];
         mgmtDictFID2LIP    = [NSMutableDictionary new];
         mgmtDictFQDN2LIP   = [NSMutableDictionary new];
@@ -440,6 +445,49 @@ extern ResourceConfig* rc;
     array = [mgmtRequestA objectForKey:fqdn];
     [mgmtRequestA removeObjectForKey:fqdn];
     return array;
+}
+
+- (bool)is_cage_enable
+{
+    if (kvt == nil) {
+        return false;
+    }
+    else {
+        return true;
+    }
+}
+
+- (bool)recage
+{
+    [mgmtLock lock];
+    [mgmtDictFIDDate release];
+    mgmtDictFIDDate = [NSMutableDictionary new];
+    [mgmtDictPortPair release];
+    mgmtDictPortPair = [NSMutableDictionary new];
+    [mgmtDictPPFlags release];
+    mgmtDictPPFlags = [NSMutableDictionary new];
+    [mgmtDictFQDN2LIP release];
+    mgmtDictFQDN2LIP = [NSMutableDictionary new];
+    [mgmtDictLIP2FQDN release];
+    mgmtDictLIP2FQDN = [NSMutableDictionary new];
+    [mgmtDictLIP2FID release];
+    mgmtDictLIP2FID = [NSMutableDictionary new];
+    [mgmtDictFID2LIP release];
+    mgmtDictFID2LIP = [NSMutableDictionary new];
+    [mgmtDictFIDIdle release];
+    mgmtDictFIDIdle = [NSMutableDictionary new];
+    [mgmtDictPPIdle release];
+    mgmtDictPPIdle = [NSMutableDictionary new];
+    [mgmtDictFID2PP release];
+    mgmtDictFID2PP = [NSMutableDictionary new];
+    [mgmtRequestA release];
+    mgmtRequestA = [NSMutableDictionary new];
+    [kvt release];
+    kvt = [[keyValueTable alloc] init];
+    [kvt setLocalDB:[rc getLocalDB]];
+
+    return true;
+    [mgmtLock unlock];
 }
 
 - (bool)enqueueRequestA:(NSString*)fqdn
@@ -1060,6 +1108,7 @@ extern ResourceConfig* rc;
     [kvt release];
     [defaultIP release];
     [defaultRT release];
+    [mgmtDictFID2PP   release];
     [mgmtDictPortPair release];
     [mgmtDictPPFlags  release];
     [mgmtDictFQDN2LIP release];
@@ -1070,7 +1119,6 @@ extern ResourceConfig* rc;
     [mgmtDictFIDIdle  release];
     [mgmtDictPPIdle   release];
     [mgmtRequestA     release];
-    //[mgmtDictFIDCounter release];
     [mgmtLock release];
     [super dealloc];
     return;

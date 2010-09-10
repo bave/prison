@@ -282,10 +282,8 @@ extern bool is_linking;
         defaultIP = nil;
         defaultRT = nil;
         mgmtLock = [NSLock new];
-        if (is_linking) {
-            kvt = [[keyValueTable alloc] init_test];
-            [kvt setLocalDB:[rc getLocalDB]];
-        }
+        kvt = [[keyValueTable alloc] init_test];
+        [kvt setLocalDB:[rc getLocalDB]];
         mgmtDictFIDDate    = [NSMutableDictionary new];
         mgmtDictFIDIdle    = [NSMutableDictionary new];
         mgmtDictPPIdle     = [NSMutableDictionary new];
@@ -312,10 +310,8 @@ extern bool is_linking;
         local_id  = 1;
         defaultIP = nil;
         defaultRT = nil;
-        if (is_linking) {
-            kvt = [keyValueTable new];
-            [kvt setLocalDB:[rc getLocalDB]];
-        }
+        kvt = [keyValueTable new];
+        [kvt setLocalDB:[rc getLocalDB]];
         mgmtLock = [NSLock new];
         mgmtDictFIDDate    = [NSMutableDictionary new];
         mgmtDictFIDIdle    = [NSMutableDictionary new];
@@ -364,21 +360,22 @@ extern bool is_linking;
     lip = [NSString stringWithString:ip];
     //NSLog(@"lip:%@", lip);
 
+    /*
+    // adjust firewall number
     NSNumber* fid;
     filter_id = [self _filter_id_resolv];
     fid = [NSNumber numberWithUnsignedShort:filter_id];
     [mgmtDictFID2LIP setObject:lip forKey:fid];
     [mgmtDictLIP2FID setObject:fid forKey:lip];
 
-    /*
     NSNumber* counter;
     counter = [NSNumber numberWithUnsignedShort:0];
     [mgmtDictFIDCounter setObject:counter forKey:fid];
-    */
 
     NSDate* date;
     date = [NSDate date];
     [mgmtDictFIDDate setObject:date forKey:fid];
+    */
 
     return lip;
 }
@@ -482,12 +479,13 @@ extern bool is_linking;
     mgmtDictFID2PP = [NSMutableDictionary new];
     [mgmtRequestA release];
     mgmtRequestA = [NSMutableDictionary new];
-    [kvt release];
-    kvt = [[keyValueTable alloc] init];
-    [kvt setLocalDB:[rc getLocalDB]];
-
-    return true;
+    if (is_linking) {
+        [kvt cage_join];
+    } else {
+        [kvt cage_unlink];
+    }
     [mgmtLock unlock];
+    return true;
 }
 
 - (bool)enqueueRequestA:(NSString*)fqdn

@@ -29,8 +29,10 @@
 #define INITIALLY_TIMEOUT (-60)
 #define FW_IDLE_TIMEOUT   (-10)
 #define PP_IDLE_TIMEOUT   (-4)
+
 #define KVT_CAGE_TIMEOUT  (10)
 #define KVT_CAGE_TTL 120
+#define KVT_CAGE_RETRY_JOIN 5
 
 // reduce declaration
 #define SA    struct sockaddr

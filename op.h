@@ -725,94 +725,96 @@ extern bool is_verbose;
    //[mgmt setDefaultRT:[ni defaultRoute4]];
    //[mgmt setDefaultIP:[ni defaultIP4]];
 
-   for (;;) {
+    
+    bool is_first = false;
+    for (;;) {
 
-       id loop_pool = [NSAutoreleasePool new];
+        id loop_pool = [NSAutoreleasePool new];
 
-       NSString* ip;
-       NSString* rt;
+        NSString* ip;
+        NSString* rt;
 
-       [niLock lock];
-       [ni refresh];
-       rt = [ni defaultRoute4];
-       ip = [ni defaultIP4];
-       [niLock unlock];
+        [niLock lock];
+        [ni refresh];
+        rt = [ni defaultRoute4];
+        ip = [ni defaultIP4];
+        [niLock unlock];
 
-       if (ip == nil && rt == nil) {
-           is_linking = false;
-       } else {
-           is_linking = true;
-       }
+        if (ip == nil && rt == nil) {
+            is_linking = false;
+        } else {
+            is_linking = true;
+        }
 
-       int flag;
-       flag = false;
+        int flag;
+        flag = false;
 
-       if (!ip4comp(rt, [mgmt getDefaultRT])) {
-           //NSLog(@"%d", __LINE__);
-           [mgmt setDefaultRT:rt];
-           flag = true;
-       }
+        if (!ip4comp(rt, [mgmt getDefaultRT])) {
+            //NSLog(@"%d", __LINE__);
+            [mgmt setDefaultRT:rt];
+            flag = true;
+        }
 
-       if (!ip4comp(ip, [mgmt getDefaultIP])) {
-           //NSLog(@"%d", __LINE__);
-           [mgmt setDefaultIP:ip];
-           flag = true;
-       }
+        if (!ip4comp(ip, [mgmt getDefaultIP])) {
+            //NSLog(@"%d", __LINE__);
+            [mgmt setDefaultIP:ip];
+            flag = true;
+        }
 
-       if (flag) {
-           if (is_verbose) {
-               NSLog(@"change-log");
-               NSLog(@"default-Router:%@\n", rt);
-               NSLog(@"default-IPaddr:%@\n", ip);
-           }
-           /*
-           NSLog(@"change netinfo");
-           [fw delExtraRule];
-           NSLog(@"fw delExtraRule");
-           //[mgmt recage];
-           //NSLog(@"mgmt recage");
-           */
-       }
+        if (flag) {
+            if (is_verbose) {
+                NSLog(@"change-log");
+                NSLog(@"default-Router:%@\n", rt);
+                NSLog(@"default-IPaddr:%@\n", ip);
+            }
+
+            if (is_first) {
+                [fw delExtraRule];
+                [mgmt recage];
+            }
+
+        }
+        is_first = true;
 
 
 #define KEV_BUF_SIZE 128
-       char buf[KEV_BUF_SIZE];
-       memset(buf, 0, sizeof(buf));
+        char buf[KEV_BUF_SIZE];
+        memset(buf, 0, sizeof(buf));
 
-       struct timespec wait;
-       wait.tv_sec = 2;
-       wait.tv_nsec = 0;
+        struct timespec wait;
+        wait.tv_sec = 2;
+        wait.tv_nsec = 0;
 
-       size_t read_size;
-       read_size = 0;
+        size_t read_size;
+        read_size = 0;
 
-       // block wait
-       ret = kevent(kq, NULL, 0, &kev, 1, NULL);
-       read_size = read((int)kev.ident, buf, sizeof(buf));
-       // throw away noise message without catching
-       for (;;) {
-           ret = kevent(kq, NULL, 0, &kev, 1, &wait);
-           if (kev.flags & EV_ERROR) {
-               perror("kevent-block");
-               raise(SIGINT);
-           }
-           if (ret == 0) {
-               // TimeOver
-               break;
-           }
-           read_size  = read((int)kev.ident, buf, sizeof(buf));
-           //printf("event -> ret:%d -> buf:%s\n", ret, buf);
-       }
+        // block wait
+        ret = kevent(kq, NULL, 0, &kev, 1, NULL);
+        read_size = read((int)kev.ident, buf, sizeof(buf));
+        // throw away noise message without catching
+        for (;;) {
+            ret = kevent(kq, NULL, 0, &kev, 1, &wait);
+            if (kev.flags & EV_ERROR) {
+                perror("kevent-block");
+                raise(SIGINT);
+            }
+            if (ret == 0) {
+                // TimeOver
+                break;
+            }
+            read_size  = read((int)kev.ident, buf, sizeof(buf));
+            //printf("event -> ret:%d -> buf:%s\n", ret, buf);
+        }
 
-       //memdump(buf, KEV_BUF_SIZE);
+        //memdump(buf, KEV_BUF_SIZE);
 #undef KEV_BUF_SIZE
 
-       if ([self isCancelled] == YES) {
-           break;
-       }
+        if ([self isCancelled] == YES) {
+            break;
+        }
 
-       [loop_pool drain];
-   }
+        [loop_pool drain];
+    }
 
     [pool drain];
     return;

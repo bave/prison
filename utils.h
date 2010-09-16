@@ -430,7 +430,11 @@ NSData* ip_aton(NSString* type, NSString* addr)
         memset(&sin_tmp, 0, sizeof(sin_tmp));
         hints.ai_family = AF_INET;
         err = getaddrinfo(ip, NULL, &hints, &res);
-        if (err>0) perror("getaddrinfo");
+        if (err>0) {
+            perror("getaddrinfo");
+            freeaddrinfo(res);
+            return nil;
+        } 
         sin = (struct sockaddr_in *)(res->ai_addr);
         memcpy(&sin_tmp, sin, sizeof(sin_tmp));
         freeaddrinfo(res);
@@ -443,7 +447,11 @@ NSData* ip_aton(NSString* type, NSString* addr)
         memset(&sin6_tmp, 0, sizeof(sin6_tmp));
         hints.ai_family = AF_INET6;
         err = getaddrinfo(ip, NULL, &hints, &res);
-        if (err>0) perror("getaddrinfo");
+        if (err>0) {
+            perror("getaddrinfo");
+            freeaddrinfo(res);
+            return nil;
+        }
         sin6 = (struct sockaddr_in6 *)(res->ai_addr);
         memcpy(&sin6_tmp, sin6, sizeof(sin6_tmp));
         freeaddrinfo(res);

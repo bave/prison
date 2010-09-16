@@ -63,9 +63,10 @@ extern bool is_linking;
 - (bool)setTaskPath:(NSString*)path;
 
 - (bool)isCageRun;
+- (bool)isCageJoin;
 - (bool)sendMessage:(NSString*)message;
 - (bool)cage_join;
-- (bool)cage_unlink;
+- (bool)cage_leave;
 
 // private function
 - (void)_debug_dict;
@@ -132,6 +133,7 @@ extern bool is_linking;
 
 - (id)init
 {
+    /*
     if (ni == nil) {
         return nil;
     }
@@ -139,6 +141,7 @@ extern bool is_linking;
     if ([ni defaultIP4] == nil) {
         return nil;
     }
+    */
 
     self = [super init];
     if(self != nil) {
@@ -158,6 +161,7 @@ extern bool is_linking;
 
 - (id)init:(NSString*)path
 {
+    /*
     if (ni == nil) {
         return nil;
     }
@@ -165,6 +169,7 @@ extern bool is_linking;
     if ([ni defaultIP4] == nil) {
         return nil;
     }
+    */
 
     self = [super init];
     if(self != nil) {
@@ -386,6 +391,11 @@ extern bool is_linking;
     return [kvtTask isRunning];
 }
 
+- (bool)isCageJoin
+{
+    return kvt_is_join;
+}
+
 - (void)_cage_console_handler:(NSNotification*)notify
 {
     id pool = [NSAutoreleasePool new];
@@ -507,6 +517,7 @@ extern bool is_linking;
             else if ([[m_array objectAtIndex:1] isEqualToString:@"join"]) {
                 if ([[m_array objectAtIndex:0] isEqualToString:@"202"]) {
                     kvt_counter_join = 0;
+                    [self _cage_put];
                     kvt_is_join = true;
                 } else if ([[m_array objectAtIndex:0] isEqualToString:@"400"]) {
                     kvt_is_join = false;
@@ -523,7 +534,7 @@ extern bool is_linking;
                     if (kvt_counter_join <= KVT_CAGE_RETRY_JOIN) {
                         [self cage_join];
                     } else {
-                        [self cage_unlink];
+                        [self cage_leave];
                     }
                 }
             }
@@ -617,7 +628,7 @@ extern bool is_linking;
     if (kvt_is_join) {
         [self _cage_put];
     } else {
-        [self cage_unlink];
+        [self cage_leave];
     }
 
     [pool drain];
@@ -636,6 +647,9 @@ extern bool is_linking;
     [niLock lock];
     NSString* ip = [ni defaultIP4];
     [niLock unlock];
+    if (!is_global(ip)) {
+        return false;
+    }
 
     NSString* value = [NSString stringWithFormat:@"%@:NULL:NULL", ip];
 
@@ -712,6 +726,7 @@ extern bool is_linking;
 - (bool)cage_join
 {
     id pool = [NSAutoreleasePool new];
+    NSLog(@"kvt.h : cage_join");
     NSString* ip = [rc getSeedHost];
     NSString* port = [rc getSeedPort];
     NSString* message;
@@ -724,9 +739,12 @@ extern bool is_linking;
     return ret;
 }
 
-- (bool)cage_unlink
+- (bool)cage_leave
 {
-    //kvt_cage_join
+    [kvtRequestQueue removeAllObjects];
+    [kvtLock lock];
+    [kvtReputQueue removeAllObjects];
+    [kvtLock unlock];
     return true;
 }
 

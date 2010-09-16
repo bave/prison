@@ -10,6 +10,7 @@
 #include "category.h"
 
 extern Manager* mgmt;
+extern bool is_linking;
 
 @interface Timer : NSObject
 {
@@ -54,15 +55,18 @@ extern Manager* mgmt;
 
 - (void)idle_action:(NSTimer*)timer
 {
-    id pool = [NSAutoreleasePool new];
-    NSArray* array;
-    array = [mgmt idle_timeout];
-    if ([array count] != 0) {
-        [[NSNotificationCenter defaultCenter]
-            postNotificationName:@"notify://obs.FWTimeout"
-            object:array];
+    if (is_linking) {
+        id pool = [NSAutoreleasePool new];
+        NSArray* array;
+        array = [mgmt idle_timeout];
+        if ([array count] != 0) {
+            [[NSNotificationCenter defaultCenter]
+                postNotificationName:@"notify://obs.FWTimeout"
+                object:array];
+        }
+        [pool drain];
     }
-    [pool drain];
+    return;
 }
 
 - (void)stopIdieTimer
@@ -85,15 +89,18 @@ extern Manager* mgmt;
 
 - (void)per_action:(NSTimer*)timer
 {
-    id pool = [NSAutoreleasePool new];
-    NSArray* array;
-    array = [mgmt per_timeout];
-    if ([array count] != 0) {
-        [[NSNotificationCenter defaultCenter]
-            postNotificationName:@"notify://obs.PPTimeout"
-            object:array];
+    if (is_linking) {
+        id pool = [NSAutoreleasePool new];
+        NSArray* array;
+        array = [mgmt per_timeout];
+        if ([array count] != 0) {
+            [[NSNotificationCenter defaultCenter]
+                postNotificationName:@"notify://obs.PPTimeout"
+                object:array];
+        }
+        [pool drain];
     }
-    [pool drain];
+    return;
 }
 
 - (void)stopPerTimer
@@ -142,14 +149,17 @@ extern Manager* mgmt;
 
 - (void)reput_action:(NSTimeInterval)interval
 { 
-
-    id pool = [NSAutoreleasePool new];
-    NSArray* reput_array = [mgmt dequeuePutList];
-    NSEnumerator* reput_enum = [reput_array objectEnumerator];
-    ITERATE (reput_element, reput_enum) {
-        [mgmt putCage:reput_element];
+    if (is_linking) {
+        if ([mgmt isCageJoin]) {
+            id pool = [NSAutoreleasePool new];
+            NSArray* reput_array = [mgmt dequeuePutList];
+            NSEnumerator* reput_enum = [reput_array objectEnumerator];
+            ITERATE (reput_element, reput_enum) {
+                [mgmt putCage:reput_element];
+            }
+            [pool drain];
+        }
     }
-    [pool drain];
     return;
 }
 

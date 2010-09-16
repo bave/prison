@@ -110,7 +110,7 @@ extern bool is_linking;
 
 // related cage function
 - (bool)recage;
-- (bool)is_cage_enable;
+- (bool)isCageJoin;
 - (bool)enqueueRequestA:(NSString*)fqdn
                        :(PacketBuffer*)pbuf
                        :(int)socketFD
@@ -444,12 +444,11 @@ extern bool is_linking;
     return array;
 }
 
-- (bool)is_cage_enable
+- (bool)isCageJoin;
 {
-    if (kvt == nil) {
+    if ([kvt isCageJoin] == false) {
         return false;
-    }
-    else {
+    } else {
         return true;
     }
 }
@@ -481,8 +480,9 @@ extern bool is_linking;
     mgmtRequestA = [NSMutableDictionary new];
     if (is_linking) {
         [kvt cage_join];
-    } else {
-        [kvt cage_unlink];
+    }
+    if (![kvt isCageJoin]) {
+        [kvt cage_leave];
     }
     [mgmtLock unlock];
     return true;

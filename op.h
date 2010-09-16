@@ -249,14 +249,16 @@ extern bool is_verbose;
 
                 else {
                     // query to cage
-                    [mgmt enqueueRequestA:fqdn 
-                                         :pbuf
-                                         :socketFD
-                                         :(sockaddr*)&sin_recv
-                                         :name_id];
-                    //enqueue return following
-                    //true : to query cage...
-                    //false: already request in request Queue.
+                    if ([mgmt isCageJoin]) {
+                        [mgmt enqueueRequestA:fqdn 
+                                             :pbuf
+                                             :socketFD
+                                             :(sockaddr*)&sin_recv
+                                             :name_id];
+                    }
+                    // enqueue return following
+                    // true : to query cage...
+                    // false: already request in request Queue.
                     if ([self isCancelled] == YES) {
                         [loop_pool drain];
                         break;
@@ -726,7 +728,7 @@ extern bool is_verbose;
    //[mgmt setDefaultIP:[ni defaultIP4]];
 
     
-    bool is_first = false;
+    bool is_first = true;
     for (;;) {
 
         id loop_pool = [NSAutoreleasePool new];
@@ -768,14 +770,14 @@ extern bool is_verbose;
                 NSLog(@"default-IPaddr:%@\n", ip);
             }
 
-            if (is_first) {
+            if (!is_first) {
                 [fw delExtraRule];
                 [mgmt recage];
             }
 
         }
-        is_first = true;
 
+        is_first = false;
 
 #define KEV_BUF_SIZE 128
         char buf[KEV_BUF_SIZE];

@@ -208,7 +208,7 @@ bool is_ip4addr(NSString* ip)
     NSString* regexp_ipaddr = [NSString stringWithFormat:@"%@.%@.%@.%@",
                                                 segment, segment, segment, segment];
     NSPredicate* sep_regexp;
-    sep_regexp = [NSPredicate predicateWithFormat:@"SELF matches %@", regexp_ipaddr];
+    sep_regexp = [NSPredicate predicateWithFormat:@"SELF MATCHES %@", regexp_ipaddr];
 
     // reference http://userguide.icu-project.org/strings/regexp
     // ^ : head
@@ -218,8 +218,8 @@ bool is_ip4addr(NSString* ip)
     // [01]?[0-9][0-9] :000-199
     // 2[0-4][0-9]     :200-249
     // 25[0-5]         :250-255
-
     //NSLog(@"%d", [sep_regexp evaluateWithObject:s]);
+
     return [sep_regexp evaluateWithObject:ip];
 }
 

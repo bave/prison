@@ -209,7 +209,7 @@ extern bool is_verbose;
                 // generate name reply message -------------------------------------
                 id name=[[NamePacket alloc] init];
                 [name n_set_id:name_id];
-                [name n_set_flags:QR|RA|RE_Error];
+                [name n_set_flags:QR|RE_Error];
                 [name n_create_rr_questionAAAA:fqdn];
                 [name n_build_payload];
                 [pbuf setL7:[name n_payload] :[name n_payload_size]];
@@ -237,14 +237,36 @@ extern bool is_verbose;
                 // generate name reply message -------------------------------------
                 if (lip != nil) {
                     // reply from localDB
-                    id name = [[NamePacket alloc] init];
-                    [name n_set_id:name_id];
-                    [name n_set_flags:QR|AA|RA];
-                    [name n_create_rr_questionA:fqdn];
-                    [name n_create_rr_answer:lip];
-                    [name n_build_payload];
-                    [pbuf setL7:[name n_payload] :[name n_payload_size]];
-                    [name release];
+
+                    int auth = [mgmt getFQDN2AUTH:fqdn];
+                    if (auth >= 1 || auth == -1) {
+                        id name = [[NamePacket alloc] init];
+                        [name n_set_id:name_id];
+                        [name n_set_flags:QR|RA|AA];
+                        [name n_create_rr_questionA:fqdn];
+                        [name n_create_rr_answer:lip];
+                        [name n_build_payload];
+                        [pbuf setL7:[name n_payload] :[name n_payload_size]];
+                        [name release];
+                    }
+                    else if (auth == 1) {
+                        id name = [[NamePacket alloc] init];
+                        [name n_set_id:name_id];
+                        [name n_set_flags:QR|AA];
+                        [name n_create_rr_questionA:fqdn];
+                        [name n_create_rr_answer:lip];
+                        [name n_build_payload];
+                        [pbuf setL7:[name n_payload] :[name n_payload_size]];
+                        [name release];
+                    }
+                    else if (auth == 0) {
+                        if ([self isCancelled] == YES) {
+                            [loop_pool drain];
+                            break;
+                        }
+                        [loop_pool drain];
+                        continue;
+                    }
                 }
 
                 else {

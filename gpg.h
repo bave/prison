@@ -88,8 +88,8 @@
 - (id)initWithDir:(NSString*)dir;
 - (void)dealloc;
 
-- (BOOL)getValid;
-- (BOOL)getTrust;
+- (int)getValid;
+- (int)getTrust;
 
 - (NSString*)getDir;
 - (NSString*)getExe;
@@ -372,12 +372,12 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     return ret_string;
 }
 
-- (BOOL)getValid
+- (int)getValid
 {
     return gpgValid;
 }
 
-- (BOOL)getTrust
+- (int)getTrust
 {
     return gpgTrust;
 }

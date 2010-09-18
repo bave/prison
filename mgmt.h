@@ -55,6 +55,7 @@ extern bool is_linking;
 //- (NSString*)getFQDN2Value:(NSString*)fqdn;
 - (NSString*)getFQDN2GIP:(NSString*)fqdn;
 - (NSString*)getFQDN2PORT:(NSString*)fqdn;
+- (int)getFQDN2AUTH:(NSString*)fqdn;
 
 - (bool)isExistLocalDB:(NSString*)fqdn;
 
@@ -478,12 +479,11 @@ extern bool is_linking;
     mgmtDictFID2PP = [NSMutableDictionary new];
     [mgmtRequestA release];
     mgmtRequestA = [NSMutableDictionary new];
+    local_id = 1;
+    [kvt cage_leave];
     if (is_linking) {
         [kvt cage_join];
-    }
-    if (![kvt isCageJoin]) {
-        [kvt cage_leave];
-    }
+    } 
     [mgmtLock unlock];
     return true;
 }
@@ -505,7 +505,7 @@ extern bool is_linking;
         [mgmtRequestA setObject:tmp_object forKey:fqdn];
         [kvt sendMessage:[NSString stringWithFormat:@"get,prison,%@\n", fqdn]];
         return true;
-    }
+    } 
     return false;
 }
 
@@ -632,6 +632,9 @@ extern bool is_linking;
     }
 
     return [kvt ip4key:fqdn];
+}
+- (int)getFQDN2AUTH:(NSString*)fqdn {
+    return [kvt authority4key:fqdn];
 }
 
 - (NSString*)getFQDN2PORT:(NSString*)fqdn

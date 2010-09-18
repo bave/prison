@@ -134,7 +134,7 @@ int main()
     @catch (id e){
         NSLog(@"%@\n", e);
     }
-    exit(1);
+    //exit(1);
 
     /*
     //encrypt

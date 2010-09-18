@@ -194,6 +194,12 @@ extern bool is_verbose;
 
 
         if ([[fqdn_array lastObject] isEqualToString:@"p2p"]) {
+
+            if ([mgmt isCageJoin] == false) {
+                [loop_pool drain];
+                continue;
+            }
+
             // address swapping ------------------------------------------------
             struct ip* ip;
             ip = (struct ip*)[pbuf getL3];
@@ -341,6 +347,18 @@ extern bool is_verbose;
         // ---------------------------------------------------------------------
 
 
+        // L4 protocol checking ------------------------------------------------
+        bool l4_flag = false;
+        if ([[pbuf getL4Proto] isEqualToString:@"TCP"]) {
+           l4_flag = true; 
+        } else if ([[pbuf getL4Proto] isEqualToString:@"UDP"]) {
+            l4_flag = true;
+        }
+        if (l4_flag == false) {
+            [loop_pool drain];
+            continue;
+        }
+        // ---------------------------------------------------------------------
 
 
         // fowarding swap processing -------------------------------------------
@@ -355,6 +373,8 @@ extern bool is_verbose;
             [loop_pool drain];
             continue;
         }
+
+        NSLog(@"%d", __LINE__);
 
         NSString* nsSrcIP;
         [niLock lock];
@@ -373,6 +393,8 @@ extern bool is_verbose;
             [loop_pool drain];
             continue;
         }
+
+        NSLog(@"%d", __LINE__);
 
         ip->ip_src.s_addr=inet_addr([nsSrcIP UTF8String]);
         ip->ip_dst.s_addr=inet_addr([nsDstIP UTF8String]);
@@ -399,7 +421,11 @@ extern bool is_verbose;
             udp->uh_dport = htons((uint16_t)[[mgmt getLIP2PORT:lip] intValue]);
             fromPort = ntohs(udp->uh_dport);
         }
+        NSLog(@"%d", __LINE__);
+
         [pbuf sync];
+
+        NSLog(@"%d", __LINE__);
         // ---------------------------------------------------------------------
 
 
@@ -416,6 +442,7 @@ extern bool is_verbose;
 
         // ---------------------------------------------------------------------
 
+        NSLog(@"%d", __LINE__);
 
         // set PairPortNumber --------------------------------------------------
         //NSLog(@"Protocol:%d, srcPort:%d, dstPort:%d", protocol, srcPort, dstPort);

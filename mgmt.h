@@ -161,6 +161,7 @@ extern bool is_linking;
     NSLog(@"RequestA%@", [mgmtRequestA allKeys]);
     NSLog(@"kvtRequestQueue%@", [kvt getRequestQueue]);
     NSLog(@"kvtReputQueue%@", [kvt getReputQueue]);
+    NSLog(@"isLinking:%d, isCageJoin:%d", is_linking, [kvt isCageJoin]);
     printf("-----------------------------------------\n");
     printf("\n");
     return;
@@ -447,11 +448,7 @@ extern bool is_linking;
 
 - (bool)isCageJoin;
 {
-    if ([kvt isCageJoin] == false) {
-        return false;
-    } else {
-        return true;
-    }
+    return [kvt isCageJoin];
 }
 
 - (bool)recage

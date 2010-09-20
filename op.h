@@ -374,7 +374,6 @@ extern bool is_verbose;
             continue;
         }
 
-        NSLog(@"%d", __LINE__);
 
         NSString* nsSrcIP;
         [niLock lock];
@@ -394,7 +393,6 @@ extern bool is_verbose;
             continue;
         }
 
-        NSLog(@"%d", __LINE__);
 
         ip->ip_src.s_addr=inet_addr([nsSrcIP UTF8String]);
         ip->ip_dst.s_addr=inet_addr([nsDstIP UTF8String]);
@@ -421,11 +419,9 @@ extern bool is_verbose;
             udp->uh_dport = htons((uint16_t)[[mgmt getLIP2PORT:lip] intValue]);
             fromPort = ntohs(udp->uh_dport);
         }
-        NSLog(@"%d", __LINE__);
 
         [pbuf sync];
 
-        NSLog(@"%d", __LINE__);
         // ---------------------------------------------------------------------
 
 
@@ -442,7 +438,6 @@ extern bool is_verbose;
 
         // ---------------------------------------------------------------------
 
-        NSLog(@"%d", __LINE__);
 
         // set PairPortNumber --------------------------------------------------
         //NSLog(@"Protocol:%d, srcPort:%d, dstPort:%d", protocol, srcPort, dstPort);
@@ -666,9 +661,7 @@ extern bool is_verbose;
                                                SrcPort:srcPort];
 
                 if (PPFlags == PPFLAG_ERROR) {
-                    if (is_verbose) {
-                        NSLog(@"%d: false:getPPFlags", __LINE__);
-                    }
+                    if (is_verbose) { }
                 }
 
                 uint8_t condFlag;
@@ -801,13 +794,11 @@ extern bool is_verbose;
         flag = false;
 
         if (!ip4comp(rt, [mgmt getDefaultRT])) {
-            //NSLog(@"%d", __LINE__);
             [mgmt setDefaultRT:rt];
             flag = true;
         }
 
         if (!ip4comp(ip, [mgmt getDefaultIP])) {
-            //NSLog(@"%d", __LINE__);
             [mgmt setDefaultIP:ip];
             flag = true;
         }
@@ -821,6 +812,9 @@ extern bool is_verbose;
 
             if (!is_first) {
                 [fw delExtraRule];
+                [[NSNotificationCenter defaultCenter]
+                    postNotificationName:@"notify://obs.DSflushcache"
+                    object:nil];
                 [mgmt recage];
             }
 

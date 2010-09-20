@@ -499,8 +499,15 @@ extern bool is_linking;
     //NSLog(@"enqueuRequestA:%@\n", tmp_object);
 
     if ([mgmtRequestA objectForKey:fqdn] == nil) {
+        int ret;
         [mgmtRequestA setObject:tmp_object forKey:fqdn];
-        [kvt sendMessage:[NSString stringWithFormat:@"get,prison,%@\n", fqdn]];
+        while (1) {
+            ret = [kvt sendMessage:[NSString stringWithFormat:@"get,prison,%@\n",fqdn]];
+            if (ret == true) {
+                break;
+            }
+            sleep(1);
+        }
         return true;
     } 
     return false;

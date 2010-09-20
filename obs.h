@@ -225,9 +225,6 @@ extern NSLock* extLock;
     //3: request divert socket payload
     //4: name_id
 
-    NSLog(@"code:%@\n", code);
-    NSLog(@"request_array:%@\n", request_array);
-
     NSString* fqdn = [request_array objectAtIndex:0];
     int sock = [[request_array objectAtIndex:1] intValue];
     SAIN* sin = (SAIN*)[[request_array objectAtIndex:2] bytes];
@@ -241,14 +238,19 @@ extern NSLock* extLock;
         lip = [mgmt getFQDN2LIP:fqdn];
     }
     else if ([code isEqualToString:@"409"] == YES) {
-        NSLog(@"%@\n", code);
+        if (is_verbose) NSLog(@"%@\n", code);
     }
 
-    if (lip != nil) {
+    int auth = [mgmt getFQDN2AUTH:fqdn];
+    if (lip != nil && auth != 0) {
         // reply from localDB
         id name = [[NamePacket alloc] init];
         [name n_set_id:name_id];
-        [name n_set_flags:QR|AA|RA];
+        if (auth >= 1 || auth == 1) {
+            [name n_set_flags:QR|AA|RA];
+        } else if (auth == 1) {
+            [name n_set_flags:QR|AA];
+        }
         [name n_create_rr_questionA:fqdn];
         [name n_create_rr_answer:lip];
         [name n_build_payload];
@@ -258,9 +260,11 @@ extern NSLock* extLock;
 
     else {
         // replay NXDomain
-        NSLog(@"NXDOMAIN\n", code);
-        NSLog(@"name_id:%d\n", name_id);
-        NSLog(@"fqdn:%@\n", fqdn);
+        if (is_verbose) {
+            NSLog(@"NXDOMAIN\n", code);
+            NSLog(@"name_id:%d\n", name_id);
+            NSLog(@"fqdn:%@\n", fqdn);
+        }
         id name = [[NamePacket alloc] init];
         [name n_set_id:name_id];
         [name n_set_flags:QR|AA|RA|RE_Error];
@@ -277,7 +281,6 @@ extern NSLock* extLock;
     if ((int)size == -1) {
         perror("sendto");
     }
-    NSLog(@"sendto size:%d\n", size);
 
     return;
 }

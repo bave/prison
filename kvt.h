@@ -73,6 +73,7 @@ extern bool is_linking;
 - (void)_debug_dict;
 
 - (void)_gpg_init;
+- (bool)_gpg_import_db:(NSString*)message;
 
 - (bool)_cage_run;
 - (void)_cage_init:(NSString*)path;
@@ -81,6 +82,7 @@ extern bool is_linking;
 - (bool)_cage_node_new;
 - (bool)_cage_join;
 - (bool)_cage_put;
+- (bool)_cage_get_pubring:(NSString*)message;
 - (int)_cage_set_cache:(NSString*)message;
 
 - (void)_cage_console_handler:(NSNotification*)notify;
@@ -88,6 +90,7 @@ extern bool is_linking;
 
 - (bool)_dequeueRequest:(NSString*)message;
 - (bool)_enqueueRequest:(NSString*)message;
+- (bool)_changeAuthority:(NSString*)key :(int)auth;
 
 - (NSString*)_commit_message:(NSString*)message;
 
@@ -456,7 +459,7 @@ extern bool is_linking;
     }
 
     if (kvt_is_preparation) {
-        NSLog(@"%@\n", task_file);
+        //NSLog(@"%@\n", task_file);
         [task_file readInBackgroundAndNotify];
     }
     [pool drain];
@@ -504,15 +507,35 @@ extern bool is_linking;
 
                 //SUCCEEDED_GET = "204"
                 else if ([[m_array objectAtIndex:0] isEqualToString:@"204"]) {
+                    int authority;
                     NSArray* mesg_array = [m componentsSeparatedByString:@","];
                     NSString* key = [mesg_array objectAtIndex:3];
                     if ([key hasSuffix:@".p2p"]) {
-                        [self _cage_set_cache:m];
+                        authority = [self _cage_set_cache:m];
+                        if (authority == 0) {
+                            [self _cage_get_pubring:m];
+                        } else {
+                            [[NSNotificationCenter defaultCenter]
+                               postNotificationName:@"notify://obs.NameReply" object:m];
+                        }
                     }
                     else if ([key hasSuffix:@"@prison"]) {
+                            [self _gpg_import_db:m];
+                            NSArray* m_array;
+                            m_array = [m componentsSeparatedByString:@","];
+                            NSString* pubring_key;
+                            pubring_key = [m_array objectAtIndex:3];
+                            NSString* hostname;
+                            hostname = [[pubring_key componentsSeparatedByString:@"@"]
+                                                                   objectAtIndex:0];
+                            NSString* convert_message;
+                            convert_message = [NSString stringWithFormat:
+                                    @"204,get,prison,%@.p2p,non-value", hostname];
+
+                            [[NSNotificationCenter defaultCenter]
+                               postNotificationName:@"notify://obs.NameReply"
+                               object:convert_message];
                     }
-                    [[NSNotificationCenter defaultCenter]
-                        postNotificationName:@"notify://obs.NameReply" object:m];
                 }
 
                 //ERR_GET_FAILURE = "409"
@@ -592,6 +615,61 @@ extern bool is_linking;
     return;
 }
 
+- (bool)_gpg_import_db:(NSString*)message
+{
+    NSArray* message_array = [message componentsSeparatedByString:@","];
+
+    //NSString* code = [message_array objectAtIndex:0];
+    //NSString* command = [message_array objectAtIndex:1];
+    //NSString* node_name = [message_array objectAtIndex:2];
+    NSString* dht_key = [message_array objectAtIndex:3];
+    NSString* content = [GPGME appendPublicFrame:[message_array objectAtIndex:4]];
+
+    NSString* hostname = [[dht_key componentsSeparatedByString:@"@"] objectAtIndex:0];
+    NSString* key = [NSString stringWithFormat:@"%@.p2p", hostname];
+
+    NSDictionary* pubring = [[gpg throw:content] objectAtIndex:0];
+    NSString* throw_user = [pubring objectForKey:@"user"];
+    NSArray* userlist = [gpg userlist];
+
+    NSEnumerator* user_enum = [userlist objectEnumerator];
+    ITERATE(user_element, user_enum) {
+        NSString* user = [user_element objectForKey:@"user"];
+        if ([user isEqualToString:throw_user]) {
+            // already import same name user pubring... in trustdb
+            [self _changeAuthority:key :0];
+            return false;
+        }
+    }
+
+    [gpg import:content];
+
+    return [self _changeAuthority:key :1];
+}
+
+- (bool)_changeAuthority:(NSString*)key :(int)auth
+{
+    NSMutableArray* tmp_array = [NSMutableArray new];
+
+    NSString* value;
+    value = [kvtCageCache objectForKey:key];
+    if (value == nil) return false; 
+
+    NSArray* value_array;
+    value_array = [value componentsSeparatedByString:@":"];
+
+    unsigned int i;
+    for (i=0; i<([value_array count]-1); i++) {
+        [tmp_array addObject:[value_array objectAtIndex:i]];
+    }
+    [tmp_array addObject:[NSString stringWithFormat:@"%d", auth]];
+    value = [tmp_array componentsJoinedByString:@":"];
+
+    [kvtCageCache setObject:value forKey:key];
+
+    return true;
+}
+
 - (void)_cage_init:(NSString*)path
 {
     id pool = [NSAutoreleasePool new];
@@ -650,6 +728,26 @@ extern bool is_linking;
 
     [pool drain];
     return;
+}
+
+- (bool)_cage_get_pubring:(NSString*)message
+{
+    NSArray* message_array = [message componentsSeparatedByString:@","];
+    NSString* key = [message_array objectAtIndex:3];
+    NSArray* key_array = [key componentsSeparatedByString:@"."];
+    NSString* key_hostname = [key_array objectAtIndex:0];
+    NSString* key_request = [NSString stringWithFormat:@"%@@prison\n", key_hostname];
+
+    int ret;
+    while (1) {
+        ret = [self sendMessage:
+                    [NSString stringWithFormat:@"get,prison,%@\n", key_request]];
+        if (ret == true) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 - (bool)_cage_put
@@ -888,13 +986,13 @@ extern bool is_linking;
     int authority = 0;
 
     // unique
-    NSArray* mesg_array = [message componentsSeparatedByString:@","];
+    NSArray* message_array = [message componentsSeparatedByString:@","];
 
-    //NSString* code = [mesg_array objectAtIndex:0];
-    //NSString* command = [mesg_array objectAtIndex:1];
-    //NSString* node_name = [mesg_array objectAtIndex:2];
-    NSString* key = [mesg_array objectAtIndex:3];
-    NSString* content = [GPGME appendMessageFrame:[mesg_array objectAtIndex:4]];
+    //NSString* code = [message_array objectAtIndex:0];
+    //NSString* command = [message_array objectAtIndex:1];
+    //NSString* node_name = [message_array objectAtIndex:2];
+    NSString* key = [message_array objectAtIndex:3];
+    NSString* content = [GPGME appendMessageFrame:[message_array objectAtIndex:4]];
 
     [kvtLock lock];
     NSString* message_verify = [gpg verify:content];
@@ -902,13 +1000,12 @@ extern bool is_linking;
     int trust = [gpg getTrust];
     authority = valid + trust;
     NSString* value = [NSString stringWithFormat:@"%@:%d", message_verify, authority];
-    if (valid == YES) {
-        [kvtCageCache setObject:value forKey:key];
-        if (is_verbose) {
-            NSLog(@"kvt_func:_cage_set_cache\n");
-            NSLog(@"key:%@\n", key);
-            NSLog(@"value:%@\n", value);
-        }
+    [kvtCageCache setObject:value forKey:key];
+    if (is_verbose) {
+        NSLog(@"kvt_func:_cage_set_cache\n");
+        NSLog(@"key:%@\n", key);
+        NSLog(@"value:%@\n", value);
+        NSLog(@"authority:%d\n", authority);
     }
     [kvtLock unlock];
     
@@ -926,7 +1023,7 @@ extern bool is_linking;
 
     value = [kvtCageCache objectForKey:key];
     NSArray* value_array = [value componentsSeparatedByString:@":"];
-    NSString* authority_string = [value_array objectAtIndex:3];
+    NSString* authority_string = [value_array lastObject];
     int authority = [authority_string intValue];
 
     return authority;

@@ -21,13 +21,58 @@ int main(int argc, char** argv)
         usage();
     }
 
+    NSString* ip;
+
+    #ifdef __MACH__
+
     NetInfo* ni = [NetInfo new];
+    ip = [ni defaultIP4];
+    NSLog(@"%@", ip);
+
+    #else __LINUX__
+    {
+        int ret;
+        const NSStringEncoding* encode;
+        NSTask* task = nil;
+        NSData* out_data = nil;
+        NSString* out_string = nil;
+        NSPipe* out_pipe = nil;
+        NSFileHandle* out_file = nil;
+        NSMutableArray* args;
+
+        args = [NSMutableArray array];
+        NSString* command = [NSString stringWithFormat:@"%@ip eth0", currentdir()];
+        [args addObject:@"-c"];
+        [args addObject:command];
+
+
+        out_pipe = [NSPipe pipe];
+        out_file = [out_pipe fileHandleForReading];
+
+        task = [[NSTask alloc] init];
+        [task setLaunchPath:@"/bin/sh"];
+        //[task setStandardInput:in_pipe];
+        [task setStandardOutput:out_pipe];
+        //[task setStandardError:err_pipe];
+        [task setArguments:args];
+        [task launch];
+
+        [task waitUntilExit];
+        ret = [task terminationStatus];
+
+        encode = [NSString availableStringEncodings];
+        out_data = [out_file readDataToEndOfFile];
+        out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+        ip = out_string;
+        NSLog(@"%@", ip);
+    }
+    #endif
+
 
     NSString* home = [NSString stringWithFormat:@"%@%s/", currentdir(), argv[1]];
     NSString* user = [NSString stringWithFormat:@"%s", argv[1]];
     //NSString* uid = [NSString stringWithFormat:@"%@@prison/", user];
 
-    NSString* ip = [ni defaultIP4];
     NSString* phrase = [NSString stringWithFormat:@"%@:NULL:NULL", ip];
 
     NSString* value_sign = nil;

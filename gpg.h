@@ -1192,7 +1192,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     unsigned int count = [arg_array count];
     char* args[count];
-    for (unsigned int i=0; i<count; i++) {
+    unsigned int i;
+    for (i=0; i<count; i++) {
         args[i] = (char*)[[arg_array objectAtIndex:i] UTF8String];
     }
     args[count] = NULL;

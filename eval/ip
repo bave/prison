@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+import socket
+import fcntl
+import sys
+import os
+
+def ifconfig(ifname):
+    uname = os.uname()
+    os_name = uname[0]
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    result = "NULL"
+    if os_name == "Linux":
+        # Linux 
+        result = fcntl.ioctl(s.fileno(), 0x8915, (ifname+'\0'*32)[:32])
+    if os_name == "Darwin":
+        # snow lepard
+        result = fcntl.ioctl(s.fileno(), 0XC0206921, (ifname+'\0'*32)[:32])
+
+    if result != "NULL":
+        ret = socket.inet_ntoa(result[20:24])
+    else:
+        ret = "NULL"
+
+    return ret
+
+if __name__ == '__main__':
+    # argv is interface name
+    if len(sys.argv) == 2:
+        try:
+            print ifconfig(sys.argv[1])
+        except:
+            print "non exsist interface name!!"
+    else: 
+        print "python ip.py [interface_name]"

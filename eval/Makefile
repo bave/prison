@@ -30,6 +30,9 @@ sign: sign.m
 export: export.m
 	${CC} ${CFLAGS} -o export export.m -lgpgme -lgpg-error
 
+chk:chk.c
+	gcc -o chk chk.c
+
 clean:
 	rm ./key &
 	rm -rf ./key.dSYM &
@@ -37,4 +40,5 @@ clean:
 	rm -rf ./sign.dSYM &
 	rm ./export &
 	rm -rf ./export.dSYM &
+	rm ./chk &
 

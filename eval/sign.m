@@ -2,7 +2,10 @@
 
 #include "../gpg.h"
 #include "../utils.h"
+
+#ifdef __MACH__
 #include "../ni.h"
+#endif
 
 #define __PRISON__
 

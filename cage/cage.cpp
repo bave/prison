@@ -937,7 +937,7 @@ void process_put(int sockfd, esc_tokenizer::iterator &it,
                          esc_key.c_str(), esc_value.c_str(), ttl);
         }
 
-        fprintf(stderr, "cage_put:%lu:%s\n", strlen(result), result);
+        //fprintf(stderr, "cage_put:%lu:%s\n", strlen(result), result);
         send(sockfd, result, strlen(result), 0);
 }
 

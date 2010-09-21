@@ -27,7 +27,8 @@ if __name__ == '__main__':
     # argv is interface name
     if len(sys.argv) == 2:
         try:
-            print ifconfig(sys.argv[1])
+            #print ifconfig(sys.argv[1])
+            sys.stdout.write(ifconfig(sys.argv[1]))
         except:
             print "non exsist interface name!!"
     else: 

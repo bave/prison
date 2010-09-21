@@ -18,8 +18,7 @@ CFLAGS+= -fconstant-string-class=NSConstantString
 CFLAGS+= -fobjc-exceptions
 endif
 
-all:
-	ls
+all: key sign export
 
 key: key.m
 	${CC} ${CFLAGS} -o key key.m -lgpgme -lgpg-error

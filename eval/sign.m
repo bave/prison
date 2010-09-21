@@ -30,9 +30,8 @@ int main(int argc, char** argv)
 
     NetInfo* ni = [NetInfo new];
     ip = [ni defaultIP4];
-    NSLog(@"%@", ip);
 
-    #else __LINUX__
+    #elif __linux__
     {
         int ret;
         const NSStringEncoding* encode;
@@ -67,7 +66,6 @@ int main(int argc, char** argv)
         out_data = [out_file readDataToEndOfFile];
         out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
         ip = out_string;
-        NSLog(@"%@", ip);
     }
     #endif
 
@@ -77,6 +75,7 @@ int main(int argc, char** argv)
     //NSString* uid = [NSString stringWithFormat:@"%@@prison/", user];
 
     NSString* phrase = [NSString stringWithFormat:@"%@:NULL:NULL", ip];
+    NSLog(@"%@", phrase);
 
     NSString* value_sign = nil;
 

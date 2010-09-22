@@ -43,9 +43,9 @@ int main(int argc, char** argv)
             NSLog(@"start_genkey\n");
 
             [gpg mkKeyParams:@"RSA"
-                            :@"1024"
+                            :@"256"
                             :@"RSA"
-                            :@"1024"
+                            :@"256"
                             :user
                             :uid];
 

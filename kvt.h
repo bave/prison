@@ -520,7 +520,9 @@ extern bool is_linking;
                         }
                     }
                     else if ([key hasSuffix:@"@prison"]) {
+                            NSLog(@"%d", __LINE__);
                             [self _gpg_import_db:m];
+                            NSLog(@"%d", __LINE__);
                             NSArray* m_array;
                             m_array = [m componentsSeparatedByString:@","];
                             NSString* pubring_key;
@@ -528,13 +530,16 @@ extern bool is_linking;
                             NSString* hostname;
                             hostname = [[pubring_key componentsSeparatedByString:@"@"]
                                                                    objectAtIndex:0];
+                            NSLog(@"%d", __LINE__);
                             NSString* convert_message;
                             convert_message = [NSString stringWithFormat:
                                     @"204,get,prison,%@.p2p,non-value", hostname];
 
+                            NSLog(@"%d", __LINE__);
                             [[NSNotificationCenter defaultCenter]
                                postNotificationName:@"notify://obs.NameReply"
                                object:convert_message];
+                            NSLog(@"%d", __LINE__);
                     }
                 }
 
@@ -617,6 +622,8 @@ extern bool is_linking;
 
 - (bool)_gpg_import_db:(NSString*)message
 {
+    NSString* key = nil;
+    @try {
     NSArray* message_array = [message componentsSeparatedByString:@","];
 
     //NSString* code = [message_array objectAtIndex:0];
@@ -626,7 +633,9 @@ extern bool is_linking;
     NSString* content = [GPGME appendPublicFrame:[message_array objectAtIndex:4]];
 
     NSString* hostname = [[dht_key componentsSeparatedByString:@"@"] objectAtIndex:0];
-    NSString* key = [NSString stringWithFormat:@"%@.p2p", hostname];
+    key = [NSString stringWithFormat:@"%@.p2p", hostname];
+
+    NSLog(@"content:\n%@", content);
 
     NSDictionary* pubring = [[gpg throw:content] objectAtIndex:0];
     NSString* throw_user = [pubring objectForKey:@"user"];
@@ -643,6 +652,10 @@ extern bool is_linking;
     }
 
     [gpg import:content];
+    }
+    @catch (id err) {
+        NSLog(@"%@", err);
+    }
 
     return [self _changeAuthority:key :1];
 }
@@ -736,7 +749,7 @@ extern bool is_linking;
     NSString* key = [message_array objectAtIndex:3];
     NSArray* key_array = [key componentsSeparatedByString:@"."];
     NSString* key_hostname = [key_array objectAtIndex:0];
-    NSString* key_request = [NSString stringWithFormat:@"%@@prison\n", key_hostname];
+    NSString* key_request = [NSString stringWithFormat:@"%@@prison", key_hostname];
 
     int ret;
     while (1) {

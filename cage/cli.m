@@ -65,13 +65,13 @@ int main(int argc, char** argv)
     }
     system("sh -c \"tput clear\"");
     printf("Now connecting to /tmp/sock_cage!!\n");
-    char buffer[65543];
+    char buffer[65535];
+    char fgets_buf[BUFSIZ];
     for (;;) {
         printf("send_message:");
         fflush(stdout);
 
         memset(buffer, '\0', sizeof(buffer));
-        fgets(buffer, sizeof(buffer), stdin);
 
         if (strcmp(buffer, "list\n") == 0) {
             list();

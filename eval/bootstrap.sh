@@ -1,7 +1,21 @@
-#!/bin/sh
+#!/bin/zsh
 
-CAGE="/Users/bayve/git/prison/bin/cage -f /tmp/boot1"
-CLI="/Users/bayve/git/prison/bin/cli /tmp/boot1"
+CAGE="NO"
+CLI="NO"
+
+CAGE=/Users/bayve/git/prison/bin/cage
+CLI=/Users/bayve/git/prison/bin/cli
+INTERNAL_SOCKET=/tmp/boot1
+
+if [ $CAGE = "NO" ]; then
+    echo "please input cage path"
+    exit 1
+fi
+
+if [ $CLI = "NO" ]; then
+    echo "please input cli path"
+    exit 1
+fi
 
 SEED_NODE=localhost
 SEED_PORT=12000
@@ -10,8 +24,8 @@ SNODE=kris
 SPORT=12001
 EPORT=12010
 
+$CAGE -f $INTERNAL_SOCKET &
 
-$CAGE &
 rm -f error
 touch error
 
@@ -21,7 +35,7 @@ while [ $i -le $EPORT ]
 do
     expect -c "
     set timeout 2
-    spawn $CLI
+    spawn $CLI $INTERNAL_SOCKET
     expect \"send_message:\"
     send   \"new,$SNODE$i,$i,global\n\"
     expect { 
@@ -57,7 +71,7 @@ do
         echo $SNODE$i
         expect -c "
         set timeout 5
-        spawn $CLI
+        spawn $CLI $INTERNAL_SOCKET
         expect \"send_message:\"
         send   \"new,$SNODE$i,$i,global\n\"
         expect { 
@@ -93,7 +107,7 @@ while [ $i -le $EPORT ]
 do
     expect -c "
     set timeout 2
-    spawn $CLI
+    spawn $CLI $INTERNAL_SOCKET
     expect \"send_message:\"
     send   \"join,$SNODE$i,$SEED_NODE,$SEED_PORT\n\"
     expect { 
@@ -129,7 +143,7 @@ do
         echo $SNODE$i
         expect -c "
         set timeout 5
-        spawn $CLI
+        spawn $CLI $INTERNAL_SOCKET
         expect \"send_message:\"
         send   \"join,$SNODE$i,$SEED,$SPORT\n\"
         expect { 
@@ -156,6 +170,7 @@ do
 done
 # ============================================================
 
+exit 1
 
 # put for dht ================================================
 rm -f error
@@ -172,25 +187,21 @@ do
     VS=`cat $SNODE$i/sign.txt`
 
     # value of export
-    VE1=`cat $SNODE$i/export.txt | cut -c 1-300`
-    VE2=`cat $SNODE$i/export.txt | cut -c 301-600`
-    VE3=`cat $SNODE$i/export.txt | cut -c 601-900`
-    VE4=`cat $SNODE$i/export.txt | cut -c 901-1200`
+    VE=`cat $SNODE$i/export.txt`
+    echo $VE
+    sleep 1
 
     expect -c "
     set timeout 2
-    spawn $CLI
+    spawn $CLI $INTERNAL_SOCKET
     expect \"send_message:\"
-    send   \"put,$SNODE$i,$SNODE$i.p2p,$VS,7200,unique\n\"
+    send   \"put,$SNODE$i,$SNODE$i@prison,$VE,7200,unique\n\"
     expect { 
         \"recv_message:203,\" {
             expect \"send_message:\"
-            send   \"put,$SNODE$i,$SNODE$i@prison,$VE1\"
-            send   \"$V2E\"
-            send   \"$V3E\"
-            send   \"$VE4,7200,unique\n\"
             expect {
                 \"recv_message:203,\" {
+                    send   \"put,$SNODE$i,$SNODE$i.p2p,$VS,7200,unique\n\"
                     expect \"send_message:\"
                     send   \"quit\"
                 }
@@ -236,23 +247,17 @@ do
         VS=`cat $SNODE$i/sign.txt`
 
         # value of export
-        VE1=`cat $SNODE$i/export.txt | cut -c 1-300`
-        VE2=`cat $SNODE$i/export.txt | cut -c 301-600`
-        VE3=`cat $SNODE$i/export.txt | cut -c 601-900`
-        VE4=`cat $SNODE$i/export.txt | cut -c 901-1200`
+        VE=`cat $SNODE$i/export.txt`
 
         expect -c "
         set timeout 2
-        spawn $CLI
+        spawn $CLI $INTERNAL_SOCKET
         expect \"send_message:\"
-        send   \"put,$SNODE$i,$SNODE$i.p2p,$VS,7200,unique\n\"
+        send   \"put,$SNODE$i,$SNODE$i@prison,$VE,7200,unique\n\"
         expect { 
             \"recv_message:203,\" {
                 expect \"send_message:\"
-                send   \"put,$SNODE$i,$SNODE$i@prison,$VE1\"
-                send   \"$V2E\"
-                send   \"$V3E\"
-                send   \"$VE4,7200,unique\n\"
+                send   \"put,$SNODE$i,$SNODE$i.p2p,$VS,7200,unique\n\"
                 expect {
                     \"recv_message:203,\" {
                         expect \"send_message:\"

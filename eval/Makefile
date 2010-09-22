@@ -20,6 +20,10 @@ endif
 
 all: key sign export
 
+expect:
+	wget http://jaist.dl.sourceforge.net/project/expect/Expect/5.44.1.15/expect-5.44.1.15.tar.gz
+	tar zxvpf expect-5.44.1.15.tar.gz
+
 key: key.m
 	${CC} ${CFLAGS} -o key key.m -lgpgme -lgpg-error
 

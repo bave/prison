@@ -1,11 +1,12 @@
-#!/bin/zsh
+#!/bin/sh
 
 CAGE="NO"
 CLI="NO"
+INTERNAL_SOCKET="NO"
 
-CAGE=/Users/bayve/git/prison/bin/cage
-CLI=/Users/bayve/git/prison/bin/cli
-INTERNAL_SOCKET=/tmp/boot1
+#CAGE=/home/t-inoue/git/prison/bin/cage
+#CLI=/home/t-inoue/git/prison/bin/cli
+#INTERNAL_SOCKET=/tmp/boot1
 
 if [ $CAGE = "NO" ]; then
     echo "please input cage path"
@@ -17,12 +18,17 @@ if [ $CLI = "NO" ]; then
     exit 1
 fi
 
+if [ $INTERNAL_SOCKET = "NO" ]; then
+    echo "please input AF_LOCAL socket file path"
+    exit 1
+fi
+
 SEED_NODE=localhost
 SEED_PORT=12000
 
-SNODE=kris
+SNODE=aris
 SPORT=12001
-EPORT=12010
+EPORT=12100
 
 $CAGE -f $INTERNAL_SOCKET &
 
@@ -41,17 +47,20 @@ do
     expect { 
         \"recv_message:200,\" {
             expect \"send_message:\"
-            send   \"quit\"
+            send   \"quit\n\"
+            interact
         }
-        \"recv_message:40,\"  {
+        \"recv_message:40\"  {
             system \"echo $i >> error\"
             expect \"send_message:\"
-            send   \"quit\"
+            send   \"quit\n\"
+            interact
         }
         timeout { 
             system \"echo $i >> error\"
             expect \"send_message:\"
-            send   \"quit\"
+            send   \"quit\n\"
+            interact
         }
     }
     "
@@ -77,17 +86,20 @@ do
         expect { 
             \"recv_message:200,\" {
                 expect \"send_message:\"
-                send   \"quit\"
+                send   \"quit\n\"
+                interact
             }
-            \"recv_message:40,\"  {
+            \"recv_message:40\"  {
                 system \"echo $i >> error\"
                 expect \"send_message:\"
-                send   \"quit\"
+                send   \"quit\n\"
+                interact
             }
             timeout { 
                 system \"echo $i >> error\"
                 expect \"send_message:\"
-                send   \"quit\"
+                send   \"quit\n\"
+                interact
             }
         }
         "
@@ -113,17 +125,20 @@ do
     expect { 
         \"recv_message:202,\" {
             expect \"send_message:\"
-            send   \"quit\"
+            send   \"quit\n\"
+            interact
         }
-        \"recv_message:40,\"  {
+        \"recv_message:40\"  {
             system \"echo $i >> error\"
             expect \"send_message:\"
-            send   \"quit\"
+            send   \"quit\n\"
+            interact
         }
         timeout { 
             system \"echo $i >> error\"
             expect \"send_message:\"
-            send   \"quit\"
+            send   \"quit\n\"
+            interact
         }
     }
     "
@@ -149,17 +164,20 @@ do
         expect { 
             \"recv_message:202,\" {
                 expect \"send_message:\"
-                send   \"quit\"
+                send   \"quit\n\"
+                interact
             }
-            \"recv_message:40,\"  {
+            \"recv_message:40\"  {
                 system \"echo $i >> error\"
                 expect \"send_message:\"
-                send   \"quit\"
+                send   \"quit\n\"
+                interact
             }
             timeout { 
                 system \"echo $i >> error\"
                 expect \"send_message:\"
-                send   \"quit\"
+                send   \"quit\n\"
+                interact
             }
         }
         "
@@ -170,14 +188,13 @@ do
 done
 # ============================================================
 
-exit 1
-
 # put for dht ================================================
 rm -f error
 touch error
 i=$SPORT
 while [ $i -le $EPORT ]
 do
+
     mkdir $SNODE$i
     ./key $SNODE$i
     ./sign $SNODE$i
@@ -188,9 +205,7 @@ do
 
     # value of export
     VE=`cat $SNODE$i/export.txt`
-    echo $VE
-    sleep 1
-
+    #echo $VE
     expect -c "
     set timeout 2
     spawn $CLI $INTERNAL_SOCKET
@@ -198,38 +213,41 @@ do
     send   \"put,$SNODE$i,$SNODE$i@prison,$VE,7200,unique\n\"
     expect { 
         \"recv_message:203,\" {
-            expect \"send_message:\"
+            send   \"put,$SNODE$i,$SNODE$i.p2p,$VS,7200,unique\n\"
             expect {
                 \"recv_message:203,\" {
-                    send   \"put,$SNODE$i,$SNODE$i.p2p,$VS,7200,unique\n\"
                     expect \"send_message:\"
-                    send   \"quit\"
+                    send   \"quit\n\"
+                    interact
                 }
-                \"recv_message:40,\"  {
+                \"recv_message:40\"  {
                     system \"echo $i >> error\"
                     expect \"send_message:\"
-                    send   \"quit\"
+                    send   \"quit\n\"
+                    interact
                 }
                 timeout { 
                     system \"echo $i >> error\"
                     expect \"send_message:\"
-                    send   \"quit\"
+                    send   \"quit\n\"
+                    interact
                 }
             }
-            send   \"quit\"
         }
-        \"recv_message:40,\"  {
+        \"recv_message:40\"  {
             system \"echo $i >> error\"
             expect \"send_message:\"
-            send   \"quit\"
+            send   \"quit\n\"
+            interact
         }
         timeout { 
             system \"echo $i >> error\"
             expect \"send_message:\"
-            send   \"quit\"
+            send   \"quit\n\"
+            interact
         }
-    }"
-
+    }
+    "
     i=`expr $i + 1`
     sleep 0.1
 done
@@ -248,7 +266,6 @@ do
 
         # value of export
         VE=`cat $SNODE$i/export.txt`
-
         expect -c "
         set timeout 2
         spawn $CLI $INTERNAL_SOCKET
@@ -256,37 +273,41 @@ do
         send   \"put,$SNODE$i,$SNODE$i@prison,$VE,7200,unique\n\"
         expect { 
             \"recv_message:203,\" {
-                expect \"send_message:\"
                 send   \"put,$SNODE$i,$SNODE$i.p2p,$VS,7200,unique\n\"
                 expect {
                     \"recv_message:203,\" {
                         expect \"send_message:\"
-                        send   \"quit\"
+                        send   \"quit\n\"
+                        interact
                     }
-                    \"recv_message:40,\"  {
+                    \"recv_message:40\"  {
                         system \"echo $i >> error\"
                         expect \"send_message:\"
-                        send   \"quit\"
+                        send   \"quit\n\"
+                        interact
                     }
                     timeout { 
                         system \"echo $i >> error\"
                         expect \"send_message:\"
-                        send   \"quit\"
+                        send   \"quit\n\"
+                        interact
                     }
                 }
-                send   \"quit\"
             }
-            \"recv_message:40,\"  {
+            \"recv_message:40\"  {
                 system \"echo $i >> error\"
                 expect \"send_message:\"
-                send   \"quit\"
+                send   \"quit\n\"
+                interact
             }
             timeout { 
                 system \"echo $i >> error\"
                 expect \"send_message:\"
-                send   \"quit\"
+                send   \"quit\n\"
+                interact
             }
-        }"
+        }
+        "
         i=`expr $i + 1`
         sleep 0.1
     done

@@ -66,12 +66,16 @@ int main(int argc, char** argv)
     system("sh -c \"tput clear\"");
     printf("Now connecting to /tmp/sock_cage!!\n");
     char buffer[65535];
+    char stdinbuf[65535];
+    setbuffer(stdin, stdinbuf, sizeof(stdinbuf));
     for (;;) {
+
         printf("send_message:");
         fflush(stdout);
-        fflush(stdin);
 
         memset(buffer, '\0', sizeof(buffer));
+        memset(stdinbuf, '\0', sizeof(stdinbuf));
+
         fgets(buffer, sizeof(buffer), stdin);
 
 

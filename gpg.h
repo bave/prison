@@ -2652,7 +2652,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     if (key == nil) {
         [pool drain];
-        @throw @"error:[gpg throw] non key stream";
+        //@throw @"error:[gpg throw] non key stream";
+        return nil;
     }
 
     NSMutableArray* args = nil;
@@ -2727,13 +2728,15 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     if ([key_string length] == 0) {
         [task release];
         [pool drain];
-        @throw @"error:[gpg throw] no key data";
+        //@throw @"error:[gpg throw] no key data";
+        return nil;
     }
 
     if (ret != 0) {
         [task release];
         [pool drain];
-        @throw @"error: [gpg throw] violation error";
+        //@throw @"error: [gpg throw] violation error";
+        return nil;
     }
 
 

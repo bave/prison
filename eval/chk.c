@@ -14,6 +14,7 @@ main()
     printf("SIOCGIFADDR_hex = 0x");
     showhex(i);
     printf("\n");
+    printf("\n");
     
     return 0;
 }

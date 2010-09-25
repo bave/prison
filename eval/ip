@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""
+use in sign.m
+"""
 import socket
 import fcntl
 import sys

@@ -1,12 +1,9 @@
 -- PRISON --
 Port Relation Identifier Service with Ovarlay Network
 
-- turn down naming... 
-jail
-    JAIST A... i... l...
-
-RAPRINS
-    Rapidly Accessible Port Relation Identifier with Naming Service
+# was rejected
+# -- RAPRINS --
+# Rapidly Accessible Port Relation Identifier with Naming Service
 
 
 - using library
@@ -23,16 +20,10 @@ RAPRINS
 
 - ToDo
     prison
-        mk coding at using of kvt...
 
 	libcage
         -> uniqe [fin]
         -> multi [fin]
-
-    RRR(ResourceRecordRegister)
-        hostRRR
-        GroupRRR
-        serviceRRR
 
     FrontEnd
         host viewer

@@ -59,7 +59,6 @@ extern bool is_linking;
 - (NSDictionary*)getRequestQueue;
 - (NSArray*)dequeueReput;
 - (NSArray*)getReputQueue;
-//- (void)storeKVT:(NSString*)key :(NSString*)valeu;
 
 - (bool)setTaskPath:(NSString*)path;
 

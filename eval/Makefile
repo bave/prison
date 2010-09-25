@@ -44,4 +44,5 @@ clean:
 	rm ./export &
 	rm -rf ./export.dSYM &
 	rm ./chk &
+	./clean.sh
 

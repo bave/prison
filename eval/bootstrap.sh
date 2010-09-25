@@ -1,40 +1,10 @@
 #!/bin/sh
 
-CAGE="NO"
-CLI="NO"
-INTERNAL_SOCKET="NO"
-
-#CAGE=/home/t-inoue/git/prison/bin/cage
-#CLI=/home/t-inoue/git/prison/bin/cli
-#INTERNAL_SOCKET=/tmp/boot1
-
-if [ $CAGE = "NO" ]; then
-    echo "please input cage path"
-    exit 1
-fi
-
-if [ $CLI = "NO" ]; then
-    echo "please input cli path"
-    exit 1
-fi
-
-if [ $INTERNAL_SOCKET = "NO" ]; then
-    echo "please input AF_LOCAL socket file path"
-    exit 1
-fi
-
-SEED_NODE=localhost
-SEED_PORT=12000
-
-SNODE=aris
-SPORT=12001
-EPORT=12100
+. ./config.sh
 
 $CAGE -f $INTERNAL_SOCKET &
-
 rm -f error
 touch error
-
 # new node ===================================================
 i=$SPORT
 while [ $i -le $EPORT ]

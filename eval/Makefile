@@ -20,10 +20,6 @@ endif
 
 all: key sign export
 
-expect:
-	wget http://jaist.dl.sourceforge.net/project/expect/Expect/5.44.1.15/expect-5.44.1.15.tar.gz
-	tar zxvpf expect-5.44.1.15.tar.gz
-
 key: key.m
 	${CC} ${CFLAGS} -o key key.m -lgpgme -lgpg-error
 
@@ -34,7 +30,10 @@ export: export.m
 	${CC} ${CFLAGS} -o export export.m -lgpgme -lgpg-error
 
 chk:chk.c
-	gcc -o chk chk.c
+	${CC} ${CFLAGS} -o chk chk.c -lresolv
+
+measure:measure.m
+	${CC} ${CFLAGS} -o measure measure.m
 
 clean:
 	rm ./key &
@@ -44,5 +43,8 @@ clean:
 	rm ./export &
 	rm -rf ./export.dSYM &
 	rm ./chk &
+	rm -rf ./chk.dSYM &
+	rm ./measure &
+	rm -rf ./measure.dSYM &
 	./clean.sh
 

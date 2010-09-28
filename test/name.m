@@ -8,7 +8,6 @@ int main(int argc, char *argv[])
     //id name=[[NamePacket alloc] init];
     id name=[NamePacket new];
 
-    exit(0);
 	//std::string rr("aris.jpcert.cc");
 	//std::string addr("192.50.109.27");
 

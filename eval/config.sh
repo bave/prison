@@ -17,12 +17,12 @@ INTERNAL_SOCKET="NO"
 #INTERNAL_SOCKET="/tmp/sock_bootstrap"
 
 if [ $CAGE = "NO" ]; then
-    echo "please input cage path"
+    echo "please input path"
     exit 1
 fi
 
 if [ $CLI = "NO" ]; then
-    echo "please input cli path"
+    echo "please input path"
     exit 1
 fi
 

@@ -3,10 +3,11 @@
 #include <stdlib.h>
 #include <resolv.h>
 #include <nameser.h>
-
 #include <time.h>
-#include <sys/time.h>
 
+#include <sys/types.h>
+#include <sys/time.h>
+#include <arpa/nameser.h>
 
 
 #include "../name.h"
@@ -14,10 +15,12 @@
 #define SA struct sockaddr
 
 void usage(void);
+char* get_resolver(int i);
+int get_resolver_count(void);
 
 int main(int argc, char *argv[])
 {
-    if (argc != 3) usage();
+    if (!(argc == 3 || argc == 2)) usage();
 
     id pool = [[NSAutoreleasePool alloc] init];
     id n = [NamePacket new];
@@ -44,9 +47,18 @@ int main(int argc, char *argv[])
     memset(&sin2, 0, sizeof(sin2));
     memset(buf, 0, BUFSIZ);
 
+    res_init();
+    //printf("%d\n", get_resolver_count());
+    //printf("%s\n", get_resolver(0));
+
     sin1.sin_family = AF_INET;
     sin1.sin_port = htons(53);
-    inet_pton(AF_INET, argv[2], &sin1.sin_addr);
+    if (argc == 2) {
+        inet_pton(AF_INET, get_resolver(0), &sin1.sin_addr);
+    }
+    if (argc == 3) {
+        inet_pton(AF_INET, argv[2], &sin1.sin_addr);
+    }
 
     /*
     struct timeval {
@@ -54,6 +66,7 @@ int main(int argc, char *argv[])
         suseconds_t  tv_usec;
     };
     */
+
     struct timeval prev;
     struct timeval current;
 
@@ -67,8 +80,22 @@ int main(int argc, char *argv[])
     len = recvfrom(sockfd, buf, BUFSIZ, 0, (SA*)&sin2, &sin_size); 
     gettimeofday(&current, NULL);
 
-    time_t sec = current.tv_sec - prev.tv_sec;
-    suseconds_t usec = current.tv_usec - prev.tv_usec;
+    time_t sec;
+    suseconds_t usec;
+    if (current.tv_sec == prev.tv_sec) {
+        sec = current.tv_sec - prev.tv_sec;
+        usec = current.tv_usec - prev.tv_usec;
+    }
+
+    else if (current.tv_sec != prev.tv_sec) {
+        int carry = 1000000;
+        sec = current.tv_sec - prev.tv_sec;
+        usec = carry - prev.tv_usec + current.tv_usec;
+        if (usec > carry) {
+            usec = usec - carry;
+            sec++;
+        }
+    }
 
     printf("sec:%lu usec:%d ", sec, usec);
 
@@ -140,4 +167,16 @@ int main(int argc, char *argv[])
 void usage(void){
     printf("name [hostname] [dns server]\n");
     exit(-1);
+}
+
+char* get_resolver(int i)
+{
+    struct sockaddr_in sin;
+    memcpy(&sin, &(_res.nsaddr_list[i]), sizeof(struct sockaddr_in));
+    return inet_ntoa(sin.sin_addr);
+}
+
+int get_resolver_count(void)
+{
+    return _res.nscount;
 }

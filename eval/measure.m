@@ -57,22 +57,21 @@ int main(int argc, char *argv[])
     struct timeval prev;
     struct timeval current;
 
-    gettimeofday(&prev, NULL);
+
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 
+    gettimeofday(&prev, NULL);
     sendto(sockfd, [n n_payload], [n n_payload_size], 0, (SA*)&sin1, sizeof(sin1));
-    gettimeofday(&current, NULL);
 
-    //printf("sec:%lu, usec:%d\n", prev.tv_sec, prev.tv_usec);
-    //printf("sec:%lu, usec:%d\n", current.tv_sec, current.tv_usec);
+    re:
+    len = recvfrom(sockfd, buf, BUFSIZ, 0, (SA*)&sin2, &sin_size); 
+    gettimeofday(&current, NULL);
 
     time_t sec = current.tv_sec - prev.tv_sec;
     suseconds_t usec = current.tv_usec - prev.tv_usec;
 
     printf("sec:%lu usec:%d ", sec, usec);
 
-    re:
-    len = recvfrom(sockfd, buf, BUFSIZ, 0, (SA*)&sin2, &sin_size); 
 
     if (len == -1) { exit(1); }
 

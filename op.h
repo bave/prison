@@ -258,7 +258,7 @@ extern bool is_verbose;
                     else if (auth == 1) {
                         id name = [[NamePacket alloc] init];
                         [name n_set_id:name_id];
-                        [name n_set_flags:QR|AA];
+                        [name n_set_flags:QR|RA];
                         [name n_create_rr_questionA:fqdn];
                         [name n_create_rr_answer:lip];
                         [name n_build_payload];

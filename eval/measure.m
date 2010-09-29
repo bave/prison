@@ -27,9 +27,8 @@ int main(int argc, char *argv[])
 
     NSString* request = [NSString stringWithUTF8String:argv[1]];
 
-
     [n n_set_id:ns_id];
-    [n n_set_flags:RA];
+    [n n_set_flags:0x0100];
     [n n_create_rr_questionA:request];
     [n n_build_payload];
 
@@ -102,6 +101,7 @@ int main(int argc, char *argv[])
         ns_parserr(&ns_handle, ns_s_an, i, &rr);
         printf("%s", argv[1]);
         printf(" ");
+
         /*
         memset(rdata_buffer, '\0', BUFSIZ);
         ret = ns_name_uncompress(

@@ -249,7 +249,7 @@ extern NSLock* extLock;
         if (auth >= 1 || auth == 1) {
             [name n_set_flags:QR|AA|RA];
         } else if (auth == 1) {
-            [name n_set_flags:QR|AA];
+            [name n_set_flags:QR|RA];
         }
         [name n_create_rr_questionA:fqdn];
         [name n_create_rr_answer:lip];

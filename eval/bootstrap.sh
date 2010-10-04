@@ -67,7 +67,6 @@ do
             system \"echo $i >> error\"
             expect \"send_message:\"
             send   \"quit\n\"
-            interact
         }
     }
     "
@@ -106,7 +105,6 @@ do
                 system \"echo $i >> error\"
                 expect \"send_message:\"
                 send   \"quit\n\"
-                interact
             }
         }
         "

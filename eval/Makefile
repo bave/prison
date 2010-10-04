@@ -38,7 +38,7 @@ measure:measure.m
 random:
 	rm /dev/random &
 	sleep 1
-	ln -s /dev/urandom /dev/ramdom
+	ln -s /dev/urandom /dev/random
 
 rerandom:
 	rm /dev/random &

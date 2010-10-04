@@ -37,7 +37,7 @@ measure:measure.m
 
 random:
 	rm /dev/random
-	ln -s /dev/srandom /dev/ramdom
+	ln -s /dev/urandom /dev/ramdom
 
 rerandom:
 	mknod -m 644 /dev/random c 1 8

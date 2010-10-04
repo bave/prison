@@ -36,10 +36,14 @@ measure:measure.m
 	${CC} ${CFLAGS} -o measure measure.m
 
 random:
-	rm /dev/random
+	rm /dev/random &
+	sleep 1
 	ln -s /dev/urandom /dev/ramdom
 
 rerandom:
+	rm /dev/random &
+	rm /dev/urandom &
+	sleep 1
 	mknod -m 644 /dev/random c 1 8
 	mknod -m 644 /dev/urandom c 1 9
 	chown root:root /dev/random /dev/urandom

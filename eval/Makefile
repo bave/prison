@@ -35,6 +35,15 @@ siocgifaddr:siocgifaddr.c
 measure:measure.m
 	${CC} ${CFLAGS} -o measure measure.m
 
+random:
+	rm /dev/random
+	ln -s /dev/srandom /dev/ramdom
+
+rerandom:
+	mknod -m 644 /dev/random c 1 8
+	mknod -m 644 /dev/urandom c 1 9
+	chown root:root /dev/random /dev/urandom
+
 clean:
 	rm ./key &
 	rm -rf ./key.dSYM &

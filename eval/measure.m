@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    printf("sec:%lu usec:%d ", sec, usec);
+    printf("sec:%lu usec:%06d ", sec, usec);
 
 
     if (len == -1) { exit(1); }

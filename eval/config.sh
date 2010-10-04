@@ -3,18 +3,17 @@
 SEED_NODE=aris.jaist.ac.jp
 SEED_PORT=12000
 
-SNODE=aris
+NODE=aris
 SPORT=12001
 EPORT=12001
-
 
 CAGE="NO"
 CLI="NO"
 INTERNAL_SOCKET="NO"
 
-#CAGE="$HOME/git/prison/bin/cage"
-#CLI="$HOME/git/prison/bin/cli"
-#INTERNAL_SOCKET="/tmp/sock_bootstrap"
+CAGE="$HOME/git/prison/bin/cage"
+CLI="$HOME/git/prison/bin/cli"
+INTERNAL_SOCKET="/tmp/sock_bootstrap"
 
 if [ $CAGE = "NO" ]; then
     echo "please input path"

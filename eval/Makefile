@@ -29,8 +29,8 @@ sign: sign.m
 export: export.m
 	${CC} ${CFLAGS} -o export export.m -lgpgme -lgpg-error
 
-chk:chk.c
-	${CC} ${CFLAGS} -o chk chk.c -lresolv
+siocgifaddr:siocgifaddr.c
+	${CC} ${CFLAGS} -o siocgifaddr siocgifaddr.c
 
 measure:measure.m
 	${CC} ${CFLAGS} -o measure measure.m
@@ -42,8 +42,8 @@ clean:
 	rm -rf ./sign.dSYM &
 	rm ./export &
 	rm -rf ./export.dSYM &
-	rm ./chk &
-	rm -rf ./chk.dSYM &
+	rm ./siocgifaddr &
+	rm -rf ./siocgifaddr.dSYM &
 	rm ./measure &
 	rm -rf ./measure.dSYM &
 	./clean.sh

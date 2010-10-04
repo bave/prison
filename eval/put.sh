@@ -39,9 +39,6 @@ if [ $# != 0 ]; then
     fi
 fi
 
-$CAGE -f $INTERNAL_SOCKET &
-rm -f error
-touch error
 # put for dht ================================================
 rm -f error
 touch error

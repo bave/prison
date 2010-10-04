@@ -11,9 +11,9 @@ CAGE="NO"
 CLI="NO"
 INTERNAL_SOCKET="NO"
 
-CAGE="$HOME/git/prison/bin/cage"
-CLI="$HOME/git/prison/bin/cli"
-INTERNAL_SOCKET="/tmp/sock_bootstrap"
+#CAGE="$HOME/git/prison/bin/cage"
+#CLI="$HOME/git/prison/bin/cli"
+#INTERNAL_SOCKET="/tmp/sock_bootstrap"
 
 if [ $CAGE = "NO" ]; then
     echo "please input path"

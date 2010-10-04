@@ -14,7 +14,7 @@ if [ $# != 0 ]; then
         echo "put.sh [node_name] [start_port] [end_port] [internal_sock]"
         exit 1
     else
-        NODE=$0
+        NODE=$1
     fi
 
     if [ -z $2 ]; then

@@ -4,7 +4,6 @@ host=$1
 bias=$2
 num=$3
 
-
 end=`expr $bias + $num`
 
 i=`expr $bias + 1`

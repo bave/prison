@@ -5,6 +5,7 @@
 #include <nameser.h>
 #include <time.h>
 
+#include <sys/select.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <arpa/nameser.h>
@@ -39,6 +40,7 @@ int main(int argc, char *argv[])
     socklen_t sin_size = sizeof(struct sockaddr_in);
 
     int sockfd;
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     struct sockaddr_in sin1;
     struct sockaddr_in sin2;
     unsigned char buf[BUFSIZ];
@@ -70,13 +72,34 @@ int main(int argc, char *argv[])
     struct timeval prev;
     struct timeval current;
 
-
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    int s_retval;
+    struct timeval t_val;
+    fd_set s_fd;
+    memset(&t_val, 0, sizeof(t_val));
+    t_val.tv_sec = 1;
 
     gettimeofday(&prev, NULL);
     sendto(sockfd, [n n_payload], [n n_payload_size], 0, (SA*)&sin1, sizeof(sin1));
 
     re:
+    FD_ZERO(&s_fd);
+    FD_SET(sockfd, &s_fd);
+    s_retval = select((sockfd+1), &s_fd, NULL, NULL, &t_val);
+    if (s_retval <= 0) {
+        if (s_retval == -1) {
+            perror("select");
+            close(sockfd);
+            [pool drain];
+            return -1;
+        }
+        if (s_retval == 0) {
+            printf("%s:timeout\n", argv[1]);
+            close(sockfd);
+            [pool drain];
+            return 0;
+        }
+    }
+
     len = recvfrom(sockfd, buf, BUFSIZ, 0, (SA*)&sin2, &sin_size); 
     gettimeofday(&current, NULL);
 
@@ -118,6 +141,9 @@ int main(int argc, char *argv[])
 
     if (count == 0) {
         printf("%s:nxdomain\n", argv[1]);
+        close(sockfd);
+        [pool drain];
+        return 0;
     }
     
     int i;
@@ -159,6 +185,7 @@ int main(int argc, char *argv[])
         }
         */
     }
+    close(sockfd);
     [pool drain];
 
     return 0;

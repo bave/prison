@@ -1067,9 +1067,9 @@ extern bool is_linking;
 
         s_retval = select((cage_sock_fd+1), &s_fd, NULL, NULL, &t_val);
 
-        if(s_retval <= 0) {
-            if(s_retval == -1) perror("select");
-            if(s_retval == 0) fprintf(stderr, "timeout! fd : %d \n", cage_sock_fd);
+        if (s_retval <= 0) {
+            if (s_retval == -1) perror("select");
+            if (s_retval == 0) fprintf(stderr, "timeout! fd : %d \n", cage_sock_fd);
             ret = false;
         }
 

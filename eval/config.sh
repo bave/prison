@@ -7,25 +7,21 @@ NODE=aris
 SPORT=12001
 EPORT=12001
 
-CAGE="NO"
-CLI="NO"
-INTERNAL_SOCKET="NO"
-
 #CAGE="$HOME/git/prison/bin/cage"
 #CLI="$HOME/git/prison/bin/cli"
 #INTERNAL_SOCKET="/tmp/sock_bootstrap"
 
-if [ $CAGE = "NO" ]; then
-    echo "please input path"
+if [ -z $CAGE ]; then
+    echo "please input path in config.sh"
     exit 1
 fi
 
-if [ $CLI = "NO" ]; then
-    echo "please input path"
+if [ -z $CLI ]; then
+    echo "please input path in config.sh"
     exit 1
 fi
 
-if [ $INTERNAL_SOCKET = "NO" ]; then
-    echo "please input internal socket file path"
+if [ -z $INTERNAL_SOCKET ]; then
+    echo "please input internal socket file path in config.sh"
     exit 1
 fi

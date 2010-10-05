@@ -1,23 +1,28 @@
 #!/bin/sh
-./seed.sh
-#!/bin/sh
-./seed.sh
 
-./bootstrap.sh dev 12001 12040 /tmp/boot1
-./bootstrap.sh dev 12041 12080 /tmp/boot2
-./bootstrap.sh dev 12081 12120 /tmp/boot3
-./bootstrap.sh dev 12121 12060 /tmp/boot4
-./bootstrap.sh dev 12161 12200 /tmp/boot5
-./bootstrap.sh dev 12201 12240 /tmp/boot6
-./bootstrap.sh dev 12241 12280 /tmp/boot7
-./bootstrap.sh dev 12281 12320 /tmp/boot8
+. ./config.sh
 
-./put.sh dev 12001 12040 /tmp/boot1
-./put.sh dev 12041 12080 /tmp/boot2
-./put.sh dev 12081 12120 /tmp/boot3
-./put.sh dev 12121 12060 /tmp/boot4
-./put.sh dev 12161 12200 /tmp/boot5
-./put.sh dev 12201 12240 /tmp/boot6
-./put.sh dev 12241 12280 /tmp/boot7
-./put.sh dev 12281 12320 /tmp/boot8
+PER_NODE=$1
+DIV=$2
+if [ -z $PER_NODE ]; then
+    echo "please input PER_NODE arg1"
+    exit 1
+fi
 
+if [ -z $DIV ]; then
+    echo "please input DIV arg2"
+    exit 1
+fi
+
+i=1
+START_PORT=$SPORT
+while [ $i -le $DIV ]
+do
+    echo "./bootstrap.sh $NODE $START_PORT  $END_PORT $INTERNAL_SOCKET$i"
+    ./bootstrap.sh $NODE $PORT  `$PORT + $PER_NODE` /tmp/boot$i
+    echo "./put.sh $NODE $START_PORT $END_PORT $INTERNAL_SOCKET$i"
+    ./put.sh $NODE $PORT  `$PORT + $PER_NODE` /tmp/boot$i
+    END_PORT=`expr $START_PORT + $PER_NODE - 1`
+    START_PORT=`expr $END_PORT + 1`
+    i=`expr $i + 1`
+done

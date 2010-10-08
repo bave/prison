@@ -71,7 +71,6 @@ do
     }
     "
     i=`expr $i + 1`
-    sleep 0.1
 done
 
 LOOP=`cat error`
@@ -109,7 +108,6 @@ do
         }
         "
         i=`expr $i + 1`
-        sleep 0.2
     done
     SIZE=`/bin/ls -al error | awk '{print $5}'`
 done
@@ -148,7 +146,6 @@ do
     }
     "
     i=`expr $i + 1`
-    sleep 0.1
 done
 
 LOOP=`cat error`
@@ -187,7 +184,6 @@ do
         }
         "
         i=`expr $i + 1`
-        sleep 0.2
     done
     SIZE=`/bin/ls -al error | awk '{print $5}'`
 done

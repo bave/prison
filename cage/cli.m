@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 
     }
     system("sh -c \"tput clear\"");
-    printf("Now connecting to /tmp/sock_cage!!\n");
+    printf("Now connecting to %s!!\n", path);
     char buffer[65535];
     for (;;) {
 

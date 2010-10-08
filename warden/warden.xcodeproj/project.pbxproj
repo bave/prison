@@ -9,7 +9,8 @@
 /* Begin PBXBuildFile section */
 		AB1E52A1125BB23200B5C6AF /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1DDD58140DA1D0A300B32029 /* MainMenu.xib */; };
 		AB1E52A3125BB24000B5C6AF /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		AB1E52DC125BB45200B5C6AF /* warden-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = AB1E52CE125BB35C00B5C6AF /* warden-Info.plist */; };
+		AB459679125DC1A500EEEBE2 /* libgpg-error.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AB459678125DC1A500EEEBE2 /* libgpg-error.dylib */; };
+		AB45967B125DC1E300EEEBE2 /* libgpgme.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AB45967A125DC1E300EEEBE2 /* libgpgme.dylib */; };
 		AB8E4AB6125BB0B50029F7A8 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; };
 		AB8E4AB8125BB0CB0029F7A8 /* warden.m in Sources */ = {isa = PBXBuildFile; fileRef = AB8E4A60125BABC50029F7A8 /* warden.m */; };
 /* End PBXBuildFile section */
@@ -21,6 +22,8 @@
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		AB1E52CE125BB35C00B5C6AF /* warden-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "warden-Info.plist"; sourceTree = "<group>"; };
+		AB459678125DC1A500EEEBE2 /* libgpg-error.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libgpg-error.dylib"; path = "/opt/local/lib/libgpg-error.dylib"; sourceTree = "<absolute>"; };
+		AB45967A125DC1E300EEEBE2 /* libgpgme.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libgpgme.dylib; path = /opt/local/lib/libgpgme.dylib; sourceTree = "<absolute>"; };
 		AB8E4A5F125BABC50029F7A8 /* warden.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = warden.h; sourceTree = "<group>"; };
 		AB8E4A60125BABC50029F7A8 /* warden.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = warden.m; sourceTree = "<group>"; };
 		AB8E4AA5125BAEF70029F7A8 /* warden.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = warden.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -32,6 +35,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB1E52A3125BB24000B5C6AF /* Cocoa.framework in Frameworks */,
+				AB459679125DC1A500EEEBE2 /* libgpg-error.dylib in Frameworks */,
+				AB45967B125DC1E300EEEBE2 /* libgpgme.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +101,8 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				AB45967A125DC1E300EEEBE2 /* libgpgme.dylib */,
+				AB459678125DC1A500EEEBE2 /* libgpg-error.dylib */,
 				1DDD58140DA1D0A300B32029 /* MainMenu.xib */,
 			);
 			name = Resources;
@@ -156,7 +163,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB1E52A1125BB23200B5C6AF /* MainMenu.xib in Resources */,
-				AB1E52DC125BB45200B5C6AF /* warden-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -199,6 +205,10 @@
 				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/AppKit.framework/Headers/AppKit.h";
 				INFOPLIST_FILE = "warden-Info.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/local/lib,
+				);
 				OTHER_LDFLAGS = (
 					"-framework",
 					Foundation,
@@ -222,6 +232,10 @@
 				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/AppKit.framework/Headers/AppKit.h";
 				INFOPLIST_FILE = "warden-Info.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/local/lib,
+				);
 				OTHER_LDFLAGS = (
 					"-framework",
 					Foundation,
@@ -243,8 +257,14 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /opt/local/include;
+				LIBRARY_SEARCH_PATHS = /opt/local/lib;
 				ONLY_ACTIVE_ARCH = YES;
-				PREBINDING = NO;
+				OTHER_LDFLAGS = (
+					"-lgpgme",
+					"-lgpg-error",
+				);
+				PREBINDING = YES;
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
 				SDKROOT = macosx10.6;
 				VALID_ARCHS = x86_64;
@@ -259,7 +279,13 @@
 				GCC_ENABLE_SYMBOL_SEPARATION = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				PREBINDING = NO;
+				HEADER_SEARCH_PATHS = /opt/local/include;
+				LIBRARY_SEARCH_PATHS = /opt/local/lib;
+				OTHER_LDFLAGS = (
+					"-lgpgme",
+					"-lgpg-error",
+				);
+				PREBINDING = YES;
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
 				SDKROOT = macosx10.6;
 				VALID_ARCHS = x86_64;

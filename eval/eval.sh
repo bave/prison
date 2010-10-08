@@ -19,9 +19,9 @@ START_PORT=$SPORT
 while [ $i -le $DIV ]
 do
     echo "./bootstrap.sh $NODE $START_PORT  $END_PORT $INTERNAL_SOCKET$i"
-    ./bootstrap.sh $NODE $PORT  `$PORT + $PER_NODE` /tmp/boot$i
+    ./bootstrap.sh $NODE $START_PORT  $END_PORT $INTERNAL_SOCKET$i"
     echo "./put.sh $NODE $START_PORT $END_PORT $INTERNAL_SOCKET$i"
-    ./put.sh $NODE $PORT  `$PORT + $PER_NODE` /tmp/boot$i
+    ./put.sh $NODE $START_PORT $END_PORT $INTERNAL_SOCKET$i"
     END_PORT=`expr $START_PORT + $PER_NODE - 1`
     START_PORT=`expr $END_PORT + 1`
     i=`expr $i + 1`

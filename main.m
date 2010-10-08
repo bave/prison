@@ -154,22 +154,6 @@ int main(int argc, char** argv)
 
     // initialize Class -------------------------------------------------------
     @try {
-        ni = [NetInfo new];
-        if ([ni defaultIP4] != nil) {
-            is_linking = true;
-        }
-        mgmt = [Manager new];
-        extLock = [NSLock new];
-        niLock = [NSLock new];
-    }
-    @catch (id err) {
-        NSString* err_str;
-        err_str = [NSString stringWithFormat:@"%@%@\n", @"init error: ", err];
-        exit_action([err_str UTF8String]);
-    }
-    // ------------------------------------------------------------------------
-
-    @try {
 
         fw = [[FWHooker alloc] init];
 
@@ -218,11 +202,22 @@ int main(int argc, char** argv)
         [fw addRule: 2];
         */
         // --------------------------------------------------------------------
+
+        ni = [NetInfo new];
+        if ([ni defaultIP4] != nil) {
+            is_linking = true;
+        }
+        mgmt = [Manager new];
+        extLock = [NSLock new];
+        niLock = [NSLock new];
+
     }
-    @catch(id ex) {
-         //NSLog(@"%@", ex);
-         exit_action("error->exit : fw routing");
-    } 
+    @catch (id err) {
+        NSString* err_str;
+        err_str = [NSString stringWithFormat:@"%@%@\n", @"init error: ", err];
+        exit_action([err_str UTF8String]);
+    }
+    // ------------------------------------------------------------------------
     @finally { }
 
 

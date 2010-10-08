@@ -77,7 +77,6 @@ extern NSLock* extLock;
 
 - (void)test:(NSNotification*)notify
 {
-    //NSLog(@"%d\n", __LINE__); 
     printf("sel1 was called by main loop\n");
     return;
 }
@@ -135,7 +134,6 @@ extern NSLock* extLock;
 - (void)obsFWT:(NSNotification*)notify
 {
     [extLock lock];
-    //NSLog(@"chekc : %d", __LINE__);
     uint16_t port;
     uint16_t protocol;
     NSArray* array_i;
@@ -200,7 +198,6 @@ extern NSLock* extLock;
 
 - (void)obsNameReply:(NSNotification*)notify
 {
-    NSLog(@"notification to obsNameReply");
     //id name = [notify name];
     //NSLog(@"objectNotifyName:%@\n", name);
 

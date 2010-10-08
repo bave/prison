@@ -104,7 +104,7 @@ extern bool is_linking;
 - (void)_debug_dict
 {
     //NSLog(@"%@",kvtDict);
-    NSLog(@"%@",kvtLocalDB);
+    if (is_verbose)NSLog(@"%@",kvtLocalDB);
     return;
 }
 
@@ -519,9 +519,7 @@ extern bool is_linking;
                         }
                     }
                     else if ([key hasSuffix:@"@prison"]) {
-                            NSLog(@"%d", __LINE__);
                             [self _gpg_import_db:m];
-                            NSLog(@"%d", __LINE__);
                             NSArray* m_array;
                             m_array = [m componentsSeparatedByString:@","];
                             NSString* pubring_key;
@@ -529,16 +527,13 @@ extern bool is_linking;
                             NSString* hostname;
                             hostname = [[pubring_key componentsSeparatedByString:@"@"]
                                                                    objectAtIndex:0];
-                            NSLog(@"%d", __LINE__);
                             NSString* convert_message;
                             convert_message = [NSString stringWithFormat:
                                     @"204,get,prison,%@.p2p,non-value", hostname];
 
-                            NSLog(@"%d", __LINE__);
                             [[NSNotificationCenter defaultCenter]
                                postNotificationName:@"notify://obs.NameReply"
                                object:convert_message];
-                            NSLog(@"%d", __LINE__);
                     }
                 }
 
@@ -633,8 +628,6 @@ extern bool is_linking;
 
     NSString* hostname = [[dht_key componentsSeparatedByString:@"@"] objectAtIndex:0];
     key = [NSString stringWithFormat:@"%@.p2p", hostname];
-
-    NSLog(@"content:\n%@", content);
 
     NSDictionary* pubring = [[gpg throw:content] objectAtIndex:0];
     NSString* throw_user = [pubring objectForKey:@"user"];

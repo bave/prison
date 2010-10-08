@@ -617,7 +617,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     NSFileHandle* err_file = nil;
 
     NSTask* task = nil;
-    NSData* out_data = nil;
+    NSMutableData* out_data = [NSMutableData new];
     NSString* out_string = nil;
 
     int ret;
@@ -654,6 +654,12 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         [task setArguments:args];
         [task launch];
 
+        //isRunning
+        while ([task isRunning]) {
+            [out_data appendData:[out_file availableData]];
+        }
+
+
         [task waitUntilExit];
         ret = [task terminationStatus];
 
@@ -663,7 +669,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
         // stdout
         encode = [NSString availableStringEncodings];
-        out_data = [out_file readDataToEndOfFile];
         out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
 
         if ([out_string length] == 0) {

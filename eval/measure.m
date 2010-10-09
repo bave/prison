@@ -113,10 +113,14 @@ int main(int argc, char *argv[])
     else if (current.tv_sec != prev.tv_sec) {
         int carry = 1000000;
         sec = current.tv_sec - prev.tv_sec;
-        usec = carry - prev.tv_usec + current.tv_usec;
-        if (usec > carry) {
-            usec = usec - carry;
-            sec++;
+        if (prev.tv_usec > current.tv_sec) {
+            usec = carry - prev.tv_usec + current.tv_usec;
+            if (usec > carry) {
+                usec = usec - carry;
+                sec++;
+            }
+        } else {
+            usec = current.tv_usec - prev.tv_usec;
         }
     }
 

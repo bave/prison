@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     struct timeval t_val;
     fd_set s_fd;
     memset(&t_val, 0, sizeof(t_val));
-    t_val.tv_sec = 1;
+    t_val.tv_sec = 2;
 
     gettimeofday(&prev, NULL);
     sendto(sockfd, [n n_payload], [n n_payload_size], 0, (SA*)&sin1, sizeof(sin1));
@@ -115,6 +115,7 @@ int main(int argc, char *argv[])
         sec = current.tv_sec - prev.tv_sec;
         if (prev.tv_usec > current.tv_usec) {
             usec = carry - prev.tv_usec + current.tv_usec;
+            sec--;
             if (usec > carry) {
                 usec = usec - carry;
                 sec++;

@@ -26,35 +26,41 @@ enum retFlag { success, fail };
 #define FW_PREFIX(X) htonl((unsigned int)(0xFFFFFFFF << (32-X)))
 #define INT3 __asm__ __volatile__("int3");
 
+// time measurement macro
+#define TCHK_START(name)           \
+    struct timeval name##_prev;    \
+    struct timeval name##_current; \
+    gettimeofday(&name##_prev, NULL)
+
+#define TCHK_END(name)                                                             \
+gettimeofday(&name##_current, NULL);                                               \
+time_t name##_sec;                                                                 \
+suseconds_t name##_usec;                                                           \
+if (name##_current.tv_sec == name##_prev.tv_sec) {                                 \
+    name##_sec = name##_current.tv_sec - name##_prev.tv_sec;                       \
+    name##_usec = name##_current.tv_usec - name##_prev.tv_usec;                    \
+} else if (name ##_current.tv_sec != name##_prev.tv_sec) {                         \
+    int name##_carry = 1000000;                                                    \
+    name##_sec = name##_current.tv_sec - name##_prev.tv_sec;                       \
+    if (name##_prev.tv_usec > name##_current.tv_usec) {                            \
+        name##_usec = name##_carry - name##_prev.tv_usec + name##_current.tv_usec; \
+        name##_sec--;                                                              \
+        if (name##_usec > name##_carry) {                                          \
+            name##_usec = name##_usec - name##_carry;                              \
+            name##_sec++;                                                          \
+        }                                                                          \
+    } else {                                                                       \
+        name##_usec = name##_current.tv_usec - name##_prev.tv_usec;                \
+    }                                                                              \
+}                                                                                  \
+printf("%s: sec:%lu usec:%06d\n", #name, name##_sec, name##_usec); 
+
 #ifdef __MACH__
 #define ITERATE(element, enumerator) for(id element in enumerator) 
 #else
 #define ITERATE(element, enumerator)    \
 id element;                             \
 while (element = [enumerator nextObject])
-
-
-// time measurement macro
-#define TCHK_START(name) NSDate* name##_start = [NSDate new]
-#define TCHK_END(name) \
-NSDate* name##_end = [NSDate new];\
-NSLog(@"%s interval: %f", #name, [name##_end timeIntervalSinceDate:name##_start]); \
-[name##_start release]; \
-[name##_end release]
-
-/*
- * using reference of ITERATE MACRO...
-NSArray* line_array = nil;
-NSEnumerator* line_enum = nil;
-line_array = [(NSString*)file componentsSeparatedByString:@"\n"];
-line_enum =  [line_array objectEnumerator];
-ITERATE(line_element, line_enum) {
-    if ([line_element characterAtIndex:0] == '#') {
-        continue;
-    }
-}
-*/
-
 #endif
 
 #ifdef __MACH__

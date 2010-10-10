@@ -33,13 +33,14 @@ enum retFlag { success, fail };
 id element;                             \
 while (element = [enumerator nextObject])
 
-#define BM_START(name) NSDate *name##_start = [NSDate new]
-#define BM_END(name)   NSDate *name##_end = [NSDate new];\
-  NSLog(@"%s interval: %f", #name,                       \
-  [name##_end timeIntervalSinceDate:name##_start]);      \
-  [name##_start release];\
-  [name##_end release]
 
+// time measurement macro
+#define TCHK_START(name) NSDate* name##_start = [NSDate new]
+#define TCHK_END(name) \
+NSDate* name##_end = [NSDate new];\
+NSLog(@"%s interval: %f", #name, [name##_end timeIntervalSinceDate:name##_start]); \
+[name##_start release]; \
+[name##_end release]
 
 /*
  * using reference of ITERATE MACRO...

@@ -229,7 +229,6 @@ extern NSLock* extLock;
     [pbuf withData:[request_array objectAtIndex:3]];
     int name_id = [[request_array objectAtIndex:4] intValue];
 
-    BM_START(setfqdn);
     NSString* lip = nil;
     if ([code isEqualToString:@"204"] == YES) {
         [mgmt setFQDN:fqdn];
@@ -238,7 +237,6 @@ extern NSLock* extLock;
     else if ([code isEqualToString:@"409"] == YES) {
         if (is_verbose) NSLog(@"%@\n", code);
     }
-    BM_END(setfqdn);
 
     int auth = [mgmt getFQDN2AUTH:fqdn];
     if (lip != nil && auth != 0) {

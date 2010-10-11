@@ -1,4 +1,6 @@
 
+#define __PRISON__
+
 // system includer
 #import <Cocoa/Cocoa.h>
 #include <errno.h>
@@ -11,6 +13,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <netinet/tcp.h>
+
 
 // local includer
 #include "rc.h"
@@ -26,8 +29,6 @@
 //#include "common.h"
 //#include "category.h"
 //#include "utils.h"
-
-#define __PRISON__
 
 // global declaration
 NSLock*    extLock;

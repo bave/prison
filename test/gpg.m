@@ -1,3 +1,6 @@
+
+#define __PRISON__
+
 #import <Cocoa/Cocoa.h>
 
 #include "../gpg.h"
@@ -9,7 +12,6 @@
 // gpg  (GnuPG) 1.4.10
 
 
-#define __PRISON__
 
 
 int main()
@@ -86,6 +88,23 @@ int main()
         }
     }
 
+    // import-key
+    @try {
+        NSLog(@"import message:%d\n", [gpg import:key]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    // signkey
+    @try {
+        [gpg setPasswd:@"test"];
+        NSLog(@"sigkey:%d\n", [gpg signkey:@"hage@raprins"]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
     // verify test
     @try {
         NSLog(@"verify message:\n%@\n", [gpg verify:sig]);
@@ -99,6 +118,31 @@ int main()
         NSLog(@"%@\n", e);
     }
 
+    // delsig
+    @try {
+        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"hage@raprins"]);
+        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"test@prison"]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    // signedlist
+    @try {
+        NSLog(@"signedlist mesg\n%@\n", [gpg signedlist]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    // delkey
+    @try {
+        NSLog(@"delkey:%d\n", [gpg delkey:@"hage@raprins"]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
     // export-key 
     @try {
         // all keyring
@@ -107,14 +151,6 @@ int main()
         NSLog(@"export keyring\n%@\n", [gpg exportPubring:@"test@prison"]);
     }
     @catch (id e) {
-        NSLog(@"%@\n", e);
-    }
-
-    // import-key
-    @try {
-        NSLog(@"import message:%d\n", [gpg import:key]);
-    }
-    @catch (id e){
         NSLog(@"%@\n", e);
     }
 
@@ -179,35 +215,10 @@ int main()
         NSLog(@"%@\n", e);
     }
 
-    // signkey
-    @try {
-        [gpg setPasswd:@"test"];
-        NSLog(@"sigkey:%d\n", [gpg signkey:@"hage@raprins"]);
-    }
-    @catch (id e){
-        NSLog(@"%@\n", e);
-    }
-
-    // delsig
-    @try {
-        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"hage@raprins"]);
-        NSLog(@"delsig:%d\n", [gpg delsig:@"hage@raprins" :@"test@prison"]);
-    }
-    @catch (id e){
-        NSLog(@"%@\n", e);
-    }
 
     // signedlist
     @try {
         NSLog(@"signedlist mesg\n%@\n", [gpg signedlist]);
-    }
-    @catch (id e){
-        NSLog(@"%@\n", e);
-    }
-
-    // delkey
-    @try {
-        NSLog(@"delkey:%d\n", [gpg delkey:@"hage@raprins"]);
     }
     @catch (id e){
         NSLog(@"%@\n", e);

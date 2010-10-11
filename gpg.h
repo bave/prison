@@ -72,7 +72,7 @@
     gpgme_engine_info_t gpgInfo;
     gpgme_error_t gpgErr;
 
-    NSLock* gpgLock;
+    //NSLock* gpgLock;
 }
 
 
@@ -136,8 +136,11 @@
 - (void)_pinrt_sig_status:(gpgme_error_t)status;
 - (void)_print_data:(gpgme_data_t)data;
 
-- (int)_is_trust:(gpgme_verify_result_t)result;
-- (int)_is_valid:(gpgme_verify_result_t)result;
+- (int)_is_trust:(NSArray*)word;
+- (int)_is_valid:(NSArray*)word;
+
+- (int)_is_trust_gpgme:(gpgme_verify_result_t)result;
+- (int)_is_valid_gpgme:(gpgme_verify_result_t)result;
 
 - (NSData*)_data_to_nsdata:(gpgme_data_t)data;
 
@@ -174,13 +177,140 @@ static gpgme_error_t _passwd_cb(void* object,
 }
 // ------------------------------------------------------------------------------
 
-// c lang function --------------------------------------------------------------
+// local c lang function --------------------------------------------------------------
 #define R (0)
 #define W (1)
+
+static pid_t popen4_verify(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_pp)
+{
+    int ret = 0;
+
+    //fd_in  : input
+    //fd_out : output
+    //fd_err : output
+    //fd_pp  : output
+
+    int pipe_out[2];
+    int pipe_err[2];
+    int pipe_in[2];
+    int pipe_pp[2];
+
+    pid_t pid;
+
+    //Create pipes. -------------------------------
+    if (ret == 0) {
+        if (pipe(pipe_out) == -1) {
+            ret = errno;
+        }
+    }
+
+    if (ret == 0) {
+        if (pipe(pipe_err) == -1) {
+            close(pipe_out[R]);
+            close(pipe_out[W]);
+            ret = errno;
+        }
+    }
+
+    if (ret == 0) {
+        if (pipe(pipe_in) == -1) {
+            close(pipe_out[R]);
+            close(pipe_out[W]);
+            close(pipe_err[R]);
+            close(pipe_err[W]);
+            ret = errno;
+        }
+    }
+
+    if (ret == 0) {
+        if(pipe(pipe_pp) == -1) {
+            close(pipe_out[R]);
+            close(pipe_out[W]);
+            close(pipe_err[R]);
+            close(pipe_err[W]);
+            close(pipe_in[R]);
+            close(pipe_in[W]);
+            ret = errno;
+        }
+    }
+
+    if (ret != 0) {
+        perror("pipe");
+        ret = -ret;
+    }
+    //---------------------------------------------
+
+
+    // Invoke fork process
+    if (ret == 0) {
+        if ((pid = fork()) == -1) {
+            ret = -errno;
+            perror("fork");
+        }
+    }
+
+    // child process
+    if (pid == 0) {
+
+        close(pipe_in[W]);
+        close(pipe_out[R]);
+        close(pipe_err[R]);
+        close(pipe_pp[R]);
+
+        dup2(pipe_in[R], 0);
+        close(pipe_in[R]);
+
+        dup2(pipe_out[W], 1);
+        close(pipe_out[W]);
+
+        dup2(pipe_err[W], 2);
+        close(pipe_err[W]);
+
+        dup2(pipe_pp[W], 3);
+        close(pipe_pp[W]);
+
+        /*
+        char buffer[4000];
+        memset(buffer, 0, 4000);
+        read(3, buffer, 4000);
+        printf("pass:::%s\n", buffer);
+        */
+
+        if (execvp(args[0], args) == -1) {
+            close(pipe_in[R]);
+            close(pipe_out[W]);
+            close(pipe_err[W]);
+            close(pipe_pp[W]);
+            exit(1);
+        }
+        exit(0);
+    }
+
+    // parent process
+    else {
+        close(pipe_in[R]);
+        close(pipe_out[W]);
+        close(pipe_err[W]);
+        close(pipe_pp[W]);
+
+        if (fd_in  != NULL) *fd_in  = pipe_in[W];
+        if (fd_out != NULL) *fd_out = pipe_out[R];
+        if (fd_err != NULL) *fd_err = pipe_err[R];
+        if (fd_pp  != NULL) *fd_pp  = pipe_pp[R];
+    }
+
+    return(pid);
+}
 
 static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_pp)
 {
     int ret = 0;
+
+    //fd_in  : input
+    //fd_out : output
+    //fd_err : output
+    //fd_pp  : input
+
 
     int pipe_out[2];
     int pipe_err[2];
@@ -293,6 +423,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     return(pid);
 }
+
 #undef R
 #undef W
 // ------------------------------------------------------------------------------
@@ -730,6 +861,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     [arg_array addObject:gpgExe];
     [arg_array addObject:@"--homedir"];
     [arg_array addObject:gpgDir];
+    [arg_array addObject:@"--passphrase-fd"];
+    [arg_array addObject:@"3"];
     [arg_array addObject:@"--batch"];
     [arg_array addObject:@"--armor"];
     [arg_array addObject:@"-r"];
@@ -923,6 +1056,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     [arg_array addObject:gpgExe];
     [arg_array addObject:@"--homedir"];
     [arg_array addObject:gpgDir];
+    [arg_array addObject:@"--passphrase-fd"];
+    [arg_array addObject:@"3"];
     [arg_array addObject:@"--batch"];
     [arg_array addObject:@"--always-trust"];
     [arg_array addObject:@"--armor"];
@@ -1162,8 +1297,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSString*)sign:(NSString*)txt
 {
-
-#ifndef  __PRISON__
+#ifdef  __PRISON__
 
     pid_t ch;
     int ch_fd_in;
@@ -2572,7 +2706,133 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSString*)verify:(NSString*)sig
 {
-    [gpgLock lock];
+#ifdef __PRISON__
+
+    pid_t ch;
+    int ch_fd_in;
+    int ch_fd_out;
+    int ch_fd_err;
+    int ch_fd_status;
+    int status;
+
+    if (sig == nil) {
+        //@throw @"error: [gpg verify] txt data is nil";
+        return nil;
+    }
+
+    if ([sig length] == 0) {
+        //@throw @"error: [gpg verify] nonexistent txt data";
+        return nil;
+    }
+
+    id pool = [NSAutoreleasePool new];
+
+    NSMutableArray* arg_array = [NSMutableArray array];
+    [arg_array addObject:gpgExe];
+    [arg_array addObject:@"--homedir"];
+    [arg_array addObject:gpgDir];
+    [arg_array addObject:@"--status-fd"];
+    [arg_array addObject:@"3"];
+    //[arg_array addObject:@"--no-tty"];
+    [arg_array addObject:@"--batch"];
+    [arg_array addObject:@"-d"];
+
+    unsigned int count = [arg_array count];
+    char* args[count];
+    unsigned int i;
+    for (i=0; i<count; i++) {
+        args[i] = (char*)[[arg_array objectAtIndex:i] UTF8String];
+    }
+    args[count] = NULL;
+
+    ch = popen4_verify(args, &ch_fd_in, &ch_fd_out, &ch_fd_err, &ch_fd_status);
+
+    write(ch_fd_in, [sig UTF8String], [sig length]);
+    close(ch_fd_in);
+
+    waitpid(ch, &status, 0);
+
+    int is_correct_terminate;
+    is_correct_terminate = WIFEXITED(status);
+
+    if (is_correct_terminate != 1) {
+        close(ch_fd_out);
+        close(ch_fd_err);
+        close(ch_fd_status);
+        @throw @"error: [gpg sign] violation error";
+        return nil;
+    }
+
+    int terminate_status;
+    terminate_status = WEXITSTATUS(status);
+
+    //NSLog(@"terminate_status%d\n", terminate_status);
+
+    /*
+    if (terminate_status != 0) {
+        close(ch_fd_out);
+        close(ch_fd_err);
+        close(ch_fd_status);
+        @throw @"error: [gpg sign] miss passphrase";
+    }
+    */
+
+
+    // encoding
+    const NSStringEncoding* encode = [NSString availableStringEncodings];
+
+    NSFileHandle* out_file = [[NSFileHandle alloc] initWithFileDescriptor:ch_fd_out];
+    NSData* out_data = [out_file readDataToEndOfFile];
+    NSString* out_string = [[NSString alloc] initWithData:out_data encoding:*encode];
+    //[out_string autorelease];
+    //NSLog(@"\n%@\n", out_string);
+
+    //NSFileHandle* err_file = [[NSFileHandle alloc] initWithFileDescriptor:ch_fd_err];
+    //NSData* err_data = [err_file readDataToEndOfFile];
+    //NSString* err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
+    //[err_string autorelease];
+    //NSLog(@"\n%@\n", err_string);
+
+    NSFileHandle* status_file = [[NSFileHandle alloc] initWithFileDescriptor:ch_fd_status];
+    NSData* status_data = [status_file readDataToEndOfFile];
+    NSString* status_string = [[NSString alloc] initWithData:status_data encoding:*encode];
+    [status_string autorelease];
+    //NSLog(@"\n%@\n", status_string);
+
+    NSEnumerator* line_enum = nil;
+    NSArray* line_array = nil;
+    NSArray* line_array_tmp = nil;
+    NSMutableArray* word_array = [NSMutableArray new];
+
+    line_array_tmp = [status_string componentsSeparatedByString:@"\n"];
+    line_array = [line_array_tmp subarrayWithRange:NSMakeRange(2, [line_array_tmp count]-2)];
+    line_enum = [line_array objectEnumerator];
+    ITERATE(line_element, line_enum) {
+        NSArray* line_array = [line_element componentsSeparatedByString:@" "];
+        if ([line_array count] <= 1) { continue; }
+        [word_array addObject:[line_array objectAtIndex:1]];
+    }
+    //NSLog(@"\n%@\n", word_array);
+
+    gpgTrust = [self _is_trust:word_array];
+    gpgValid = [self _is_valid:word_array];
+
+    close(ch_fd_out);
+    close(ch_fd_err);
+    close(ch_fd_status);
+
+    [out_file release];
+    //[err_file release];
+    [status_file release];
+
+    [pool drain];
+    [out_string autorelease];
+
+    return out_string;
+
+#else
+
+    //[gpgLock lock];
     int valid = 0;
     int trust = 0;
     gpgme_ctx_t ctx;
@@ -2583,7 +2843,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     id pool = [NSAutoreleasePool new];
 
     if ([sig compare:@"No Data"] == NSOrderedSame) {
-        [gpgLock unlock];
+        //[gpgLock unlock];
         [pool drain];
         @throw @"error: [gpg verity] nonexistent sigature file";
     }
@@ -2598,7 +2858,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        [gpgLock unlock];
+        //[gpgLock unlock];
         [pool drain];
         @throw @"error: [gpg verify] violation error";
     }
@@ -2607,10 +2867,9 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     //[self _print_data:out_data];
 
     result = gpgme_op_verify_result(ctx); 
-    valid = [self _is_valid:result];
-    trust = [self _is_trust:result];
-    gpgTrust = trust;
-    gpgValid = valid;
+
+    gpgTrust = [self _is_trust_gpgme:result];
+    gpgValid = [self _is_valid_gpgme:result];
 
     /*
     if (valid != 1) {
@@ -2630,9 +2889,9 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        [gpgLock unlock];
+        //[gpgLock unlock];
         [pool drain];
-        @throw @"error: [gpg decrypt] nonexistent sig data";
+        @throw @"error: [gpg verify] nonexistent sig data";
     }
 
     gpgme_data_release(in_data);
@@ -2644,11 +2903,13 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     NSString* out_string = nil;
     out_string = [[NSString alloc] initWithData:out_nsdata encoding:*encode];
 
-    [gpgLock unlock];
+    //[gpgLock unlock];
     [pool drain];
     [out_string autorelease];
 
     return out_string;
+
+#endif
 }
 
 - (NSArray*)throw:(NSString*)key
@@ -2800,7 +3061,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         BOOL isDir;
         BOOL isExist;
 
-        gpgLock = [NSLock new];
+        //gpgLock = [NSLock new];
 
         setlocale(LC_ALL, "");
         gpgme_check_version(NULL);
@@ -2866,7 +3127,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         BOOL isDir;
         BOOL isExist;
 
-        gpgLock = [NSLock new];
+        //gpgLock = [NSLock new];
 
         setlocale(LC_ALL, "");
         gpgme_check_version(NULL);
@@ -2943,7 +3204,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     if (gpgVer != nil)  [gpgVer release];
     if (gpgPasswd != nil) [gpgPasswd release];
 
-    [gpgLock release];
+    //[gpgLock release];
 
     [super dealloc];
     return;
@@ -3002,12 +3263,44 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     return;
 }
 
-- (int)_is_valid:(gpgme_verify_result_t)result
+- (int)_is_valid:(NSArray*)word
+{
+    NSEnumerator* word_enum = nil;
+    word_enum = [word objectEnumerator];
+    ITERATE(word_element, word_enum) {
+        if ([word_element isEqualToString:@"NO_PUBKEY"]) { return 0; }
+        else if ([word_element isEqualToString:@"ERRSIG"]) { return 0; }
+        else if ([word_element isEqualToString:@"BADSIG"]) { return 0;}
+        else if ([word_element isEqualToString:@"EXPSIG"]) { return 0;}
+        else if ([word_element isEqualToString:@"EXPKEYSIG"]) { return 0;}
+        else if ([word_element isEqualToString:@"REVKEYSIG"]) { return 0;}
+        else if ([word_element isEqualToString:@"GOODSIG"]) { return 1; }
+    }
+
+    return 0;
+}
+
+- (int)_is_trust:(NSArray*)word
+{
+    NSEnumerator* word_enum = nil;
+    word_enum = [word objectEnumerator];
+    ITERATE(word_element, word_enum) {
+        if ([word_element isEqualToString:@"NO_PUBKEY"]) { return 0; }
+        else if ([word_element isEqualToString:@"TRUST_UNDEFINED"]) { return 0; }
+        else if ([word_element isEqualToString:@"TRUST_NEVER"]) { return 0; }
+        else if ([word_element isEqualToString:@"TRUST_MARGIANL"]) { return 1; }
+        else if ([word_element isEqualToString:@"TRUST_FULLY"]) { return 2; }
+        else if ([word_element isEqualToString:@"TRUST_ULTIMATE"]) { return 3; }
+    }
+    return 0;
+}
+
+- (int)_is_valid_gpgme:(gpgme_verify_result_t)result
 {
     switch (gpg_err_code(result->signatures->status))
     {
         case GPG_ERR_NO_ERROR:
-            return true;
+            return 1;
 
         case GPG_ERR_BAD_SIGNATURE:
         case GPG_ERR_NO_PUBKEY:
@@ -3017,10 +3310,10 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         default:
             break;
     }
-    return false;
+    return 0;
 }
 
-- (int)_is_trust:(gpgme_verify_result_t)result
+- (int)_is_trust_gpgme:(gpgme_verify_result_t)result
 {
     gpgme_signature_t sig;
     for (sig = result->signatures; sig; sig = sig->next) 

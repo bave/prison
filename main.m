@@ -25,7 +25,6 @@
 #include "task.h"
 
 // test code include 
-//#include "event.h"
 
 //#include "name.h"
 //#include "pbuf.h"
@@ -364,22 +363,6 @@ int main(int argc, char** argv)
     ];
 
     sleep(1);
-
-    /*
-    // test code
-    id e = [[event alloc] init:"/tmp/prison/sock_cage" :"150.65.179.151" :"12000"];
-
-    DISPATCH_START(loop)
-    {
-        int port;
-        for (port=12001; port<=13000; port++) {
-            usleep(100000);
-            [e sendMessage:[NSString stringWithFormat:@"get,test,dev%d.p2p\n", port]];
-        }
-    }
-    DISPATCH_END
-    DISPATCH(loop);
-    */
 
     // - event loop ------------------------------------------
     Timer* t = [Timer new];

@@ -30,10 +30,6 @@ extern bool is_linking;
     bool kvt_is_join;
     int kvt_counter_join;
 
-    NSTask* kvtTask;
-    NSString* kvtTaskPath;
-    NSPipe* task_pipe;
-    NSFileHandle* task_file;
     NSFileHandle* cage_file;
 
     NSLock* kvtLock;
@@ -41,13 +37,13 @@ extern bool is_linking;
     NSMutableArray* kvtReputQueue;
     NSMutableDictionary* kvtCageCache;
 
-    GPGME* gpg;
     NSMutableDictionary* kvtLocalDB;
+
+    GPGME* gpg;
 }
 
 // public function
 - (id)init;
-- (id)init:(NSString*)path;
 - (void)waitLock;
 - (void)dealloc;
 - (bool)setLocalDB:(NSDictionary*)db;
@@ -60,9 +56,7 @@ extern bool is_linking;
 - (NSArray*)dequeueReput;
 - (NSArray*)getReputQueue;
 
-- (bool)setTaskPath:(NSString*)path;
 
-- (bool)isCageRun;
 - (bool)isCageJoin;
 - (bool)sendMessage:(NSString*)message;
 - (bool)cage_join;
@@ -74,8 +68,7 @@ extern bool is_linking;
 - (void)_gpg_init;
 - (bool)_gpg_import_db:(NSString*)message;
 
-- (bool)_cage_run;
-- (void)_cage_init:(NSString*)path;
+- (void)_cage_init;
 - (bool)_cage_set_id;
 - (bool)_cage_connect;
 - (bool)_cage_node_new;
@@ -84,7 +77,6 @@ extern bool is_linking;
 - (bool)_cage_get_pubring:(NSString*)message;
 - (int)_cage_set_cache:(NSString*)message;
 
-- (void)_cage_console_handler:(NSNotification*)notify;
 - (void)_cage_recv_handler:(NSNotification*)notify;
 
 - (bool)_dequeueRequest:(NSString*)message;
@@ -156,39 +148,14 @@ extern bool is_linking;
         kvtCageCache = [[NSMutableDictionary alloc] init];
         kvtRequestQueue = [[NSMutableDictionary alloc] init];
         kvtReputQueue = [[NSMutableArray alloc] init];
+        id pool = [NSAutoreleasePool new];
         [self _gpg_init];
-        [self _cage_init:nil];
+        [self _cage_init];
+        [pool drain];
     }
     return self;
 }
 
-- (id)init:(NSString*)path
-{
-    /*
-    if (ni == nil) {
-        return nil;
-    }
-
-    if ([ni defaultIP4] == nil) {
-        return nil;
-    }
-    */
-
-    self = [super init];
-    if(self != nil) {
-        // --------------
-        // initial coding
-        // --------------
-        kvtLock = [NSLock new];
-        kvtLocalDB = [[NSMutableDictionary alloc] init];
-        kvtCageCache = [[NSMutableDictionary alloc] init];
-        kvtRequestQueue = [[NSMutableDictionary alloc] init];
-        kvtReputQueue = [[NSMutableArray alloc] init];
-        [self _gpg_init];
-        [self _cage_init:path];
-    }
-    return self;
-}
 
 - (bool)setLocalDB:(NSDictionary*)db
 {
@@ -262,21 +229,10 @@ extern bool is_linking;
     // --------------
     // release coding
     // --------------
-
-    if ([kvtTask isRunning]) {
-        [kvtTask terminate];
-    }
-
-    [task_pipe release];
-    [task_file closeFile];
-    [task_file release];
-
     close(cage_sock_fd);
     [cage_file closeFile];
     [cage_file release];
 
-    [kvtTaskPath release];
-    [kvtTask release];
     [gpg release];
     [kvtLock release];
     [kvtRequestQueue release];
@@ -289,180 +245,9 @@ extern bool is_linking;
     return;
 }
 
-- (bool)_cage_run;
-{
-    if([kvtTask isRunning]) {
-        //NSLog(@"isRunning\n");
-        return false;
-    }
-
-    id pool = [NSAutoreleasePool new];
-    id saved_err = nil;
-
-    task_pipe = [[NSPipe alloc] init];
-    task_file = [task_pipe fileHandleForReading];
-
-    @try{
-
-        NSMutableArray* args;
-        args = [NSMutableArray array];
-        [args addObject:@"-f"];
-        [args addObject:[rc getInternal]];
-
-        // kvtTask
-        [kvtTask setLaunchPath:kvtTaskPath];
-        //[task setStandardInput:in_pipe];
-        //[task setStandardOutput:out_pipe];
-        [kvtTask setStandardError:task_pipe];
-        [kvtTask setArguments:args];
-        [kvtTask launch];
-
-
-        [[NSNotificationCenter defaultCenter]
-            addObserver:self
-            selector:@selector(_cage_console_handler:)
-            name:NSFileHandleReadCompletionNotification
-            object:task_file
-        ];
-    }
-
-    @catch (NSString* err) {
-        NSString* err_string = [NSString stringWithFormat:
-                                @"error: [rc _cage_run] %@", err];
-        saved_err = [err retain];
-        @throw err_string;
-    }
-
-    @catch (id err) {
-        saved_err = [err retain];
-        @throw err;
-    }
-    @finally {
-        //[stat_file closeFile];
-        //[out_file closeFile];
-        //[err_file closeFile];
-        [pool drain];
-        [saved_err autorelease];
-    }
-
-    if ([kvtTask isRunning]) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-- (bool)setTaskPath:(NSString*)path
-{
-    id pool = [NSAutoreleasePool new];
-    bool ret;
-    BOOL isExist;
-    BOOL isDir;
-    NSFileManager* manager;
-    manager = [NSFileManager defaultManager];
-
-    if ([path characterAtIndex:0] == '/' &&
-        [[path lastPathComponent] isEqualToString:@"cage"])
-    {
-        isExist = [manager fileExistsAtPath:path isDirectory:&isDir];
-        if (isExist==true && isDir == false) {
-            [kvtTaskPath release];
-            kvtTaskPath = [[NSString alloc] initWithString:path];
-            ret = true;
-        } else {
-            kvtTaskPath = nil;
-            ret = false;
-        }
-    } else {
-        NSString* tmp_path;
-        tmp_path = [NSString stringWithFormat:@"%@%@", currentdir(), path];
-        isExist = [manager fileExistsAtPath:tmp_path isDirectory:&isDir];
-        if (isExist == true && isDir == false) {
-            [kvtTaskPath release];
-            kvtTaskPath = [[NSString alloc] initWithString:tmp_path];
-            ret = true;
-        } else {
-            ret = false;
-        }
-    }
-    [pool drain];
-    return ret;
-}
-
-- (bool)isCageRun
-{
-    return [kvtTask isRunning];
-}
-
 - (bool)isCageJoin
 {
     return kvt_is_join;
-}
-
-- (void)_cage_console_handler:(NSNotification*)notify
-{
-    id pool = [NSAutoreleasePool new];
-    //NSLog(@"\n%@\n", notify);
-    //static kvt_is_preparation = false;
-            
-    if (!kvt_is_preparation)
-    {
-        NSData* err_data = nil;
-        NSString* err_string = nil;
-        const NSStringEncoding* encode;
-        encode = [NSString availableStringEncodings];
-        err_data = [task_file availableData];
-        err_string = [[NSString alloc] initWithData:err_data encoding:*encode];
-        [err_string autorelease];
-
-        if (is_verbose) {
-            NSLog(@"_cage_console_handler(!preparation):\n%@\n", err_string);
-        }
-
-        if ([err_string isEqualToString:@"cage: preparations for listen"]) {
-            //NSLog(@"cage: preparation\n");
-            kvt_is_preparation = true;
-        }
-
-        //NSLog(@"preparetion:%d\n", kvt_is_preparation);
-        if ([err_string isEqualToString: @"start_listen: No such file or directory"])
-        {
-            if (is_verbose) {
-                NSLog(@"_cage_console_handler: no such file internal sock\n");
-            }
-            [pool drain];
-            @throw @"cant make internal connect socket";
-        }
-    }
-
-    else if (![[notify userInfo] objectForKey:@"NSFileHandleError"]
-             && kvt_is_preparation)
-    {
-        NSData *data;
-        NSString *string;
-        const NSStringEncoding* encode;
-        encode = [NSString availableStringEncodings];
-        data = [[notify userInfo] objectForKey:NSFileHandleNotificationDataItem];
-        string = [[NSString alloc] initWithData:data encoding:*encode];
-        [string autorelease];
-
-        if (is_verbose) {
-            NSLog(@"_cage_console_handler(preparation):\n%@\n", string);
-        }
-
-        // rise exception
-        if ([string isEqualToString:@"start_listen: No such file or directory"]) {
-            [pool drain];
-            @throw @"cant make internal connect socket";
-        }
-    }
-
-    if (kvt_is_preparation) {
-        //NSLog(@"%@\n", task_file);
-        [task_file readInBackgroundAndNotify];
-    }
-    [pool drain];
-    return;
 }
 
 - (void)_cage_recv_handler:(NSNotification*)notify
@@ -471,99 +256,85 @@ extern bool is_linking;
     if (![[notify userInfo] objectForKey:@"NSFileHandleError"])
     {
         NSData *data;
-        NSString *buf_string;
-        const NSStringEncoding* encode;
-        encode = [NSString availableStringEncodings];
+        const NSStringEncoding* encode = [NSString availableStringEncodings];
         data = [[notify userInfo] objectForKey:NSFileHandleNotificationDataItem];
+
         NSString* buffer = [[NSString alloc] initWithData:data encoding:*encode];
         [buffer autorelease];
 
-        NSArray* buffer_array = [buffer componentsSeparatedByString:@"\n"];
+        NSArray* buffer_array;
+        buffer_array = [buffer componentsSeparatedByString:@"\n"];
         [buffer_array autorelease];
 
         unsigned int i;
         for (i=0; i<[buffer_array count]; i++) {
-            buf_string = [NSString stringWithFormat:@"%@\n",
-                                   [buffer_array objectAtIndex:i]];
-            if ([self _dequeueRequest:buf_string]) {
-                if (is_verbose) NSLog(@"_cage_recv_handler:\n%@\n", buf_string);
-                NSString* m;
-                if ([buf_string hasSuffix:@"\n"]) {
-                    NSRange range = NSMakeRange(0 ,[buf_string length]-1);
-                    m = [NSString stringWithString:
-                                  [buf_string substringWithRange:range]];
-                } else {
-                    m = buf_string;
-                }
+            id element = [buffer_array objectAtIndex:i];
+            if ([element length] == 0) { continue; }
 
-                NSArray* m_array = [m componentsSeparatedByString:@","];
+            if ([self _dequeueRequest:element]) {
+
+                if (is_verbose) NSLog(@"_cage_recv_handler:\n%@\n", element);
+                NSArray* element_array = [element componentsSeparatedByString:@","];
+
                 //SUCCEEDED_PUT = "203"
-                if ([[m_array objectAtIndex:0] isEqualToString:@"203"]) { 
+                if ([[element_array objectAtIndex:0] isEqualToString:@"203"]) { 
                     [kvtLock lock];
-                    [kvtReputQueue addObject:[buf_string substringFromIndex:4]];
+                    [kvtReputQueue addObject:[element substringFromIndex:4]];
                     [kvtLock unlock];
                 }
 
                 //SUCCEEDED_GET = "204"
-                else if ([[m_array objectAtIndex:0] isEqualToString:@"204"]) {
+                else if ([[element_array objectAtIndex:0] isEqualToString:@"204"]) {
                     int authority;
-                    NSArray* mesg_array = [m componentsSeparatedByString:@","];
-                    NSString* key = [mesg_array objectAtIndex:3];
+                    NSString* key = [element_array objectAtIndex:3];
                     if ([key hasSuffix:@".p2p"]) {
-                        authority = [self _cage_set_cache:m];
+                        authority = [self _cage_set_cache:element];
                         if (authority == 0) {
-                            [self _cage_get_pubring:m];
+                            [self _cage_get_pubring:element];
                         } else {
                             [[NSNotificationCenter defaultCenter]
-                               postNotificationName:@"notify://obs.NameReply" object:m];
+                               postNotificationName:@"notify://obs.NameReply" object:element];
                         }
                     }
                     else if ([key hasSuffix:@"@prison"]) {
-                            [self _gpg_import_db:m];
-                            NSArray* m_array;
-                            m_array = [m componentsSeparatedByString:@","];
-                            NSString* pubring_key;
-                            pubring_key = [m_array objectAtIndex:3];
-                            NSString* hostname;
-                            hostname = [[pubring_key componentsSeparatedByString:@"@"]
-                                                                   objectAtIndex:0];
-                            NSString* convert_message;
-                            convert_message = [NSString stringWithFormat:
-                                    @"204,get,prison,%@.p2p,non-value", hostname];
+                            [self _gpg_import_db:element];
+                            NSString* pubring = [element_array objectAtIndex:3];
+                            NSString* hostname = [[pubring componentsSeparatedByString:@"@"] objectAtIndex:0];
+                            NSString* dummy = [NSString stringWithFormat: @"204,get,prison,%@.p2p,non-value", hostname];
 
                             [[NSNotificationCenter defaultCenter]
                                postNotificationName:@"notify://obs.NameReply"
-                               object:convert_message];
+                               object:dummy];
                     }
                 }
 
                 //ERR_GET_FAILURE = "409"
-                else if ([[m_array objectAtIndex:0] isEqualToString:@"409"]) {
+                else if ([[element_array objectAtIndex:0] isEqualToString:@"409"]) {
                     [[NSNotificationCenter defaultCenter]
-                        postNotificationName:@"notify://obs.NameReply" object:m];
+                        postNotificationName:@"notify://obs.NameReply" object:element];
                 }
 
                 // SUCCEEDED_DELETE = "201"
-                else if ([[m_array objectAtIndex:0] isEqualToString:@"201"]) {
+                else if ([[element_array objectAtIndex:0] isEqualToString:@"201"]) {
                 }
 
                 // join process
-                else if ([[m_array objectAtIndex:1] isEqualToString:@"join"]) {
-                    if ([[m_array objectAtIndex:0] isEqualToString:@"202"]) {
+                else if ([[element_array objectAtIndex:1] isEqualToString:@"join"]) {
+                    if ([[element_array objectAtIndex:0] isEqualToString:@"202"]) {
                         kvt_counter_join = 0;
                         [self _cage_put];
                         kvt_is_join = true;
                     }
-                    else if ([[m_array objectAtIndex:0] isEqualToString:@"400"]) {
+                    else if ([[element_array objectAtIndex:0] isEqualToString:@"400"]) {
                         kvt_is_join = false;
                     }
-                    else if ([[m_array objectAtIndex:0] isEqualToString:@"401"]) {
+                    else if ([[element_array objectAtIndex:0] isEqualToString:@"401"]) {
                         kvt_is_join = false;
                     }
-                    else if ([[m_array objectAtIndex:0] isEqualToString:@"406"]) {
+                    else if ([[element_array objectAtIndex:0] isEqualToString:@"406"]) {
                         kvt_is_join = false;
                     }
-                    else if ([[m_array objectAtIndex:0] isEqualToString:@"405"]) {
+                    else if ([[element_array objectAtIndex:0] isEqualToString:@"405"]) {
                         kvt_is_join = false;
                     } 
 
@@ -576,7 +347,6 @@ extern bool is_linking;
                         }
                     }
                 }
-
             }
         }
     }
@@ -675,37 +445,12 @@ extern bool is_linking;
     return true;
 }
 
-- (void)_cage_init:(NSString*)path
+- (void)_cage_init
 {
-    id pool = [NSAutoreleasePool new];
-    kvtTask = [[NSTask alloc] init];
-    if (path == nil) {
-        kvtTaskPath = [[NSString alloc] initWithString:@"./cage"];
-    } else {
-        if ([self setTaskPath:path] == false) {
-            [self dealloc];
-            [pool drain];
-            @throw @"non exist cage";
-        }
-    }
-    [self _cage_run];
-    if ([self isCageRun] == false) {
-        [self dealloc];
-        [pool drain];
-        @throw @"cant run cage";
-    }
-
-    kvt_is_preparation = false;
-    [[NSNotificationCenter defaultCenter]
-        postNotificationName:NSFileHandleReadCompletionNotification
-        object:task_file
-    ]; 
-
     bool is_connect;
     is_connect = [self _cage_connect];
     if (is_connect == false) {
         [self dealloc];
-        [pool drain];
         @throw @"cant connect to internal cage_sock";
     }
 
@@ -731,7 +476,6 @@ extern bool is_linking;
         [self cage_leave];
     }
 
-    [pool drain];
     return;
 }
 
@@ -742,17 +486,7 @@ extern bool is_linking;
     NSArray* key_array = [key componentsSeparatedByString:@"."];
     NSString* key_hostname = [key_array objectAtIndex:0];
     NSString* key_request = [NSString stringWithFormat:@"%@@prison", key_hostname];
-
-    int ret;
-    while (1) {
-        ret = [self sendMessage:
-                    [NSString stringWithFormat:@"get,prison,%@\n", key_request]];
-        if (ret == true) {
-            return true;
-        }
-    }
-
-    return false;
+    return [self sendMessage: [NSString stringWithFormat:@"get,prison,%@\n", key_request]];
 }
 
 - (bool)_cage_put
@@ -787,7 +521,6 @@ extern bool is_linking;
 
 - (bool)_cage_connect
 {
-    id pool = [NSAutoreleasePool new];
     int err = 0;
     struct sockaddr_un conn_request;
     memset(&conn_request, 0, sizeof(conn_request));
@@ -820,9 +553,7 @@ extern bool is_linking;
         err = [self _cage_node_new];
         if (err == true) {
             err = 0;
-            //if (is_verbose) NSLog(@"_cage_node_new: YES");
         } else {
-            //if (is_verbose) NSLog(@"_cage_node_new: NO");
             err = -1;
         }
     }
@@ -830,16 +561,14 @@ extern bool is_linking;
     if (err == 0) {
         err = [self _cage_set_id];
         if (err == true) {
-            //if (is_verbose) NSLog(@"_cage_set_id: YES");
+            if (is_verbose) NSLog(@"_cage_set_id: YES");
             err = 0;
         } else {
-            //if (is_verbose) NSLog(@"_cage_set_id: NO");
+            if (is_verbose) NSLog(@"_cage_set_id: NO");
             err = -1;
         }
     }
 
-
-    [pool drain];
     if (err == 0) {
         return true;
     } else {
@@ -851,7 +580,6 @@ extern bool is_linking;
 - (bool)cage_join
 {
     if (is_verbose) NSLog(@"cage_join");
-    id pool = [NSAutoreleasePool new];
     NSString* ip = [rc getSeedHost];
     NSString* port = [rc getSeedPort];
     NSString* message;
@@ -860,7 +588,6 @@ extern bool is_linking;
     int ret;
     ret = [self sendMessage:message];
 
-    [pool drain];
     return ret;
 }
 
@@ -1092,6 +819,7 @@ extern bool is_linking;
 - (bool)_dequeueRequest:(NSString*)message
 {
     //NSLog(@"message:%@\n", message);
+
     if (message == nil) {
         return false;
     }
@@ -1107,18 +835,21 @@ extern bool is_linking;
     }
 
     NSString* command = [mesg_array objectAtIndex:1];
-    NSString* key = [mesg_array objectAtIndex:3];
     NSString* string;
-    if ([command isEqualToString:@"put"] || [command isEqualToString:@"get"]) {
-        if ([key hasSuffix:@"\n"]) {
-            string = [NSString stringWithFormat:@"%@,%@", command,
-                            [key substringWithRange:NSMakeRange(0,[key length]-1)]];
-        } else {
-            string = [NSString stringWithFormat:@"%@,%@", command, key];
-        }
+
+    if ([command isEqualToString:@"put"]) { 
+        NSString* key = [mesg_array objectAtIndex:3];
+        string = [NSString stringWithFormat:@"%@,%@", command, key];
     }
-    if ([command isEqualToString:@"join"]) {
-            string = [NSString stringWithString:@"join"];
+    else if ([command isEqualToString:@"get"]) {
+        NSString* key = [mesg_array objectAtIndex:3];
+        string = [NSString stringWithFormat:@"%@,%@", command, key];
+    }
+    else if ([command isEqualToString:@"join"]) {
+        string = [NSString stringWithString:@"join"];
+    }
+    else {
+        return false;
     }
 
     //NSLog(@"string:%@\n", string);
@@ -1144,16 +875,15 @@ extern bool is_linking;
 
     NSString* string;
     NSString* command = [mesg_array objectAtIndex:0];
-    if ([command isEqualToString:@"put"] || [command isEqualToString:@"get"]) {
+    if ([command isEqualToString:@"put"]) {
         NSString* key = [mesg_array objectAtIndex:2];
-        if ([key hasSuffix:@"\n"]) {
-            string = [NSString stringWithFormat:@"%@,%@", command,
-                            [key substringWithRange:NSMakeRange(0,[key length]-1)]];
-        } else {
-            string = [NSString stringWithFormat:@"%@,%@", command, key];
-        }
+        string = [NSString stringWithFormat:@"%@,%@", command, key];
     }
-    if ([command isEqualToString:@"join"]) {
+    else if ([command isEqualToString:@"get"]) {
+        NSString* key = [mesg_array objectAtIndex:2];
+        string = [NSString stringWithFormat:@"%@,%@", command, key];
+    }
+    else if ([command isEqualToString:@"join"]) {
         string = [NSString stringWithString:@"join"];
     }
 
@@ -1164,18 +894,31 @@ extern bool is_linking;
 
 - (bool)sendMessage:(NSString*)message
 {
-    int ret = [self _enqueueRequest:message];
+    int ret;
+    NSString* queue_buffer = nil;
+    NSString* send_buffer = nil;
 
-    if (is_verbose) NSLog(@"sendMessage:\n%@\n", message);
+    if ([message hasSuffix:@"\n"]) {
+        NSRange range = NSMakeRange(0 ,[message length]-1);
+        queue_buffer = [NSString stringWithString:[message substringWithRange:range]];
+        send_buffer = message;
+    } else {
+        queue_buffer = message;
+        send_buffer = [NSString stringWithFormat:@"%@\n", message];
+    }
+
+    ret = [self _enqueueRequest:queue_buffer];
+
+    if (is_verbose) NSLog(@"sendMessage:\n%@\n", queue_buffer);
+
     if (ret == true) {
-        ret = send(cage_sock_fd, [message UTF8String], [message length], 0);
+        ret = send(cage_sock_fd, [send_buffer UTF8String], [send_buffer length], 0);
         if (ret == -1) {
             ret = false;
         } else {
             ret = true;
         }
     }
-
     return ret;
 }
 

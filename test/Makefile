@@ -64,8 +64,14 @@ kvt: kvt.m
 gpgme: gpg.m
 	${CC} ${CFLAGS} gpg.m -lgpgme -lgpg-error
 
+event: event.m
+	${CC} ${CFLAGS} event.m -lgpgme -lgpg-error
+
 rc: rc.m
 	${CC} ${CFLAGS} rc.m
+
+task: task.m
+	${CC} ${CFLAGS} task.m
 
 mgmt: mgmt.m
 	${CC} ${CFLAGS} mgmt.m -lgpgme -lgpg-error

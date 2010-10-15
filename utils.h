@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -25,6 +26,11 @@ enum retFlag { success, fail };
 // Macro Code
 #define FW_PREFIX(X) htonl((unsigned int)(0xFFFFFFFF << (32-X)))
 #define INT3 __asm__ __volatile__("int3");
+
+#define DISPATCH_START(name) dispatch_block_t name##_dispatch = ^{
+#define DISPATCH_END };
+#define DISPATCH(name) dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0), name##_dispatch)
+
 
 // time measurement macro
 #define TCHK_START(name)           \

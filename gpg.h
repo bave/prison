@@ -161,7 +161,6 @@ static gpgme_error_t _passwd_cb(void* object,
                                 int prev_was_bad,
                                 int fd)
 {
-    id pool = [NSAutoreleasePool new];
     GPGME* gpg = (GPGME*)object;
 
     //NSLog(@"passphrase:%@\n", [(GPGME*)object getPass]);
@@ -170,8 +169,6 @@ static gpgme_error_t _passwd_cb(void* object,
     if (passwd == nil) return GPG_ERR_BAD_PASSPHRASE;
 
     write (fd, [passwd UTF8String], [passwd length]);
-
-    [pool drain];
 
     return GPG_ERR_NO_ERROR;
 }
@@ -463,7 +460,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 + (NSString*)trimContentFromArmor:(NSString*)armorTxt
 {
-    id pool = [NSAutoreleasePool new];
     NSMutableString* tmp_string = [NSMutableString new];
 
     NSArray* armor_array = [armorTxt componentsSeparatedByString:@"\n"]; 
@@ -498,7 +494,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     }
     NSString* ret_string = [[NSString alloc] initWithString:tmp_string];
-    [pool drain];
     [ret_string autorelease];
     return ret_string;
 }
@@ -541,7 +536,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSArray*)ownerlist
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     //NSPipe* in_pipe = nil;;
@@ -635,7 +629,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         [out_file closeFile];
         [err_file closeFile];
         [task release];
-        [pool drain];
         [saved_err autorelease];
     }
 
@@ -647,7 +640,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSDictionary*)signedlist
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     //NSPipe* in_pipe = nil;;
@@ -723,7 +715,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         [out_file closeFile];
         [err_file closeFile];
         [task release];
-        [pool drain];
         [saved_err autorelease];
     }
 
@@ -735,7 +726,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSArray*)userlist
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     //NSPipe* in_pipe = nil;;
@@ -822,7 +812,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         [out_file closeFile];
         [err_file closeFile];
         [task release];
-        [pool drain];
         [saved_err autorelease];
     }
 
@@ -855,7 +844,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         @throw @"error:[gpg encrypt] nonexistent uid";
     }
 
-    id pool = [NSAutoreleasePool new];
 
     NSMutableArray* arg_array = [NSMutableArray array];
     [arg_array addObject:gpgExe];
@@ -917,7 +905,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     close(ch_fd_out);
     close(ch_fd_err);
     [out_file release];
-    [pool drain];
     [out_string autorelease];
 
     return out_string;
@@ -944,7 +931,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     // if have a uid list of user trustdb....
     // ----------------------------------------
 
-    id pool = [NSAutoreleasePool new];
 
     NSMutableArray* args;
     args = [ NSMutableArray array];
@@ -1013,13 +999,11 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     if (ret != 0) {
         [task release];
-        [pool drain];
         @throw @"error: [gpg encrypt] violation error";
     }
 
 
     [task release];
-    [pool drain];
 
     [out_string autorelease];
 
@@ -1050,7 +1034,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         @throw @"error:[gpg encrypt] nonexistent uid";
     }
 
-    id pool = [NSAutoreleasePool new];
 
     NSMutableArray* arg_array = [NSMutableArray array];
     [arg_array addObject:gpgExe];
@@ -1113,7 +1096,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     close(ch_fd_out);
     close(ch_fd_err);
     [out_file release];
-    [pool drain];
     [out_string autorelease];
 
     return out_string;
@@ -1140,7 +1122,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     // if have a uid list of user trustdb....
     // ----------------------------------------
 
-    id pool = [NSAutoreleasePool new];
 
     NSMutableArray* args;
     args = [ NSMutableArray array];
@@ -1210,13 +1191,11 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     if (ret != 0) {
         [task release];
-        [pool drain];
         @throw @"error:[gpg encrypt] violation error";
     }
 
 
     [task release];
-    [pool drain];
 
     [out_string autorelease];
 
@@ -1228,7 +1207,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 - (NSString*)decrypt:(NSString*)sig
 {
 
-    id pool = [NSAutoreleasePool new];
 
     gpgme_ctx_t ctx;
     gpgErr = gpgme_new (&ctx);
@@ -1246,7 +1224,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        [pool drain];
 
         if (GPG_ERR_NO_DATA == gpgme_err_code(gpgErr)) {
             @throw @"error: [gpg decrypt] not encrypted signature";
@@ -1262,7 +1239,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error: [gpg decrypt] unsupported algorithm";
     }
 
@@ -1275,7 +1251,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error: [gpg decrypt] nonexistent sig data";
     }
 
@@ -1288,7 +1263,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     NSString* out_string;
     out_string = [[NSString alloc] initWithData:out_nsdata encoding:*encode];
-    [pool drain];
 
     [out_string autorelease];
 
@@ -1314,7 +1288,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         @throw @"error: [gpg sign] nonexistent txt data";
     }
 
-    id pool = [NSAutoreleasePool new];
 
     NSMutableArray* arg_array = [NSMutableArray array];
     [arg_array addObject:gpgExe];
@@ -1376,14 +1349,12 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     close(ch_fd_out);
     close(ch_fd_err);
     [out_file release];
-    [pool drain];
     [out_string autorelease];
 
     return out_string;
 
 #else
 
-    id pool = [NSAutoreleasePool new];
 
     gpgme_ctx_t ctx;
     gpgErr = gpgme_new (&ctx);
@@ -1405,7 +1376,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error: [gpg sign] violation error";
     }
 
@@ -1420,7 +1390,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error: [gpg sign] nonexistent txt data";
     }
     gpgme_data_release(in_data);
@@ -1432,7 +1401,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     NSString* out_string;
     out_string = [[NSString alloc] initWithData:out_nsdata encoding:*encode];
-    [pool drain];
 
     [out_string autorelease];
 
@@ -1446,7 +1414,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 #ifdef __MACH__
     // batch mode code
 
-    id pool = [NSAutoreleasePool new];
 
     NSMutableArray* args;
     args = [NSMutableArray array];
@@ -1518,7 +1485,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     [err_file closeFile];
 
     [task release];
-    [pool drain];
 
     if ([out_string length] == 0) {
         @throw @"error: [gpg exportPubring] nonexistent user";
@@ -1601,7 +1567,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         @throw @"error:[gpg import] nonexistent key";
     }
 
-    id pool = [NSAutoreleasePool new];
 
     NSMutableArray* args;
     args = [ NSMutableArray array];
@@ -1662,13 +1627,11 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     if (ret != 0) {
         [task release];
-        [pool drain];
         @throw @"error:[gpg import] violation error";
     }
 
 
     [task release];
-    [pool drain];
 
     return true;     
 
@@ -1766,7 +1729,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSString*)exportSecring:(NSString*)uid
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     const NSStringEncoding* encode;
@@ -1877,7 +1839,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         [out_file closeFile];
         [err_file closeFile];
         [task release];
-        [pool drain];
         [saved_err autorelease];
     }
 
@@ -1887,7 +1848,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (BOOL)signkey:(NSString*)uid
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     const NSStringEncoding* encode;
@@ -2012,7 +1972,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         [out_file closeFile];
         [err_file closeFile];
         [task release];
-        [pool drain];
         [saved_err autorelease];
     }
 
@@ -2028,7 +1987,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (BOOL)delsig:(NSString*)keyuid :(NSString*)siguid
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     const NSStringEncoding* encode;
@@ -2259,7 +2217,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         [out_file closeFile];
         [err_file closeFile];
         [task release];
-        [pool drain];
         [saved_err autorelease];
     }
 
@@ -2283,7 +2240,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (BOOL)delkey:(NSString*)uid
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     NSPipe* out_pipe = nil;
@@ -2342,7 +2298,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         [out_file closeFile];
         [err_file closeFile];
         [task release];
-        [pool drain];
         [saved_err autorelease];
     }
 
@@ -2356,7 +2311,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (BOOL)genkey
 {
-    id pool = [NSAutoreleasePool new];
 
     char buffer[512];
     memset(buffer, '\0', 512);
@@ -2522,11 +2476,9 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     }
 
     @catch (id err) {
-        [pool drain];
         @throw @"error:[gpg genkey]";
     }
 
-    [pool drain];
 
     return false;
 
@@ -2562,7 +2514,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     gpgErr = gpgme_set_protocol(ctx, GPGME_PROTOCOL_OpenPGP);
     if (gpgErr) {
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error:[gpg genkey] new_ctx";
     }
     gpgme_set_armor (ctx, 1);
@@ -2570,7 +2521,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     gpgErr = gpgme_op_genkey (ctx, buffer, NULL, NULL);
     if (gpgErr) {
         gpgme_release(ctx);
-        [pool drain];
         @throw @"error:[gpg genkey] op_genkey";
     }
 
@@ -2578,19 +2528,16 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     if (!result) {
         gpgme_release(ctx);
-        [pool drain];
         return false;
     }
 
     if (!result->fpr) {
         gpgme_release(ctx);
-        [pool drain];
         return false;
     }
 
     gpgme_release(ctx);
 
-    [pool drain];
     return true;
 
 #endif
@@ -2598,7 +2545,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (BOOL)hasSecring;
 {
-    id pool = [NSAutoreleasePool new];
 
     NSFileManager* manager;
     manager = [NSFileManager defaultManager];
@@ -2646,13 +2592,11 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         // nothing
         ret = false;
     }
-    [pool drain];
     return ret;
 }
 
 - (BOOL)hasPubring;
 {
-    id pool = [NSAutoreleasePool new];
 
     NSFileManager* manager;
     manager = [NSFileManager defaultManager];
@@ -2700,7 +2644,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         // nothing
         ret = false;
     }
-    [pool drain];
     return ret;
 }
 
@@ -2725,7 +2668,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         return nil;
     }
 
-    id pool = [NSAutoreleasePool new];
 
     NSMutableArray* arg_array = [NSMutableArray array];
     [arg_array addObject:gpgExe];
@@ -2825,7 +2767,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     //[err_file release];
     [status_file release];
 
-    [pool drain];
     [out_string autorelease];
 
     return out_string;
@@ -2840,11 +2781,9 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     gpgme_data_t out_data;
     gpgme_verify_result_t result;
 
-    id pool = [NSAutoreleasePool new];
 
     if ([sig compare:@"No Data"] == NSOrderedSame) {
         //[gpgLock unlock];
-        [pool drain];
         @throw @"error: [gpg verity] nonexistent sigature file";
     }
 
@@ -2859,7 +2798,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_data_release(out_data);
         gpgme_release(ctx);
         //[gpgLock unlock];
-        [pool drain];
         @throw @"error: [gpg verify] violation error";
     }
 
@@ -2876,7 +2814,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_data_release(in_data);
         gpgme_data_release(out_data);
         gpgme_release(ctx);
-        [pool drain];
         //return @"unValid"
         //@throw @"error: [gpg verity] no validation";
     }
@@ -2890,7 +2827,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_data_release(out_data);
         gpgme_release(ctx);
         //[gpgLock unlock];
-        [pool drain];
         @throw @"error: [gpg verify] nonexistent sig data";
     }
 
@@ -2904,7 +2840,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     out_string = [[NSString alloc] initWithData:out_nsdata encoding:*encode];
 
     //[gpgLock unlock];
-    [pool drain];
     [out_string autorelease];
 
     return out_string;
@@ -2914,10 +2849,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSArray*)throw:(NSString*)key
 {
-    id pool = [NSAutoreleasePool new];
 
     if (key == nil) {
-        [pool drain];
         //@throw @"error:[gpg throw] non key stream";
         return nil;
     }
@@ -2993,14 +2926,12 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     if ([key_string length] == 0) {
         [task release];
-        [pool drain];
         //@throw @"error:[gpg throw] no key data";
         return nil;
     }
 
     if (ret != 0) {
         [task release];
-        [pool drain];
         //@throw @"error: [gpg throw] violation error";
         return nil;
     }
@@ -3044,7 +2975,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     // ---------------------------------------------------------------------
 
     [task release];
-    [pool drain];
     [key_string autorelease];
 
     return [self _parse_list_throw:key_string];
@@ -3352,7 +3282,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSData*)_data_to_nsdata:(gpgme_data_t)data;
 {
-    id pool = [NSAutoreleasePool new];
 
     int ret;
     ret = gpgme_data_seek (data, 0, SEEK_SET);
@@ -3370,7 +3299,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     NSData* ret_nsdata = [[NSData alloc] initWithData:nsdata];
 
 
-    [pool drain];
 
     [ret_nsdata autorelease];
 
@@ -3379,7 +3307,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSArray*)_parse_list_pub:(NSString*)pub
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     NSArray* line_array = nil;
@@ -3469,7 +3396,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         @throw err;
     }
     @finally {
-        [pool drain];
         [saved_err autorelease];
     }
     [output_array autorelease];
@@ -3479,7 +3405,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSArray*)_parse_list_sec:(NSString*)sec
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     NSArray* line_array = nil;
@@ -3571,7 +3496,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         @throw err;
     }
     @finally {
-        [pool drain];
         [saved_err autorelease];
     }
 
@@ -3582,7 +3506,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSArray*)_parse_list_throw:(NSString*)key
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     NSArray* line_array = nil;
@@ -3675,7 +3598,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         @throw err;
     }
     @finally {
-        [pool drain];
         [saved_err autorelease];
     }
 
@@ -3685,7 +3607,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSDictionary*)_parse_list_sig:(NSString*)sig
 {
-    id pool = [NSAutoreleasePool new];
     id saved_err = nil;
 
     NSArray* line_array = nil;
@@ -3812,7 +3733,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         @throw err;
     }
     @finally {
-        [pool drain];
         [saved_err autorelease];
     }
     [ans_dict autorelease];

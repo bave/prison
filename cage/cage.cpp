@@ -354,7 +354,7 @@ start_listen(const char* path)
             }
         }
 
-        fprintf(stderr, "cage: preparations for listen");
+        fprintf(stderr, "cage: preparations for listen\n");
 
         event_set(ev, sock_fd, EV_READ | EV_PERSIST, &callback_accept, NULL);
         event_add(ev, NULL);

@@ -22,6 +22,10 @@
 #include "obs.h"
 #include "mgmt.h"
 #include "timer.h"
+#include "task.h"
+
+// test code include 
+//#include "event.h"
 
 //#include "name.h"
 //#include "pbuf.h"
@@ -33,6 +37,7 @@
 // global declaration
 NSLock*    extLock;
 NSLock*     niLock;
+TASK*         task;
 NetInfo*        ni; 
 FWHooker*       fw;
 ResourceConfig* rc;
@@ -208,6 +213,11 @@ int main(int argc, char** argv)
         if ([ni defaultIP4] != nil) {
             is_linking = true;
         }
+        task = [TASK new];
+        [task setTaskPath:@"./cage"];
+        [task setSockPath:[rc getInternal]];
+        [task runTask];
+
         mgmt = [Manager new];
         extLock = [NSLock new];
         niLock = [NSLock new];
@@ -353,7 +363,23 @@ int main(int argc, char** argv)
         object:nil
     ];
 
+    sleep(1);
 
+    /*
+    // test code
+    id e = [[event alloc] init:"/tmp/prison/sock_cage" :"150.65.179.151" :"12000"];
+
+    DISPATCH_START(loop)
+    {
+        int port;
+        for (port=12001; port<=13000; port++) {
+            usleep(100000);
+            [e sendMessage:[NSString stringWithFormat:@"get,test,dev%d.p2p\n", port]];
+        }
+    }
+    DISPATCH_END
+    DISPATCH(loop);
+    */
 
     // - event loop ------------------------------------------
     Timer* t = [Timer new];
@@ -428,6 +454,7 @@ void sig_action(int sig) {
     [obs     release];
     [ni      release];
     [mgmt    release];
+    [task    release];
     [fw delAllRule];
     [fw release];
     exit(fail);
@@ -441,6 +468,7 @@ void exit_action(const char* err_name) {
     [obs     release];
     [ni      release];
     [mgmt    release];
+    [task    release];
     [fw delAllRule];
     [fw release];
     exit(fail);

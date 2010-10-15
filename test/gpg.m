@@ -63,6 +63,30 @@ int main()
     isPub = [gpg hasPubring];
     NSLog(@"pubring:%d\n", isPub);
 
+    //------------------------------------------------
+
+    // import-key
+    @try {
+        NSLog(@"import message:%d\n", [gpg import:key]);
+    }
+    @catch (id e){
+        NSLog(@"%@\n", e);
+    }
+
+    // verify test
+    @try {
+        NSLog(@"verify message:\n%@\n", [gpg verify:sig]);
+        NSLog(@"valid:%d\n", [gpg getValid]);
+        NSLog(@"trust:%d\n", [gpg getTrust]);
+        // trustdb()          : valid 0, trust 0
+        // trustdb(key())     : valid 1, trust 0
+        // trustdb(key(sign)) : valid 1, trust 1
+    }
+    @catch (id e) {
+        NSLog(@"%@\n", e);
+    }
+    exit(1);
+
     // key generation test
     if ((isSec || isPub) != true) {
         @try{
@@ -88,13 +112,7 @@ int main()
         }
     }
 
-    // import-key
-    @try {
-        NSLog(@"import message:%d\n", [gpg import:key]);
-    }
-    @catch (id e){
-        NSLog(@"%@\n", e);
-    }
+    exit(1);
 
     // signkey
     @try {
@@ -105,18 +123,6 @@ int main()
         NSLog(@"%@\n", e);
     }
 
-    // verify test
-    @try {
-        NSLog(@"verify message:\n%@\n", [gpg verify:sig]);
-        NSLog(@"valid:%d\n", [gpg getValid]);
-        NSLog(@"trust:%d\n", [gpg getTrust]);
-        // trustdb()          : valid 0, trust 0
-        // trustdb(key())     : valid 1, trust 0
-        // trustdb(key(sign)) : valid 1, trust 1
-    }
-    @catch (id e) {
-        NSLog(@"%@\n", e);
-    }
 
     // delsig
     @try {

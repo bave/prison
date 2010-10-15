@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SEED_NODE=aris.jaist.ac.jp
+SEED_NODE=localhost
 SEED_PORT=12000
 
 NODE=aris

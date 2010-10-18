@@ -288,7 +288,9 @@ extern bool is_linking;
                     int authority;
                     NSString* key = [element_array objectAtIndex:3];
                     if ([key hasSuffix:@".p2p"]) {
+                        //TCHK_START(set_cache);
                         authority = [self _cage_set_cache:element];
+                        //TCHK_END(set_cache);
                         if (authority == 0) {
                             [self _cage_get_pubring:element];
                         } else {
@@ -297,7 +299,9 @@ extern bool is_linking;
                         }
                     }
                     else if ([key hasSuffix:@"@prison"]) {
+                        //TCHK_START(import);
                             [self _gpg_import_db:element];
+                        //TCHK_END(import);
                             NSString* pubring = [element_array objectAtIndex:3];
                             NSString* hostname = [[pubring componentsSeparatedByString:@"@"] objectAtIndex:0];
                             NSString* dummy = [NSString stringWithFormat: @"204,get,prison,%@.p2p,non-value", hostname];
@@ -424,7 +428,7 @@ extern bool is_linking;
 
 - (bool)_changeAuthority:(NSString*)key :(int)auth
 {
-    NSMutableArray* tmp_array = [NSMutableArray new];
+    NSMutableArray* tmp_array = [[NSMutableArray new] autorelease];
 
     NSString* value;
     value = [kvtCageCache objectForKey:key];

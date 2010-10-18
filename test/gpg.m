@@ -85,7 +85,6 @@ int main()
     @catch (id e) {
         NSLog(@"%@\n", e);
     }
-    exit(1);
 
     // key generation test
     if ((isSec || isPub) != true) {
@@ -112,7 +111,6 @@ int main()
         }
     }
 
-    exit(1);
 
     // signkey
     @try {

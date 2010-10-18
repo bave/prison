@@ -800,7 +800,7 @@ extern bool is_linking;
     NSMutableArray* array_fid2pp;
     array_fid2pp = [mgmtDictFID2PP objectForKey:fid];
     if (array_fid2pp == nil) {
-        array_fid2pp = [NSMutableArray new];
+        array_fid2pp = [[NSMutableArray new] autorelease];
         [array_fid2pp addObject:nsProtoPort];
         [mgmtDictFID2PP setObject:array_fid2pp forKey:fid];
     } else {

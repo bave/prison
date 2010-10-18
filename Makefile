@@ -7,7 +7,7 @@ MIG=/usr/bin/mig
 #CFLAGS= -Wall -x objective-c++ -framework Foundation -lresolv -lstdc++ -fobjc-gc
 #CFLAGS= -v -Wall -x objective-c++ -framework Cocoa,AppKit -lresolv -lstdc++
 
-CFLAGS= -g -Wall -x objective-c++ -framework Cocoa,AppKit
+CFLAGS= -g -Wall -x objective-c++ -framework Cocoa
 
 # for gpg.h
 CFLAGS+= -I/opt/local/include -lgpgme -lgpg-error

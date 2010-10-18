@@ -290,10 +290,29 @@ static pid_t popen4_verify(char** args, int* fd_in, int* fd_out, int* fd_err, in
         close(pipe_err[W]);
         close(pipe_pp[W]);
 
-        if (fd_in  != NULL) *fd_in  = pipe_in[W];
-        if (fd_out != NULL) *fd_out = pipe_out[R];
-        if (fd_err != NULL) *fd_err = pipe_err[R];
-        if (fd_pp  != NULL) *fd_pp  = pipe_pp[R];
+        if (fd_in  != NULL) { 
+            *fd_in  = pipe_in[W];
+        } else {
+            close(pipe_in[W]);
+        }
+
+        if (fd_out != NULL) { 
+            *fd_out = pipe_out[R];
+        } else {
+            close(pipe_out[R]);
+        }
+
+        if (fd_err != NULL) { 
+            *fd_err = pipe_err[R];
+        } else {
+            close(pipe_err[R]);
+        }
+
+        if (fd_pp  != NULL) { 
+            *fd_pp  = pipe_pp[R];
+        } else {
+            close(pipe_pp[R]);
+        }
     }
 
     return(pid);
@@ -412,10 +431,29 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         close(pipe_err[W]);
         close(pipe_pp[R]);
 
-        if (fd_in  != NULL) *fd_in  = pipe_in[W];
-        if (fd_out != NULL) *fd_out = pipe_out[R];
-        if (fd_err != NULL) *fd_err = pipe_err[R];
-        if (fd_pp  != NULL) *fd_pp  = pipe_pp[W];
+        if (fd_in  != NULL) { 
+            *fd_in  = pipe_in[W];
+        } else {
+            close(pipe_in[W]);
+        }
+
+        if (fd_out != NULL) { 
+            *fd_out = pipe_out[R];
+        } else {
+            close(pipe_out[R]);
+        }
+
+        if (fd_err != NULL) { 
+            *fd_err = pipe_err[R];
+        } else {
+            close(pipe_err[R]);
+        }
+
+        if (fd_pp  != NULL) { 
+            *fd_pp  = pipe_pp[W];
+        } else {
+            close(pipe_pp[W]);
+        }
     }
 
     return(pid);
@@ -460,7 +498,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 + (NSString*)trimContentFromArmor:(NSString*)armorTxt
 {
-    NSMutableString* tmp_string = [NSMutableString new];
+    NSMutableString* tmp_string = [[NSMutableString new] autorelease];
 
     NSArray* armor_array = [armorTxt componentsSeparatedByString:@"\n"]; 
     NSEnumerator* line_enum = [armor_array objectEnumerator];
@@ -738,7 +776,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     NSFileHandle* err_file = nil;
 
     NSTask* task = nil;
-    NSMutableData* out_data = [NSMutableData new];
+    NSMutableData* out_data = [[NSMutableData new] autorelease];
     NSString* out_string = nil;
 
     int ret;
@@ -875,6 +913,20 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     //NSLog(@"%d\n", [[self getPass] length]);
     write(ch_fd_pp, [[self getPass] UTF8String], [[self getPass] length]);
     close(ch_fd_pp);
+
+
+    /*
+    // isRunning Loop
+    while (1) {
+        waitpid(ch, &status, 0, WNOHANG);
+        is_correct_terminate = WIFEXITED(status);
+        if (WIFEXITED(status)) { break; }
+        if (WIFSIGNALED(status) ) { break; }
+        //----------------------------------------------
+        // write loop processing ...
+        //----------------------------------------------
+    }
+    */
 
     waitpid(ch, &status, 0);
 
@@ -1015,6 +1067,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 - (NSString*)encryptForce:(NSString*)txt :(NSString*)uid
 {
 #ifdef __PRISON__
+
     pid_t ch;
     int ch_fd_in;
     int ch_fd_out;
@@ -1066,6 +1119,19 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     //NSLog(@"%d\n", [[self getPass] length]);
     write(ch_fd_pp, [[self getPass] UTF8String], [[self getPass] length]);
     close(ch_fd_pp);
+
+    /*
+    // isRunning Loop
+    while (1) {
+        waitpid(ch, &status, 0, WNOHANG);
+        is_correct_terminate = WIFEXITED(status);
+        if (WIFEXITED(status)) { break; }
+        if (WIFSIGNALED(status) ) { break; }
+        //----------------------------------------------
+        // write loop processing ...
+        //----------------------------------------------
+    }
+    */
 
     waitpid(ch, &status, 0);
 
@@ -1320,6 +1386,19 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     write(ch_fd_pp, [[self getPass] UTF8String], [[self getPass] length]);
     close(ch_fd_pp);
 
+    /*
+    // isRunning Loop
+    while (1) {
+        waitpid(ch, &status, 0, WNOHANG);
+        is_correct_terminate = WIFEXITED(status);
+        if (WIFEXITED(status)) { break; }
+        if (WIFSIGNALED(status) ) { break; }
+        //----------------------------------------------
+        // write loop processing ...
+        //----------------------------------------------
+    }
+    */
+
     waitpid(ch, &status, 0);
 
     int is_correct_terminate;
@@ -1550,7 +1629,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (int)import:(NSString*)key
 {
-
     /*
      *  now, this message return only ture.
      *  error is rising exception.
@@ -1871,7 +1949,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
     //NSString* out_string = nil;
     //NSString* err_string = nil;
-    NSMutableString* buf_str = [NSMutableString new];
+    NSMutableString* buf_str = [[NSMutableString new] autorelease];
 
     int ret = 1;
 
@@ -2017,7 +2095,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     NSString* err_string = nil;
     //NSString* stat_string = nil;
 
-    NSMutableString* buf_str = [NSMutableString new];
+    NSMutableString* buf_str = [[NSMutableString new] autorelease];
 
     int ret = 1;
     int valid_count = 0;
@@ -2311,7 +2389,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (BOOL)genkey
 {
-
     char buffer[512];
     memset(buffer, '\0', 512);
 
@@ -2545,7 +2622,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (BOOL)hasSecring;
 {
-
     NSFileManager* manager;
     manager = [NSFileManager defaultManager];
 
@@ -2597,7 +2673,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (BOOL)hasPubring;
 {
-
     NSFileManager* manager;
     manager = [NSFileManager defaultManager];
 
@@ -2692,6 +2767,21 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     write(ch_fd_in, [sig UTF8String], [sig length]);
     close(ch_fd_in);
 
+    /*
+    // isRunning Loop
+    while (1) {
+        waitpid(ch, &status, 0, WNOHANG);
+        is_correct_terminate = WIFEXITED(status);
+        if (WIFEXITED(status)) { break; }
+        if (WIFSIGNALED(status) ) { break; }
+        //----------------------------------------------
+        // write loop processing ...
+        //----------------------------------------------
+    }
+    */
+
+
+
     waitpid(ch, &status, 0);
 
     int is_correct_terminate;
@@ -2705,12 +2795,12 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         return nil;
     }
 
+    /*
     int terminate_status;
     terminate_status = WEXITSTATUS(status);
 
     //NSLog(@"terminate_status%d\n", terminate_status);
 
-    /*
     if (terminate_status != 0) {
         close(ch_fd_out);
         close(ch_fd_err);
@@ -2744,7 +2834,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     NSEnumerator* line_enum = nil;
     NSArray* line_array = nil;
     NSArray* line_array_tmp = nil;
-    NSMutableArray* word_array = [NSMutableArray new];
+    NSMutableArray* word_array = [[NSMutableArray new] autorelease];
 
     line_array_tmp = [status_string componentsSeparatedByString:@"\n"];
     line_array = [line_array_tmp subarrayWithRange:NSMakeRange(2, [line_array_tmp count]-2)];
@@ -2849,7 +2939,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSArray*)throw:(NSString*)key
 {
-
     if (key == nil) {
         //@throw @"error:[gpg throw] non key stream";
         return nil;
@@ -2982,7 +3071,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (id)init
 {
-
     self = [super init];
 
     if (self != nil) {
@@ -3282,7 +3370,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 - (NSData*)_data_to_nsdata:(gpgme_data_t)data;
 {
-
     int ret;
     ret = gpgme_data_seek (data, 0, SEEK_SET);
 
@@ -3322,6 +3409,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
         ans_array = [NSMutableArray new];
         ans_dict = [NSMutableDictionary new];
+        [ans_array autorelease];
+        [ans_dict autorelease];
 
         line_array = [pub componentsSeparatedByString:@"\n"];
         line_enum = [line_array objectEnumerator];
@@ -3341,8 +3430,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
                 if ([ans_dict count] != 0) {
                     [ans_array addObject:ans_dict];
                 }
-                [ans_dict autorelease];
                 ans_dict = [NSMutableDictionary new];
+                [ans_dict autorelease];
                 continue;
             }
 
@@ -3420,6 +3509,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
         ans_array = [NSMutableArray new];
         ans_dict = [NSMutableDictionary new];
+        [ans_array autorelease];
+        [ans_dict autorelease];
 
         line_array = [sec componentsSeparatedByString:@"\n"];
         line_enum = [line_array objectEnumerator];
@@ -3440,8 +3531,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
                 if ([ans_dict count] != 0) {
                     [ans_array addObject:ans_dict];
                 }
-                [ans_dict autorelease];
                 ans_dict = [NSMutableDictionary new];
+                [ans_dict autorelease];
                 continue;
             }
 
@@ -3521,6 +3612,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
         ans_array = [NSMutableArray new];
         ans_dict = [NSMutableDictionary new];
+        [ans_array autorelease];
+        [ans_dict autorelease];
 
         line_array = [key componentsSeparatedByString:@"\n"];
         line_enum = [line_array objectEnumerator];
@@ -3550,8 +3643,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
                 if ([ans_dict count] != 0) {
                     [ans_array addObject:ans_dict];
                 }
-                [ans_dict autorelease];
                 ans_dict = [NSMutableDictionary new];
+                [ans_dict autorelease];
             }
 
             // ------------------------------------------
@@ -3616,6 +3709,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     NSEnumerator* word_enum = nil;
 
     NSMutableDictionary* ans_mdict = [NSMutableDictionary new];
+    [ans_mdict autorelease];
 
     //NSString* sig = [NSString stringWithContentsOfFile:@"sig.txt"];
     //NSLog(@"%@\n", pub);
@@ -3642,7 +3736,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
             int counter = 0;
             NSNumber* ns_counter = nil;
             NSString* user = nil;
-            NSMutableDictionary* sig_dict = [NSMutableDictionary new];
+            NSMutableDictionary* sig_dict = [[NSMutableDictionary new] autorelease];
             NSComparisonResult compResult;
 
             compResult = [line_element compare:@"pub"
@@ -3738,9 +3832,6 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     [ans_dict autorelease];
     return ans_dict;
 }
-
-
-
    
 - (int)genrkey
 {

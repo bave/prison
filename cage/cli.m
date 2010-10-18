@@ -66,6 +66,7 @@ int main(int argc, char** argv)
     system("sh -c \"tput clear\"");
     printf("Now connecting to %s!!\n", path);
     char buffer[65535];
+
     for (;;) {
 
         printf("send_message:");
@@ -73,20 +74,29 @@ int main(int argc, char** argv)
 
         memset(buffer, '\0', sizeof(buffer));
 
-        fgets(buffer, sizeof(buffer), stdin);
+        char* ret = NULL;
+        ret = fgets(buffer, sizeof(buffer), stdin);
+
+        if (ret == NULL) {
+            fflush(stdin);
+            continue;
+        }
 
 
         if (strcmp(buffer, "\n") == 0) {
+            fflush(stdin);
             continue;
         }
 
         if (strcmp(buffer, "list\n") == 0) {
             list();
+            fflush(stdin);
             continue;
         }
 
         if (strcmp(buffer, "clear\n") == 0) {
             system("sh -c \"tput clear\"");
+            fflush(stdin);
             continue;
         }
 

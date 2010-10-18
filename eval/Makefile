@@ -5,7 +5,7 @@ PLAT := $(shell uname)
 ifeq "$(PLAT)" "Darwin"
 CFLAGS= -g -Wall 
 CFLAGS+= -I/opt/local/include
-CFLAGS+= -x objective-c++ -framework Cocoa,AppKit
+CFLAGS+= -x objective-c++ -framework Cocoa
 CFLAGS+= -Wno-deprecated-declarations -Wno-deprecated
 CFLAGS+= -lresolv -lstdc++
 endif

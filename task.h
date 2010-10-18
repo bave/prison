@@ -64,10 +64,6 @@ extern bool is_verbose;
         {
             id element = [buffer_array objectAtIndex:i];
             if ([element length] == 0) { continue; }
-            if ([element hasSuffix:@"\n"]) {
-                NSRange range = NSMakeRange(0 ,[element length]-1);
-                element = [NSString stringWithString:[element substringWithRange:range]];
-            }
 
             if (is_verbose) {
                 /*

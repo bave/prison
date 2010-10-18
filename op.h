@@ -186,6 +186,8 @@ extern bool is_verbose;
         // ---------------------------------------------------------------------
 
 
+        //printf("\n");
+        //printf("%s\n", [fqdn UTF8String]);
         // ネーム空間の分割判定
         fqdn_array = array_split(fqdn, @".");
         if (is_verbose) {

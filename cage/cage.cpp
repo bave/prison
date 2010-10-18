@@ -218,6 +218,7 @@ bind_safe(int sock_fd, const char* path)
             err = ENOMEM;
         }
     }
+
     if (err == 0) {
         last_slash = strrchr(path_dir, '/');
         if (last_slash == NULL) {
@@ -305,6 +306,9 @@ bind_safe(int sock_fd, const char* path)
         }
         if (err == EADDRINUSE) {
         }
+    }
+
+    if (err == 0) {
     }
 
     // rwxr-xr-x

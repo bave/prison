@@ -14,6 +14,8 @@ if [ -z $DIV ]; then
     exit 1
 fi
 
+OS=`uname`
+
 i=1
 START_PORT=$SPORT
 END_PORT=`expr $START_PORT + $PER_NODE - 1`
@@ -22,7 +24,11 @@ do
     echo "./bootstrap.sh $NODE $START_PORT  $END_PORT $INTERNAL_SOCKET$i"
     ./bootstrap.sh $NODE $START_PORT  $END_PORT $INTERNAL_SOCKET$i
     echo "./put.sh $NODE $START_PORT $END_PORT $INTERNAL_SOCKET$i"
-    ./put.sh $NODE $START_PORT $END_PORT $INTERNAL_SOCKET$i
+    if [ $OS = "Linux" ]; then
+        ./put.sh $NODE $START_PORT $END_PORT $INTERNAL_SOCKET$i
+    else
+        ./put_mac.sh $NODE $START_PORT $END_PORT $INTERNAL_SOCKET$i
+    fi
     START_PORT=`expr $END_PORT + 1`
     END_PORT=`expr $START_PORT + $PER_NODE - 1`
     i=`expr $i + 1`

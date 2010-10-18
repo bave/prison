@@ -374,7 +374,11 @@ int main(int argc, char** argv)
     [t setPerTimer:-PP_IDLE_TIMEOUT];
     [t setReputTimer:KVT_CAGE_TTL-10];
 
-    [NSApp run];
+    @try {
+        [NSApp run];
+    } @catch (id err) {
+        if (is_verbose) NSLog(@"NSApp run:%@", err);
+    }
     // -------------------------------------------------------
  
     /*

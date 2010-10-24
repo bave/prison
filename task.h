@@ -43,7 +43,7 @@ extern bool is_verbose;
 
 - (void)_task_handler:(NSNotification*)notify
 {
-    id pool = [NSAutoreleasePool new];
+    //id pool = [NSAutoreleasePool new];
     if (![[notify userInfo] objectForKey:@"NSFileHandleError"])
     {
         NSData *data;
@@ -76,7 +76,7 @@ extern bool is_verbose;
     if ([task isRunning]) {
         [task_handle readInBackgroundAndNotify];
     }
-    [pool drain];
+    //[pool drain];
     return;
 }
 

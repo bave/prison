@@ -252,7 +252,7 @@ extern bool is_linking;
 
 - (void)_cage_recv_handler:(NSNotification*)notify
 {
-    id pool = [NSAutoreleasePool new];
+    //id pool = [NSAutoreleasePool new];
     if (![[notify userInfo] objectForKey:@"NSFileHandleError"])
     {
         NSData *data;
@@ -355,7 +355,7 @@ extern bool is_linking;
         }
     }
     [cage_file readInBackgroundAndNotify];
-    [pool drain];
+    //[pool drain];
 
     return;
 }

@@ -12,17 +12,17 @@ fi
 
 echo "start"
 
-rm -f error
+#rm -f error
 touch error
 
 i=`expr $bias + 1`
 while [ $i -le $EPORT ]
 do
     expect -c "
-    set timeout 2
+    set timeout 10
     spawn $CLI $INTERNAL_SOCKET
     expect \"send_message:\"
-    send   \"get,$SEED_NODE,$NODE$i.p2p\n\"
+    send   \"get,prison,$host$i.p2p\n\"
     expect {
         \"recv_message:204,\" {
             expect \"send_message:\"

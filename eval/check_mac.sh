@@ -6,15 +6,21 @@ if [ $# != 0 ]; then
     host=$1
     bias=$2
     num=$3
+    INTERNAL_SOCKET=$4
     EPORT=`expr $bias + $num`
 fi
+
+echo "start"
+
+rm -f error
+touch error
 
 i=`expr $bias + 1`
 while [ $i -le $EPORT ]
 do
     expect -c "
     set timeout 2
-    spawn $CLI
+    spawn $CLI $INTERNAL_SOCKET
     expect \"send_message:\"
     send   \"get,$SEED_NODE,$NODE$i.p2p\n\"
     expect {

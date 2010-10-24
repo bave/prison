@@ -5,11 +5,11 @@ SEED_PORT=12000
 
 NODE=prison
 SPORT=12001
-EPORT=12001
+EPORT=12021
 
-CAGE="$HOME/git/prison/bin/cage"
-CLI="$HOME/git/prison/bin/cli"
-INTERNAL_SOCKET="/tmp/sock_bootstrap"
+#CAGE="$HOME/git/prison/bin/cage"
+#CLI="$HOME/git/prison/bin/cli"
+#INTERNAL_SOCKET="/tmp/sock_bootstrap"
 
 if [ -z $CAGE ]; then
     echo "please input path in config.sh"

@@ -15,7 +15,7 @@
     <key>run_directory</key>         <string>/tmp/prison/</string>
     <key>cage_internal_connect</key> <string>sock_cage</string>
     <key>cage_external_port</key>    <string>12000</string>
-    <key>cage_seed_host</key>        <string>150.65.32.83</string>
+    <key>cage_seed_host</key>        <string>localhost</string>
     <key>cage_seed_port</key>        <string>12000</string>
 
     <!-- your dictionary .. -->

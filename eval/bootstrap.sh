@@ -161,7 +161,7 @@ do
         set timeout 5
         spawn $CLI $INTERNAL_SOCKET
         expect \"send_message:\"
-        send   \"join,$NODE$i,$SEED,$SPORT\n\"
+        send   \"join,$NODE$i,$SEED_NODE,$SEED_PORT\n\"
         expect { 
             \"recv_message:202,\" {
                 expect \"send_message:\"

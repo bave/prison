@@ -175,6 +175,8 @@ static gpgme_error_t _passwd_cb(void* object,
 // ------------------------------------------------------------------------------
 
 // local c lang function --------------------------------------------------------------
+
+#ifdef __PRISON__
 #define R (0)
 #define W (1)
 
@@ -461,6 +463,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 
 #undef R
 #undef W
+#endif
 // ------------------------------------------------------------------------------
 
 // public function
@@ -2864,8 +2867,8 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
 #else
 
     //[gpgLock lock];
-    int valid = 0;
-    int trust = 0;
+    //int valid = 0;
+    //int trust = 0;
     gpgme_ctx_t ctx;
     gpgme_data_t in_data;
     gpgme_data_t out_data;

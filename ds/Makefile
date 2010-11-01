@@ -5,7 +5,7 @@ mig: flushcache
 
 flushcache: flushcache.m
 	${MIG} ./DSlibinfoMIG.defs
-	${CC} -lstdc++ -o flushcache flushcache.m
+	${CC} -O3 -lstdc++ -o flushcache flushcache.m
 
 clean: genclean
 	rm DSlibinfoMIGServer.c DSlibinfoMIGUser.c DSlibinfoMIG.h

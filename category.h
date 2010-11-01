@@ -22,6 +22,21 @@
 }
 @end
 
+@interface NSString (TrimStrip)
+- (NSString*)trim;
+- (NSString*)strip;
+@end
+@implementation NSString (TrimStrip)
+- (NSString *)trim
+{
+        return [self stringByTrimmingCharactersInSet:
+                        [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+- (NSString *)strip
+{
+        return [self trim];
+}
+@end
 // --------------------------------------------------------------------
 
 

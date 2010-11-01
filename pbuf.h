@@ -119,7 +119,6 @@
                      :(size_t)size
                      :(uint32_t)adjust                     
 {
-
     uint32_t sum = 0;
     uint16_t element = 0;
 

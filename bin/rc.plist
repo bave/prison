@@ -30,6 +30,7 @@
         -->
         <key>aris.p2p</key>        <string>150.65.32.83:NULL:NULL</string>
         <key>test0.aris.p2p</key>  <string>150.65.32.83:10000:TCP</string>
+        <key>http.aris.p2p</key>  <string>150.65.32.83:80:TCP</string>
     </dict>
     <key>service_name</key>
     <dict>

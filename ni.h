@@ -138,7 +138,8 @@ struct _eth {
     for(i=0; i< [self rt4_count]; i++){
         if (fcomp([self rt4_flags:i], @"U") &&
             fcomp([self rt4_flags:i], @"H") &&
-            fcomp([self rt4_flags:i], @"S") )
+            fcomp([self rt4_flags:i], @"S") &&
+            !fcomp([self rt4_flags:i], @"I") )
         {
             NSString* mask = [self netmask:[self defaultIFname4]];
             //NSLog(@"%@\n", mask);

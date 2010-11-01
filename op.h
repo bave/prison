@@ -562,7 +562,7 @@ extern bool is_verbose;
         memset(&buf, 0, sizeof(buf));
 
         size = recvfrom(socketFD, buf, sizeof(buf), 0, (SA*)&sin_recv, &len);
-        [extLock lock];
+        //[extLock lock];
         if (size < 0) {
             perror("recvfrom");
             raise(SIGINT);
@@ -662,9 +662,11 @@ extern bool is_verbose;
                 PPFlags = [mgmt getPPFlagsWithProtocol:protocol
                                                SrcPort:srcPort];
 
+                /*
                 if (PPFlags == PPFLAG_ERROR) {
                     if (is_verbose) { }
                 }
+                */
 
                 uint8_t condFlag;
                 condFlag = PPFLAG_ME2L_FIN | PPFLAG_EXT2ME_FIN;
@@ -683,9 +685,11 @@ extern bool is_verbose;
             else {}
 
         }
+        /*
         // udp
         if (protocol == IPPROTO_UDP) {
         }
+        */
         // ---------------------------------------------------------------------
 
 
@@ -727,10 +731,10 @@ extern bool is_verbose;
 
         [loop_pool drain];
         if ([self isCancelled] == YES) {
-            [extLock unlock];
+            //[extLock unlock];
             break;
         }
-        [extLock unlock];
+        //[extLock unlock];
     }
 
     [pool drain];

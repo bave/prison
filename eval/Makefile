@@ -38,6 +38,9 @@ measure:measure.m
 udp_send:udp_send.c
 	${CC} -o udp_send udp_send.c
 
+tcp_send:tcp_send.c
+	${CC} -o tcp_send tcp_send.c
+
 random:
 	rm /dev/random &
 	sleep 1
@@ -63,5 +66,6 @@ clean:
 	rm ./measure &
 	rm -rf ./measure.dSYM &
 	rm ./udp_send &
+	rm ./tcp_send &
 	./clean.sh
 

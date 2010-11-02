@@ -46,11 +46,12 @@ int main( int argc, char **argv)
     int sockfd;
     struct addrinfo info; 
     struct addrinfo *res; 
+    int i;
 
     if (argc != 4) usage();
 
     memset(&info, 0, sizeof(info));
-    info.ai_socktype = SOCK_DGRAM; 
+    info.ai_socktype = SOCK_STREAM; 
     errno = getaddrinfo(argv[1], argv[2], &info, &res);
 
     if (errno) { 
@@ -59,7 +60,7 @@ int main( int argc, char **argv)
     }
 
     printf("port_number:%d\n", atoi(argv[2]));	
-    printf("port_number:%s\n", (argv[1]));	
+    printf("hostname:%s\n", (argv[1]));	
 
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
@@ -68,25 +69,28 @@ int main( int argc, char **argv)
     socklen_t sin_size = sizeof(struct sockaddr_storage);  
     struct sockaddr_storage saddr;
 
-    while(1){
+    connect(sockfd, res->ai_addr, res->ai_addrlen); 
+    //while(1){
+    for(i=0; i<100; i++) {
         memset(buf, 0, BUFSIZ);
-        TCHK_START(udp_ping);
-        sendto(sockfd, argv[3], strlen(argv[3]), 0, res->ai_addr, res->ai_addrlen);
-        len = recvfrom(sockfd, buf, BUFSIZ, 0, (struct sockaddr*)&saddr, &sin_size); 
-        TCHK_END(udp_ping);
+        TCHK_START(tcp_ping);
+        send(sockfd, argv[3], strlen(argv[3]), 0);
+        len = recv(sockfd, buf, BUFSIZ, 0); 
+        TCHK_END(tcp_ping);
         //printf("recv: %s\n", buf);
         sleep(1);
     }
     close(sockfd);
     freeaddrinfo(res);
     return 0;
+
 }
 
     void
 usage()
 {
     printf("usage\n");
-    printf("send_udp [IP_addres] [port_number] [data_string]\n");
+    printf("send_tcp [IP_address] [port_number] [data_string]\n");
     exit(1);	
 }
 

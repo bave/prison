@@ -197,7 +197,7 @@ usage(char *cmd)
 int
 bind_safe(int sock_fd, const char* path)
 {
-    mode_t umask_old;
+    //mode_t umask_old;
     struct stat st;
     memset(&st, 0, sizeof(st));
     struct sockaddr_un bind_request;
@@ -290,7 +290,7 @@ bind_safe(int sock_fd, const char* path)
     */
 
     if (err == 0) {
-        umask_old = umask(0);
+        //umask_old = umask(0);
         unlink(path);
 #ifndef __linux__
         bind_request.sun_len = sizeof(bind_request);
@@ -312,7 +312,7 @@ bind_safe(int sock_fd, const char* path)
     }
 
     // rwxr-xr-x
-    umask(umask_old);
+    //umask(umask_old);
 
     free(path_dir);
 

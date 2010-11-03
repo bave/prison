@@ -3,17 +3,27 @@ CC=g++
 MAKE=make
 MIG=/usr/bin/mig
 
-#CFLAGS= -Wall -x objective-c++ -framework Foundation -lresolv -lstdc++ -fobjc-gc-only
-#CFLAGS= -Wall -x objective-c++ -framework Foundation -lresolv -lstdc++ -fobjc-gc
-#CFLAGS= -v -Wall -x objective-c++ -framework Cocoa,AppKit -lresolv -lstdc++
 
-CFLAGS= -O3 -g -Wall -x objective-c++ -framework Cocoa
+# for release
+CFLAGS= -O3 -fomit-frame-pointer -Wall -x objective-c++ -framework Cocoa
+# for debug
+#CFLAGS= -g -Wall -x objective-c++ -framework Cocoa
 
+
+# addition libaray and include ---------------------
 # for gpg.h
 CFLAGS+= -I/opt/local/include -lgpgme -lgpg-error
 
 # for utils.h and name.h
 CFLAGS+= -lresolv -lstdc++
+
+# garbage collection 
+#CFLAGS+= -fobjc-gc-only
+#CFLAGS+= -fobjc-gc
+# --------------------------------------------------
+
+
+# target -------------------------------------------
 
 all: caged prison
 

@@ -7,7 +7,7 @@ Port Relation Identifier Service with Ovarlay Network
 
 
 - using library
-    libcage - branch of uniqe
+    libcage - branch of libev
     libevent
     libresolv
     libgpgme

@@ -399,11 +399,11 @@ extern bool is_verbose;
         ip->ip_src.s_addr=inet_addr([nsSrcIP UTF8String]);
         ip->ip_dst.s_addr=inet_addr([nsDstIP UTF8String]);
 
-        uint8_t protocol;
-        uint8_t tcpflags;
-        uint16_t srcPort;
-        uint16_t dstPort;
-        uint16_t fromPort;
+        uint8_t protocol = 0;
+        uint8_t tcpflags = 0;
+        uint16_t srcPort = 0;
+        uint16_t dstPort = 0;
+        uint16_t fromPort= 0;
         if ([[pbuf getL4Proto] isEqualToString:@"TCP"]) {
             struct tcphdr* tcp = (struct tcphdr*)[pbuf getL4];
             dstPort = ntohs(tcp->th_dport);

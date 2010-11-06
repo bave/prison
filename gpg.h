@@ -194,7 +194,7 @@ static pid_t popen4_verify(char** args, int* fd_in, int* fd_out, int* fd_err, in
     int pipe_in[2];
     int pipe_pp[2];
 
-    pid_t pid;
+    pid_t pid = 0;
 
     //Create pipes. -------------------------------
     if (ret == 0) {
@@ -335,7 +335,7 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
     int pipe_in[2];
     int pipe_pp[2];
 
-    pid_t pid;
+    pid_t pid = 0;
 
     //Create pipes. -------------------------------
     if (ret == 0) {

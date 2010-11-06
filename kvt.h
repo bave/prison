@@ -877,7 +877,7 @@ extern bool is_linking;
 
     NSArray* mesg_array = [message componentsSeparatedByString:@","];
 
-    NSString* string;
+    NSString* string = nil;
     NSString* command = [mesg_array objectAtIndex:0];
     if ([command isEqualToString:@"put"]) {
         NSString* key = [mesg_array objectAtIndex:2];

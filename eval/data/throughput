@@ -1,0 +1,34 @@
+bayve@kris% ab -n 1 -c 1 http.aris.p2p/data                         [~/git/prison/bin]
+This is ApacheBench, Version 2.3 <$Revision: 655654 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking http.muru1.p2p (be patient).....done
+
+
+Server Software:        Apache/2.2.14
+Server Hostname:        http.muru1.p2p
+Server Port:            80
+
+Document Path:          /data
+Document Length:        104857600 bytes
+
+Concurrency Level:      1
+Time taken for tests:   17.956 seconds
+Complete requests:      1
+Failed requests:        0
+Write errors:           0
+Total transferred:      104857866 bytes
+HTML transferred:       104857600 bytes
+Requests per second:    0.06 [#/sec] (mean)
+Time per request:       17955.575 [ms] (mean)
+Time per request:       17955.575 [ms] (mean, across all concurrent requests)
+Transfer rate:          5702.98 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+              Connect:       10   10   0.0     10      10
+              Processing: 17945 17945   0.0  17945   17945
+              Waiting:        3    3   0.0      3       3
+              Total:      17956 17956   0.0  17956   17956
+

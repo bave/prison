@@ -103,7 +103,6 @@ NSData* ip_aton(NSString* type, NSString* addr);
 // hostname to IPAddr(4&6) String
 NSString* getHost2Addr(NSString* type, NSString* hostname);
 
-
 // directory management
 NSString* currentdir(void);
 

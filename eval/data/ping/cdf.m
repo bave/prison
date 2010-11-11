@@ -14,4 +14,5 @@ function cdf_data = cdf(filename, color)
 	end
 
 	plot(cdf_data(:,1), cdf_data(:,2), color);
+    %dlmwrite(['cdf_',filename], cdf_data, ' ');
 end

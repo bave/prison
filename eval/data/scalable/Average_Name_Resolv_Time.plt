@@ -2,8 +2,8 @@
 #
 #    
 #    	G N U P L O T
-#    	Version 4.4 patchlevel 0
-#    	last modified March 2010
+#    	Version 4.4 patchlevel 2
+#    	last modified Wed Sep 22 12:10:34 PDT 2010
 #    	System: Darwin 10.4.0
 #    
 #    	Copyright (C) 1986-1993, 1998, 2004, 2007-2010
@@ -34,6 +34,7 @@ set timefmt cb "%d/%m/%y,%H:%M"
 set boxwidth
 set style fill  empty border
 set style rectangle back fc  lt -3 fillstyle   solid 1.00 border lt -1
+set style circle radius graph 0.02, first 0, 0 
 set dummy x,y
 set format x "% g"
 set format y "% g"
@@ -89,15 +90,15 @@ set mx2tics default
 set my2tics default
 set mcbtics default
 set xtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
-set xtics autofreq  norangelimit
+set xtics autofreq  norangelimit font "Helvetica,20"
 set ytics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
-set ytics autofreq  norangelimit
+set ytics autofreq  norangelimit font "Helvetica,20"
 set ztics border in scale 1,0.5 nomirror norotate  offset character 0, 0, 0
-set ztics autofreq  norangelimit
+set ztics autofreq  norangelimit font "Helvetica,20"
 set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
-set cbtics autofreq  norangelimit
+set cbtics autofreq  norangelimit font "Helvetica,20"
 set title "" 
 set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
@@ -108,13 +109,13 @@ set trange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set urange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
 set vrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
 set xlabel "Numbers of node" 
-set xlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
+set xlabel  offset character 0, 0, 0 font "Helvetica,20" textcolor lt -1 norotate
 set x2label "" 
 set x2label  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set xrange [ * : 4200.00 ] noreverse nowriteback  # (currently [0.00000:] )
 set x2range [ * : * ] noreverse nowriteback  # (currently [40.0000:4200.00] )
-set ylabel "check time[ms]" 
-set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
+set ylabel "time[ms]" 
+set ylabel  offset character 0, 0, 0 font "Helvetica,20" textcolor lt -1 rotate by -270
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set yrange [ * : * ] noreverse nowriteback  # (currently [228.000:239.000] )

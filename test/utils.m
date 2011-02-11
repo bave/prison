@@ -76,6 +76,14 @@ int main() {
     NSLog(@"%d\n", is_local(@"172.16.1.1"));
     NSLog(@"%d\n", is_global(@"172.16.1.1"));
 
+    int loop;
+    for (loop=0; loop<=100000; loop++) {
+        CTCHK_START(test);
+        usleep(1000);
+        CTCHK_END(test, 1000);
+    }
+
+
     [pool release];
     return 0;
 }

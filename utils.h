@@ -61,6 +61,50 @@ if (name##_current.tv_sec == name##_prev.tv_sec) {                              
 }                                                                                  \
 printf("%s: sec:%lu usec:%06d\n", #name, name##_sec, name##_usec); 
 
+// time measurement macro for counter
+#define CTCHK_START(name)                     \
+    static int name##_count = 0;              \
+    static time_t name##_sec_total = 0;       \
+    static suseconds_t name##_usec_total = 0; \
+    struct timeval name##_prev;               \
+    struct timeval name##_current;            \
+    gettimeofday(&name##_prev, NULL)
+
+#define CTCHK_END(name, count)                                                     \
+gettimeofday(&name##_current, NULL);                                               \
+time_t name##_sec;                                                                 \
+suseconds_t name##_usec;                                                           \
+if (name##_current.tv_sec == name##_prev.tv_sec) {                                 \
+    name##_sec = name##_current.tv_sec - name##_prev.tv_sec;                       \
+    name##_usec = name##_current.tv_usec - name##_prev.tv_usec;                    \
+} else if (name ##_current.tv_sec != name##_prev.tv_sec) {                         \
+    int name##_carry = 1000000;                                                    \
+    name##_sec = name##_current.tv_sec - name##_prev.tv_sec;                       \
+    if (name##_prev.tv_usec > name##_current.tv_usec) {                            \
+        name##_usec = name##_carry - name##_prev.tv_usec + name##_current.tv_usec; \
+        name##_sec--;                                                              \
+        if (name##_usec > name##_carry) {                                          \
+            name##_usec = name##_usec - name##_carry;                              \
+            name##_sec++;                                                          \
+        }                                                                          \
+    } else {                                                                       \
+        name##_usec = name##_current.tv_usec - name##_prev.tv_usec;                \
+    }                                                                              \
+}                                                                                  \
+name##_sec_total += name##_sec;                                                    \
+name##_usec_total += name##_usec;                                                  \
+while (name##_usec_total >= 1000000) {                                             \
+    name##_usec_total = name##_usec_total - 1000000;                               \
+    name##_sec_total += 1;                                                         \
+}                                                                                  \
+name##_count++;                                                                    \
+if (name##_count >= count) {                                                       \
+    printf("%s: sec:%lu usec:%06d\n", #name, name##_sec_total, name##_usec_total); \
+    name##_sec_total = 0;                                                          \
+    name##_usec_total = 0;                                                         \
+    name##_count = 0;                                                              \
+}
+
 #ifdef __MACH__
 #define ITERATE(element, enumerator) for(id element in enumerator) 
 #else

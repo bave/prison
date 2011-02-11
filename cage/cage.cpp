@@ -1,3 +1,8 @@
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,11 +11,6 @@
 #include <string.h>
 
 #include <arpa/inet.h>
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/un.h>
 
 #include <event.h>
 
@@ -24,6 +24,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/unordered_map.hpp>
 
+#include "base64.hpp"
+
 // #define DEBUG
 
 #ifdef DEBUG
@@ -33,8 +35,10 @@
 #endif
 
 extern char *optarg;
-extern int optind, opterr, optopt;
-
+extern int optind;
+extern int optopt;
+extern int opterr;
+extern int optreset;
 
 typedef boost::char_separator<char> char_separator;
 typedef boost::tokenizer<char_separator> tokenizer;
@@ -43,20 +47,36 @@ typedef boost::tokenizer<esc_separator> esc_tokenizer;
 typedef boost::unordered_map<int, boost::shared_ptr<event> > sock2ev_type;
 typedef boost::unordered_map<std::string, boost::shared_ptr<libcage::cage> > name2node_type;
 
+bool  is_daemon = false;
+
 sock2ev_type   sock2ev;
 name2node_type name2node;
 
+
 void usage(char *cmd);
+
 int bind_safe(int sock_fd, const char* path);
+
 bool start_listen(const char* path);
+int create_named_socket(const char* path);
+
+// csock -> connect socket
+void callback_csock_accept(int fd, short ev, void *arg);
+void callback_csock_read(int fd, short ev, void *arg);
+// lsock -> listen socket
+void callback_lsock_accept(int fd, short ev, void *arg);
+void callback_lsock_read(int fd, short ev, void *arg);
 void callback_accept(int fd, short ev, void *arg);
 void callback_read(int fd, short ev, void *arg);
 void replace(std::string &str, std::string from, std::string to);
 void do_command(int sockfd, std::string command);
+
 void process_set_id(int sockfd, esc_tokenizer::iterator &it,
                     const esc_tokenizer::iterator &end);
-void process_new(int sockfd, esc_tokenizer::iterator &it,
+void process_get_id(int sockfd, esc_tokenizer::iterator &it,
                     const esc_tokenizer::iterator &end);
+void process_new(int sockfd, esc_tokenizer::iterator &it,
+                 const esc_tokenizer::iterator &end);
 void process_delete(int sockfd, esc_tokenizer::iterator &it,
                     const esc_tokenizer::iterator &end);
 void process_join(int sockfd, esc_tokenizer::iterator &it,
@@ -65,6 +85,10 @@ void process_put(int sockfd, esc_tokenizer::iterator &it,
                  const esc_tokenizer::iterator &end);
 void process_get(int sockfd, esc_tokenizer::iterator &it,
                  const esc_tokenizer::iterator &end);
+void process_rdp_listen(int sockfd, esc_tokenizer::iterator &it,
+                        const esc_tokenizer::iterator &end);
+void process_rdp_connect(int sockfd, esc_tokenizer::iterator &it,
+                         const esc_tokenizer::iterator &end);
 
 static const char* const SUCCEEDED_NEW         = "200";
 static const char* const SUCCEEDED_DELETE      = "201";
@@ -72,6 +96,9 @@ static const char* const SUCCEEDED_JOIN        = "202";
 static const char* const SUCCEEDED_PUT         = "203";
 static const char* const SUCCEEDED_GET         = "204";
 static const char* const SUCCEEDED_SET_ID      = "205";
+static const char* const SUCCEEDED_RDP_LISTEN  = "206";
+static const char* const SUCCEEDED_RDP_CONNECT = "207";
+static const char* const SUCCEEDED_GET_ID      = "208";
 
 static const char* const ERR_UNKNOWN_COMMAND   = "400";
 static const char* const ERR_INVALID_STATEMENT = "401";
@@ -80,8 +107,8 @@ static const char* const ERR_ALREADY_EXIST     = "403";
 static const char* const ERR_DEL_NO_SUCH_NODE  = "404";
 static const char* const ERR_JOIN_NO_SUCH_NODE = "405";
 static const char* const ERR_JOIN_FAILED       = "406";
-static const char* const ERR_PUT_NO_SUCH_NODE  = "407";
-static const char* const ERR_GET_NO_SUCH_NODE  = "408";
+static const char* const ERR_CREAT_RDP_FAILURE = "407";
+static const char* const ERR_NO_SUCH_NODE      = "408";
 static const char* const ERR_GET_FAILURE       = "409";
 
 /*
@@ -105,6 +132,10 @@ static const char* const ERR_GET_FAILURE       = "409";
   -> 205,set_id,NODE_NAME,IDENTIFIER |
      400 | 401,COMMENT
 
+  get_id,NODE_NAME
+  -> 205,get_id,NODE_NAME,IDENTIFIER |
+     400 | 401,COMMENT
+
   join,NODE_NAME,HOST,PORT
   -> 202,join,NODE_NAME,HOST,PORT
      400 | 401,COMMENT
@@ -114,26 +145,37 @@ static const char* const ERR_GET_FAILURE       = "409";
   put,NODE_NAME,KEY,VALUE,TTL,unique
   -> 203,put,NODE_NAME,KEY,VALUE,TTL |
      400 | 401,COMMENT |
-     407,put,NODE_NAME,KEY,VALUE,TTL,COMMENT
+     408,put,NODE_NAME,KEY,VALUE,TTL,COMMENT
 
   get,NODE_NAME,key
   -> 204,get,NODE_NAME,KEY,VALUE1,VALUE2,VALUE3,... |
      400 | 401,COMMENT |
      408,get,NODE_NAME,KEY,COMMENT |
      409,get,NODE_NAME,KEY
+
+  rdp_listen,NODE_NAME,SOCK_NAME,RDP_DPORT
+  -> 206,rdp_listen,NODE_NAME,SOCK_NAME,RDP_DPORT |
+     400 | 401,COMMENT |
+     407,rdp_listen,NODE_NAME,SOCK_NAME,RDP_DPORT |
+     408,rdp_listen,NODE_NAME,SOCK_NAME,RDP_DPORT
+
+  rdp_connect,NODE_NAME,SOCK_NAME,RDP_DADDR,RDP_DPORT,
+  -> 206,rdp_connect,NODE_NAME,SOCK_NAME,RDP_DADDR,RDP_DPORT |
+     400 | 401,COMMENT |
+     407,rdp_connect,NODE_NAME,SOCK_NAME,RDP_DADDR,RDP_DPORT |
+     408,rdp_connect,NODE_NAME,SOCK_NAME,RDP_DADDR,RDP_DPORT
  */
 
 int
 main(int argc, char** argv)
 {
-    //pid_t pid;
-    //bool  is_daemon = false;
+    pid_t pid;
 
     int   opt;
     const char* path = NULL;
 
 
-    while ((opt = getopt(argc, argv, "hf:")) != -1) {
+    while ((opt = getopt(argc, argv, "dhf:")) != -1) {
         switch (opt) {
                 case 'h':
                         usage(argv[0]);
@@ -141,11 +183,10 @@ main(int argc, char** argv)
                 case 'f':
                         path = optarg;
                         break;
-                        
-                /*
                 case 'd':
                         is_daemon = true;
                         break;
+                /*
                 case 'p':
                         port = atoi(optarg);
                         break;
@@ -153,25 +194,26 @@ main(int argc, char** argv)
                 }
         }
 
-        /*
         if (is_daemon) {
-                if ((pid = fork()) < 0) {
-                        return -1;
-                } else {
-                        exit(0);
-                }
-
+            if ((pid = fork()) < 0) {
+                //printf("cant fork!!\n");
+                return -1;
+            } else if (pid != 0) {
+                //printf("parent process!!\n");
+                exit(0);
+            } else {
+                //printf("forked process!!\n");
                 setsid();
                 chdir("/");
                 umask(0);
-        }
-        */
-        
-        if (path == NULL) {
-            path = "/tmp/sock_cage";
+            }
         }
 
-        //printf("path:%s\n", path);
+        if (path == NULL) {
+            path = "/tmp/sock_cage";
+            //printf("path:%s\n", path);
+        }
+
 
         event_init();
 
@@ -358,7 +400,9 @@ start_listen(const char* path)
             }
         }
 
-        fprintf(stderr, "cage: preparations for listen\n");
+        if (is_daemon == false) {
+            fprintf(stderr, "cage: preparations for listen\n");
+        }
 
         event_set(ev, sock_fd, EV_READ | EV_PERSIST, &callback_accept, NULL);
         event_add(ev, NULL);
@@ -369,64 +413,64 @@ start_listen(const char* path)
 void
 callback_accept(int sockfd, short ev, void *arg)
 {
-        if (ev == EV_READ) {
-                sockaddr_in saddr_in;
-                socklen_t len = sizeof(saddr_in);
-                int fd = accept(sockfd, (sockaddr*)&saddr_in, &len);
+    if (ev == EV_READ) {
+        sockaddr_in saddr_in;
+        socklen_t len = sizeof(saddr_in);
+        int fd = accept(sockfd, (sockaddr*)&saddr_in, &len);
 
-                boost::shared_ptr<event> readev(new event);
+        boost::shared_ptr<event> readev(new event);
 
-                sock2ev[fd] = readev;
+        sock2ev[fd] = readev;
 
-                event_set(readev.get(), fd, EV_READ | EV_PERSIST,
-                          &callback_read, NULL);
-                event_add(readev.get(), NULL);
-
-        }
+        event_set(readev.get(), fd, EV_READ | EV_PERSIST, &callback_read, NULL);
+        event_add(readev.get(), NULL);
+    }
+    return;
 }
 
 void
 callback_read(int sockfd, short ev, void *arg)
 {
-        ssize_t size;
-        char    buf[1024 * 64];
+    ssize_t size;
+    char    buf[1024 * 64];
 
-        if (ev == EV_READ) {
+    if (ev == EV_READ) {
         retry:
-                size = recv(sockfd, buf, sizeof(buf) - 1, 0);
+        size = recv(sockfd, buf, sizeof(buf)-1, 0);
 
-                if (size <= 0) {
-                        if (size == -1) {
-                                if (errno == EINTR)
-                                        goto retry;
+        if (size <= 0) {
+            if (size == -1) {
+                if (errno == EINTR)
+                    goto retry;
 
-                                perror("recv");
-                        }
+                perror("recv");
+            }
 
-                        event_del(sock2ev[sockfd].get());
-                        sock2ev.erase(sockfd);
+            event_del(sock2ev[sockfd].get());
+            sock2ev.erase(sockfd);
 
-                        shutdown(sockfd, SHUT_RDWR);
+            shutdown(sockfd, SHUT_RDWR);
 
-                        return;
-                }
-
-                //fprintf(stderr, "cage_read:%lu:%s\n", strlen(buf), buf);
-
-                buf[size - 1] = '\0';
-
-                std::string    str(buf);
-                replace(str, "\r\n", "\n");
-                replace(str, "\r", "\n");
-
-                char_separator sep("\n", "", boost::drop_empty_tokens);
-                tokenizer      tokens(str, sep);
-
-                for (tokenizer::iterator it = tokens.begin();
-                     it != tokens.end(); ++it) {
-                        do_command(sockfd, *it);
-                }
+            return;
         }
+
+        //fprintf(stderr, "cage_read:%lu:%s\n", strlen(buf), buf);
+
+        buf[size - 1] = '\0';
+
+        std::string    str(buf);
+        replace(str, "\r\n", "\n");
+        replace(str, "\r", "\n");
+
+        char_separator sep("\n", "", boost::drop_empty_tokens);
+        tokenizer      tokens(str, sep);
+
+        for (tokenizer::iterator it = tokens.begin();
+                it != tokens.end(); ++it) {
+            do_command(sockfd, *it);
+        }
+    }
+    return;
 }
 
 void
@@ -459,6 +503,9 @@ do_command(int sockfd, std::string command)
         } else if (*it == "set_id") {
                 D(std::cout << "process set_id" << std::endl;);
                 process_set_id(sockfd, ++it, tokens.end());
+        } else if (*it == "get_id") {
+                D(std::cout << "process get_id" << std::endl;);
+                process_get_id(sockfd, ++it, tokens.end());
         } else if (*it == "join") {
                 D(std::cout << "process join" << std::endl;);
                 process_join(sockfd, ++it, tokens.end());
@@ -468,15 +515,18 @@ do_command(int sockfd, std::string command)
         } else if (*it == "get") {
                 D(std::cout << "process get" << std::endl);
                 process_get(sockfd, ++it, tokens.end());
+        } else if (*it == "rdp_listen") {
+                D(std::cout << "process rdp_listen" << std::endl);
+                process_rdp_listen(sockfd, ++it, tokens.end());
+        } else if (*it == "rdp_connect") {
+                D(std::cout << "process rdp_connect" << std::endl);
+                process_rdp_connect(sockfd, ++it, tokens.end());
         } else {
                 D(std::cout << "unknown command: " << *it << std::endl);
-
                 char result[1024*64];
-
                 // format: 400,COMMENT
                 snprintf(result, sizeof(result), 
-                         "400,unknown command. cannot recognize '%s'\n",
-                         it->c_str());
+                         "400,unknown command. cannot recognize '%s'\n", it->c_str());
                 send(sockfd, result, strlen(result), 0);
         }
 }
@@ -488,7 +538,7 @@ process_set_id(int sockfd, esc_tokenizer::iterator &it,
         name2node_type::iterator it_n2n;
         std::string node_name;
         std::string esc_node_name;
-        char        result[1024 * 64];
+        char result[1024 * 64];
 
         // read node_name
         if (it == end || it->length() == 0) {
@@ -532,8 +582,56 @@ process_set_id(int sockfd, esc_tokenizer::iterator &it,
         it_n2n->second->set_id(it->c_str(), it->size());
 
         // format: 205,set_id,NODE_NAME,IDENTIFIER
-        snprintf(result, sizeof(result), "205,set_id,%s,%s\n",
-                 esc_node_name.c_str(), it->c_str());
+        snprintf(result, sizeof(result), "%s,set_id,%s,%s\n",
+                 SUCCEEDED_SET_ID, esc_node_name.c_str(), it->c_str());
+        send(sockfd, result, strlen(result), 0);
+}
+
+void
+process_get_id(int sockfd, esc_tokenizer::iterator &it,
+               const esc_tokenizer::iterator &end)
+{
+        name2node_type::iterator it_n2n;
+        std::string node_name;
+        std::string esc_node_name;
+        char result[1024 * 64];
+
+        // read node_name
+        if (it == end || it->length() == 0) {
+                // there is no port number
+                // format: 401,COMMENT
+                snprintf(result, sizeof(result),
+                         "401,node name is required\n");
+                send(sockfd, result, strlen(result), 0);
+                return;
+        }
+
+        node_name = *it;
+        esc_node_name = *it;
+        replace(esc_node_name, ",", "\\,");
+
+        it_n2n = name2node.find(node_name);
+        if (it_n2n == name2node.end()) {
+                // invalid node name
+                // format: 404,delete,NODE_NAME,COMMENT
+                snprintf(result, sizeof(result),
+                         "%s,delete,%s,no such node named '%s'\n",
+                         ERR_DEL_NO_SUCH_NODE, esc_node_name.c_str(),
+                         esc_node_name.c_str());
+                send(sockfd, result, strlen(result), 0);
+                return;
+        }
+
+        uint8_t addr[CAGE_ID_LEN];
+        it_n2n->second->get_id(addr);
+        std::vector<uint8_t> v;
+        v.assign(addr,addr+sizeof(addr));
+        std::string addr_str;
+        base64::encode(v, addr_str);
+
+        // format: 205,set_id,NODE_NAME,IDENTIFIER
+        snprintf(result, sizeof(result), "%s,set_id,%s,%s\n",
+                 SUCCEEDED_GET_ID, esc_node_name.c_str(), addr_str.c_str());
         send(sockfd, result, strlen(result), 0);
 }
 
@@ -543,9 +641,10 @@ process_new(int sockfd, esc_tokenizer::iterator &it,
 {
         std::string node_name;
         std::string esc_node_name;
-        int         port;
-        char        result[1024 * 64];
-        bool        is_global = false;
+
+        int port;
+        char result[1024 * 64];
+        bool is_global = false;
 
         // read node_name
         if (it == end || it->length() == 0) {
@@ -650,7 +749,8 @@ process_delete(int sockfd, esc_tokenizer::iterator &it,
         name2node_type::iterator it_n2n;
         std::string node_name;
         std::string esc_node_name;
-        char        result[1024 * 64];
+
+        char result[1024 * 64];
 
 
         if (it == end) {
@@ -731,13 +831,15 @@ public:
 void process_join(int sockfd, esc_tokenizer::iterator &it,
                   const esc_tokenizer::iterator &end)
 {
+        func_join   func;
         std::string node_name;
         std::string esc_node_name;
         std::string host;
         std::string esc_host;
-        int         port;
-        func_join   func;
-        char        result[1024 * 64];
+
+        int port;
+        char result[1024 * 64];
+
         name2node_type::iterator it_n2n;
 
         if (it == end) {
@@ -824,9 +926,10 @@ void process_put(int sockfd, esc_tokenizer::iterator &it,
         std::string esc_node_name;
         std::string key, value;
         std::string esc_key, esc_value;
-        uint16_t    ttl;
-        bool        is_unique = false;
-        char        result[1024 * 64];
+
+        uint16_t ttl;
+        bool is_unique = false;
+        char result[1024 * 64];
 
         if (it == end) {
                 // there is no node_name
@@ -909,7 +1012,7 @@ void process_put(int sockfd, esc_tokenizer::iterator &it,
                 // format: 407,put,NODE_NAME,KEY,VALUE,TTL,COMMENT
                 snprintf(result, sizeof(result),
                          "%s,put,%s,%s,%s,%d,no such node named '%s'\n",
-                         ERR_PUT_NO_SUCH_NODE, esc_node_name.c_str(),
+                         ERR_NO_SUCH_NODE, esc_node_name.c_str(),
                          esc_key.c_str(), esc_value.c_str(), ttl,
                          esc_node_name.c_str());
                 send(sockfd, result, strlen(result), 0);
@@ -1005,12 +1108,13 @@ public:
 void process_get(int sockfd, esc_tokenizer::iterator &it,
                  const esc_tokenizer::iterator &end)
 {
+        func_get    func;
         std::string node_name;
         std::string esc_node_name;
         std::string key;
         std::string esc_key;
-        char        result[1024 * 64];
-        func_get    func;
+
+        char result[1024 * 64];
 
         if (it == end) {
                 // there is no node_name
@@ -1048,7 +1152,7 @@ void process_get(int sockfd, esc_tokenizer::iterator &it,
                 // format: 408,NODE_NAME,get,KEY,COMMENT
                 snprintf(result, sizeof(result),
                          "%s,get,%s,%s,no such node named '%s'\n",
-                         ERR_GET_NO_SUCH_NODE, esc_node_name.c_str(),
+                         ERR_NO_SUCH_NODE, esc_node_name.c_str(),
                          esc_key.c_str(), esc_node_name.c_str());
                 send(sockfd, result, strlen(result), 0);
                 return;
@@ -1063,3 +1167,535 @@ void process_get(int sockfd, esc_tokenizer::iterator &it,
         func.sockfd        = sockfd;
         it_n2n->second->get(key.c_str(), key.length(), func);
 }
+
+class func_rdp_listen
+{
+public:
+        int listenfd;
+        int nsockfd;
+        int connfd;
+        int desc;
+        std::string esc_node_name;
+        std::string esc_sock_name;
+        std::string esc_rdp_port;
+        libcage::cage &m_cage;
+
+        func_rdp_listen(libcage::cage &c) : m_cage(c) { }
+        void operator() (int desc, libcage::rdp_addr addr, libcage::rdp_event event);
+};
+
+void
+func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_event event)
+{
+    // XXX rdpから受け取った時の処理を記述
+    switch (event) {
+        case libcage::CONNECTED:
+        {
+            // not implementation
+            break;
+        }
+        case libcage::ACCEPTED:
+        {
+            // not implementation
+            break;
+        }
+        case libcage::READY2READ:
+        {
+            // not implementation
+            break;
+        }
+        case libcage::BROKEN:
+        {
+            D(std::cout << "broken pipe" << std::endl);
+            m_cage.rdp_close(desc);
+            break;
+        }
+        case libcage::RESET:
+        {
+            D(std::cout << "reset by peer" << std::endl);
+            m_cage.rdp_close(desc);
+            break;
+        }
+        case libcage::FAILED:
+        {
+            D(std::cout << "failed in connecting" << std::endl);
+            m_cage.rdp_close(desc);
+            break;
+        }
+        default:
+        {
+            ;
+        }
+    }
+}
+
+
+void process_rdp_listen(int sockfd, esc_tokenizer::iterator &it,
+                        const esc_tokenizer::iterator &end)
+{
+    std::string node_name;
+    std::string esc_node_name;
+    std::string sock_name;
+    std::string esc_sock_name;
+    std::string rdp_port;
+    std::string esc_rdp_port;
+
+    char result[1024 * 64];
+
+    if (it == end) {
+        // there is no node_name
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result), "401,node name is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    node_name = *it;
+    esc_node_name = node_name;
+    replace(esc_node_name, ",", "\\,");
+
+    ++it;
+    if (it == end) {
+        // there is no socket_name
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result), "401,socket name is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    sock_name = *it;
+    esc_sock_name = sock_name;
+    replace(esc_sock_name, ",", "\\,");
+
+    ++it;
+    if (it == end) {
+        // there is no rdp_port
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result), "401,rdp port is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    rdp_port = *it;
+    esc_rdp_port = rdp_port;
+    replace(esc_rdp_port, ",", "\\,");
+
+    // -- processing part
+    // get node name in node list
+    name2node_type::iterator it_n2n;
+    it_n2n = name2node.find(node_name);
+    if (it_n2n == name2node.end()) {
+        // invalid node name
+        // format: 408,NODE_NAME,get,KEY,COMMENT
+        snprintf(result, sizeof(result),
+                "%s,rdp_listen,%s,%s,%s,no such node named '%s'\n",
+                ERR_NO_SUCH_NODE, esc_node_name.c_str(),
+                esc_sock_name.c_str(), esc_rdp_port.c_str(),
+                esc_node_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    // -- debug message --
+    D(std::cout << "    node_name: " << node_name
+                << "\n"
+                << "    sock_name: " << sock_name
+                << "\n"
+                << "    rdp_port : " << rdp_port
+                << std::endl);
+
+    // named_socket create..
+    int nsockfd;
+    nsockfd = create_named_socket(esc_sock_name.c_str());
+    if (nsockfd == -1) {
+        snprintf(result, sizeof(result),
+                "401,can't use %s\n", esc_sock_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    // dispatch processing in libcage
+    func_rdp_listen* opaque = new func_rdp_listen(*it_n2n->second.get());
+    opaque->esc_node_name    = esc_node_name;
+    opaque->esc_sock_name    = esc_sock_name;
+    opaque->esc_rdp_port     = esc_rdp_port;
+    opaque->listenfd         = sockfd;
+    opaque->nsockfd          = nsockfd;
+
+    // set to ev for writing event callback
+    boost::shared_ptr<event> readev(new event);
+    sock2ev[nsockfd] = readev;
+    event_set(readev.get(), nsockfd, EV_READ | EV_PERSIST,
+              &callback_lsock_accept, (void*)opaque);
+    event_add(readev.get(), NULL);
+
+    // format: 206,rdp_listen,NODE_NAME,SOCK_NAME,PORT_NUMBER
+    snprintf(result, sizeof(result),
+            "%s,rdp_listen,%s,%s,%s\n",
+            SUCCEEDED_RDP_LISTEN, esc_node_name.c_str(),
+            esc_sock_name.c_str(), esc_rdp_port.c_str());
+    send(sockfd, result, strlen(result), 0);
+    return;
+}
+
+void callback_lsock_accept(int fd, short ev, void* arg)
+{
+    func_rdp_listen* opaque;
+    opaque = (func_rdp_listen*)arg;
+
+    if (ev == EV_READ) {
+        struct sockaddr_storage sa_storage;
+        socklen_t sa_len = sizeof(sa_storage);
+        memset(&sa_storage, 0, sizeof(sa_storage));
+
+        int conn_fd;
+        conn_fd = accept(fd, (struct sockaddr*)&sa_storage, &sa_len);
+        opaque->connfd = conn_fd;
+
+        uint16_t num_port = atoi(opaque->esc_rdp_port.c_str());
+        opaque->desc = opaque->m_cage.rdp_listen(num_port, *opaque);
+
+        boost::shared_ptr<event> readev(new event);
+        sock2ev[conn_fd] = readev;
+
+        event_set(readev.get(), conn_fd, EV_READ | EV_PERSIST,
+                  &callback_lsock_read, (void*)opaque);
+        event_add(readev.get(), NULL);
+    } 
+    return;
+}
+
+void callback_lsock_read(int fd, short ev, void* arg)
+{
+    func_rdp_listen* opaque;
+    opaque = (func_rdp_listen*)arg;
+
+    char buf[1024 * 64];
+    memset(buf, 0, sizeof(buf));
+
+    int rsize;
+    rsize = recv(fd, buf, sizeof(buf), 0);
+    //printf("recv_size:%d\n", rsize);
+    //printf("recv_buf:%s\n", buf);
+
+    if (rsize > 0) {
+        //何処に送るのかを調べてrdp_sendに送信する
+        // -- ex XXX named_socket から受け取った時の処理を記述--
+        //int desc = ((struct opaque_lsock_accept*)arg)->desc;
+        //libcage::cage* cage = ((struct opaque_lsock_accept*)arg)->cage;
+        //cage->rdp_send(desc, buf, size);
+        send(fd, buf, strlen(buf), 0);
+        return;
+    } else {
+        // peer socket close
+        event_del(sock2ev[fd].get());
+        sock2ev.erase(fd);
+        shutdown(fd, SHUT_RDWR);
+        return;
+    }
+}
+
+class func_rdp_connect
+{
+public:
+        int nsockfd;
+        int connfd;
+        int desc;
+        std::string esc_node_name;
+        std::string esc_sock_name;
+        std::string esc_rdp_port;
+        std::string esc_rdp_addr;
+        libcage::cage &m_cage;
+
+        func_rdp_connect(libcage::cage &c) : m_cage(c) { }
+        void operator() (int desc, libcage::rdp_addr addr, libcage::rdp_event event);
+};
+
+void
+func_rdp_connect::operator() (int desc,
+                              libcage::rdp_addr addr,
+                              libcage::rdp_event event)
+{
+    // XXX rdpから受け取った時の処理を記述
+    switch (event) {
+        case libcage::CONNECTED:
+        {
+            // not implementation
+            break;
+        }
+        case libcage::ACCEPTED:
+        {
+            // not implementation
+            break;
+        }
+        case libcage::READY2READ:
+        {
+            // not implementation
+            break;
+        }
+        case libcage::BROKEN:
+        {
+            D(std::cout << "broken pipe" << std::endl);
+            m_cage.rdp_close(desc);
+            break;
+        }
+        case libcage::RESET:
+        {
+            D(std::cout << "reset by peer" << std::endl);
+            m_cage.rdp_close(desc);
+            break;
+        }
+        case libcage::FAILED:
+        {
+            D(std::cout << "failed in connecting" << std::endl);
+            m_cage.rdp_close(desc);
+            break;
+        }
+        default:
+        {
+            ;
+        }
+    }
+}
+
+
+void process_rdp_connect(int sockfd, esc_tokenizer::iterator &it,
+                        const esc_tokenizer::iterator &end)
+{
+    std::string node_name;
+    std::string esc_node_name;
+    std::string sock_name;
+    std::string esc_sock_name;
+    std::string rdp_port;
+    std::string esc_rdp_port;
+    std::string rdp_addr;
+    std::string esc_rdp_addr;
+
+    char result[1024 * 64];
+
+    if (it == end) {
+        // there is no node_name
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result), "401,node name is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    node_name = *it;
+    esc_node_name = node_name;
+    replace(esc_node_name, ",", "\\,");
+
+    ++it;
+    if (it == end) {
+        // there is no socket_name
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result), "401,socket name is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    sock_name = *it;
+    esc_sock_name = sock_name;
+    replace(esc_sock_name, ",", "\\,");
+
+    ++it;
+    if (it == end) {
+        // there is no rdp_port
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result), "401,rdp addr is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    rdp_addr = *it;
+    esc_rdp_addr = rdp_addr;
+    replace(esc_rdp_addr, ",", "\\,");
+
+    ++it;
+    if (it == end) {
+        // there is no rdp_port
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result), "401,rdp port is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    rdp_port = *it;
+    esc_rdp_port = rdp_port;
+    replace(esc_rdp_port, ",", "\\,");
+
+    // -- processing part
+    // get node name in node list
+    name2node_type::iterator it_n2n;
+    it_n2n = name2node.find(node_name);
+    if (it_n2n == name2node.end()) {
+        // invalid node name
+        // format: 408,NODE_NAME,get,KEY,COMMENT
+        snprintf(result, sizeof(result),
+                "%s,rdp_connect,%s,%s,%s,no such node named '%s'\n",
+                ERR_NO_SUCH_NODE, esc_node_name.c_str(),
+                esc_sock_name.c_str(), esc_rdp_port.c_str(),
+                esc_node_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    // -- debug message --
+    D(std::cout << "    node_name: " << node_name
+                << "\n"
+                << "    sock_name: " << sock_name
+                << "\n"
+                << "    rdp_port : " << rdp_port
+                << std::endl);
+
+    // named_socket create..
+    int nsockfd;
+    nsockfd = create_named_socket(esc_sock_name.c_str());
+    if (nsockfd == -1) {
+        snprintf(result, sizeof(result),
+                "401,can't use %s\n", esc_sock_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    // dispatch processing in libcage
+    func_rdp_connect* opaque = new func_rdp_connect(*it_n2n->second.get());
+    opaque->esc_node_name    = esc_node_name;
+    opaque->esc_sock_name    = esc_sock_name;
+    opaque->esc_rdp_port     = esc_rdp_port;
+    opaque->esc_rdp_addr     = esc_rdp_addr;
+    opaque->nsockfd          = nsockfd;
+
+    // set to ev for writing event callback
+    boost::shared_ptr<event> readev(new event);
+    sock2ev[nsockfd] = readev;
+    event_set(readev.get(), nsockfd, EV_READ | EV_PERSIST,
+              &callback_csock_accept, (void*)opaque);
+    event_add(readev.get(), NULL);
+
+    // format: 207,rdp_connect,NODE_NAME,SOCK_NAME,PORT_NUMBER
+    snprintf(result, sizeof(result),
+            "%s,rdp_connect,%s,%s,%s\n",
+            SUCCEEDED_RDP_CONNECT, esc_node_name.c_str(),
+            esc_sock_name.c_str(), esc_rdp_port.c_str());
+    send(sockfd, result, strlen(result), 0);
+    return;
+}
+
+void callback_csock_accept(int fd, short ev, void *arg)
+{
+    func_rdp_connect* opaque;
+    opaque = (func_rdp_connect*)arg;
+
+    if (ev == EV_READ) {
+        struct sockaddr_storage sa_storage;
+        socklen_t sa_len = sizeof(sa_storage);
+        memset(&sa_storage, 0, sizeof(sa_storage));
+
+        int conn_fd;
+        conn_fd = accept(fd, (struct sockaddr*)&sa_storage, &sa_len);
+        opaque->connfd = conn_fd;
+
+        libcage::id_ptr id(new libcage::uint160_t);
+        std::vector<uint8_t>v;
+        base64::decode(opaque->esc_rdp_addr, v);
+        uint8_t* mem = (uint8_t*)malloc(v.size());
+        uint8_t* seeker = mem;
+        memset(mem, 0, v.size());
+        std::vector<uint8_t>::const_iterator it;
+        for (it = v.begin(); it != v.end(); ++it) {
+            *seeker = *it;
+            seeker++;
+        }
+        id->from_binary(mem, v.size());
+        free(mem);
+
+        uint16_t rdp_d_port;
+        rdp_d_port = atoi(opaque->esc_rdp_port.c_str());
+
+        uint16_t rdp_s_port;
+        rdp_s_port = 0;
+
+        opaque->desc = opaque->m_cage.rdp_connect(rdp_s_port, id, rdp_d_port, *opaque);
+
+        boost::shared_ptr<event> readev(new event);
+        sock2ev[conn_fd] = readev;
+
+        event_set(readev.get(), conn_fd, EV_READ | EV_PERSIST,
+                  &callback_lsock_read, (void*)opaque);
+        event_add(readev.get(), NULL);
+    } 
+    return;
+}
+
+void callback_csock_read(int fd, short ev, void *arg)
+{
+    func_rdp_connect* opaque;
+    opaque = (func_rdp_connect*)arg;
+
+    char buf[1024 * 64];
+    memset(buf, 0, sizeof(buf));
+
+    int rsize;
+    rsize = recv(fd, buf, sizeof(buf), 0);
+    if (rsize > 0) {
+        //何処に送るのかを調べてrdp_sendに送信する
+        // -- ex XXX named_socket から受け取った時の処理を記述--
+        //int desc = ((struct opaque_lsock_accept*)arg)->desc;
+        //libcage::cage* cage = ((struct opaque_lsock_accept*)arg)->cage;
+        //cage->rdp_send(desc, buf, size);
+        send(fd, buf, strlen(buf), 0);
+        return;
+    } else {
+        // peer socket close
+        event_del(sock2ev[fd].get());
+        sock2ev.erase(fd);
+        shutdown(fd, SHUT_RDWR);
+        return;
+    }
+    return;
+}
+
+int create_named_socket(const char* path)
+{
+        int err = 0;
+
+        int sock_fd;
+        sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+
+        if (sock_fd == -1) { 
+            err = -1;
+        } 
+
+        if (err == 0) {
+            int on = 1;
+            int ret;
+            ret = setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
+            if (ret != 0) {
+                err = -1;
+            }
+        }
+
+        if (err == 0) {
+            int ret;
+            ret = bind_safe(sock_fd, path);
+            if (ret != 0) {
+                close(sock_fd);
+                err = -1;
+            }
+        }
+
+        if (err == 0) {
+            if (listen(sock_fd, 10) < 0) {
+                close(sock_fd);
+                err = -1;
+            }
+        }
+
+        if (err == 0) {
+            return sock_fd;
+        } else {
+            return -1;
+        }
+}
+

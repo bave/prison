@@ -35,6 +35,7 @@ int main(int argc, char** argv)
         err = errno;
         perror("socket");
     } 
+
     if (err == 0) {
         err = setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
         if (err != 0) {
@@ -79,9 +80,8 @@ int main(int argc, char** argv)
 
         if (ret == NULL) {
             fflush(stdin);
-            continue;
+            break;
         }
-
 
         if (strcmp(buffer, "\n") == 0) {
             fflush(stdin);
@@ -89,6 +89,12 @@ int main(int argc, char** argv)
         }
 
         if (strcmp(buffer, "list\n") == 0) {
+            list();
+            fflush(stdin);
+            continue;
+        }
+
+        if (strcmp(buffer, "?\n") == 0) {
             list();
             fflush(stdin);
             continue;
@@ -130,35 +136,47 @@ void list(void) {
     "\n"
     "new,NODE_NAME,PORT_NUMBER | new,NODE_NAME,PORT_NUMBER,global\n"
     "-> 200,new,NODE_NAME,PORT_NUMBER |\n"
-    "   400 | 401,COMMENT |\n"
-    "   402 | 403,new,NODE_NAME,PORT_NUMBER,COMMENT\n"
+    //"   400 | 401,COMMENT |\n"
+    //"   402 | 403,new,NODE_NAME,PORT_NUMBER,COMMENT\n"
     "\n"
     "delete,NODE_NAME\n"
     "-> 201,delete,NODE_NAME |\n"
-    "   404,delete,NODE_NAME,COMMENT\n"
+    //"   404,delete,NODE_NAME,COMMENT\n"
     "\n"
     "set_id,NODE_NAME,IDNETIFIER\n"
     "-> 205,set_id,NODE_NAME,IDENTIFIER |\n"
-    "   400 | 401,COMMENT\n"
+    "\n"
+    "get_id,NODE_NAME\n"
+    "-> 208,get_id,NODE_NAME,IDENTIFIER |\n"
+    //"   400 | 401,COMMENT\n"
     "\n"
     "join,NODE_NAME,HOST,PORT\n"
     "-> 202,join,NODE_NAME,HOST,PORT\n"
-    "   400 | 401,COMMENT\n"
-    "   405 | 406,join,NODE_NAME,HOST,PORT,COMMENT\n"
+    //"   400 | 401,COMMENT\n"
+    //"   405 | 406,join,NODE_NAME,HOST,PORT,COMMENT\n"
     "\n"
     "put,NODE_NAME,KEY,VALUE,TTL | put,NODE_NAME,KEY,VALUE,TTL,unique\n"
     "-> 203,put,NODE_NAME,KEY,VALUE,TTL\n"
-    "   400,COMMENT\n"
-    "   401,COMMENT\n"
-    "   407,put,NODE_NAME,KEY,VALUE,TTL,COMMENT\n"
+    //"   400,COMMENT\n"
+    //"   401,COMMENT\n"
+    //"   407,put,NODE_NAME,KEY,VALUE,TTL,COMMENT\n"
     "\n"
     "get,NODE_NAME,key\n"
     "-> 204,get,NODE_NAME,KEY,VALUE1,VALUE2,VALUE3,...\n"
-    "   400,COMMENT\n"
-    "   401,COMMENT\n"
-    "   408,get,KEY,COMMENT\n"
-    "   409,get,KEY\n"
+    //"   400,COMMENT\n"
+    //"   401,COMMENT\n"
+    //"   408,get,KEY,COMMENT\n"
+    //"   409,get,KEY\n"
     "\n"
+    "rdp_listen,NODE_NAME,SOCK_NAME,PORT\n"
+    "-> 206,rdp_listen,NODE_NAME,SOCK_NAME,PORT\n"
+    //"400,COMMENT\n"
+    //"401,COMMENT\n"
+    //"407,rdp_listen,NODE_NAME,SOCK_NAME,PORT\n"
+    //"408,rdp_listen,NODE_NAME,SOCK_NAME,PORT\n"
+    "\n"
+    "rdp_connect,NODE_NAME,SOCK_NAME,PORT\n"
+    "-> 207,rdp_listen,NODE_NAME,SOCK_NAME,RDP_DPORT,RDP_DADDR\n"
     "\n";
     printf("%s", usage_list);
     return;

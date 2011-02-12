@@ -1,6 +1,10 @@
 #ifndef __BASE64_HPP__
 #define __BASE64_HPP__
 
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include <iostream>
 #include <string>
 #include <vector>

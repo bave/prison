@@ -1,31 +1,30 @@
 -- PRISON --
 Port Relation Identifier Service with Ovarlay Network
 
-# was rejected
-# -- RAPRINS --
-# Rapidly Accessible Port Relation Identifier with Naming Service
-
+- checkout of svn --
+    - read-only
+        -> svn checkout https://svn.github.com/bave/prison.git
+        -> git clone https://bave@github.com/bave/prison.git
+        -> git clone git://github.com/bave/prison.git
 
 - using library
-    libcage - branch of libev
+    libcage
     libevent
     libresolv
     libgpgme
     libstd++
     boost
-
-- using framework
     Cocoa
-    Appkit
+        -> Appkit
+        -> Foudation
 
 - ToDo
     prison
+        -> default gw がついてない側のネットワークは利用できない
+           リンクローカル側でのテストに支障をきたす可能性があり．
 
-	libcage
-        -> uniqe [fin]
-        -> multi [fin]
+    libcage
+        -> rdp_socket を利用した caged をつくる
 
     FrontEnd
-        host viewer
-        Group viewer
-        Service viewer
+        -> warden の実装がまだ．．

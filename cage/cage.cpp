@@ -177,54 +177,54 @@ main(int argc, char** argv)
 
     while ((opt = getopt(argc, argv, "dhf:")) != -1) {
         switch (opt) {
-                case 'h':
-                        usage(argv[0]);
-                        return 0;
-                case 'f':
-                        path = optarg;
-                        break;
-                case 'd':
-                        is_daemon = true;
-                        break;
-                /*
-                case 'p':
-                        port = atoi(optarg);
-                        break;
-                */
-                }
+        case 'h':
+            usage(argv[0]);
+            return 0;
+        case 'f':
+            path = optarg;
+            break;
+        case 'd':
+            is_daemon = true;
+            break;
+            /*
+           case 'p':
+           port = atoi(optarg);
+           break;
+           */
         }
+    }
 
-        if (is_daemon) {
-            if ((pid = fork()) < 0) {
-                //printf("cant fork!!\n");
-                return -1;
-            } else if (pid != 0) {
-                //printf("parent process!!\n");
-                exit(0);
-            } else {
-                //printf("forked process!!\n");
-                setsid();
-                chdir("/");
-                umask(0);
-            }
+    if (is_daemon) {
+        if ((pid = fork()) < 0) {
+            //printf("cant fork!!\n");
+            return -1;
+        } else if (pid != 0) {
+            //printf("parent process!!\n");
+            exit(0);
+        } else {
+            //printf("forked process!!\n");
+            setsid();
+            chdir("/");
+            umask(0);
         }
+    }
 
-        if (path == NULL) {
-            path = "/tmp/sock_cage";
-            //printf("path:%s\n", path);
-        }
+    if (path == NULL) {
+        path = "/tmp/sock_cage";
+        //printf("path:%s\n", path);
+    }
 
 
-        event_init();
+    event_init();
 
-        if (start_listen(path) == false) {
-                perror("start_listen");
-                return -1;
-        }
+    if (start_listen(path) == false) {
+        perror("start_listen");
+        return -1;
+    }
 
-        event_dispatch();
+    event_dispatch();
 
-        return 0;
+    return 0;
 }
 
 void
@@ -364,50 +364,50 @@ bind_safe(int sock_fd, const char* path)
 bool
 start_listen(const char* path)
 {
-        event *ev = new event;
+    event *ev = new event;
 
-        int err = 0;
-        int on = 1;
-        int sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
-        if (sock_fd == -1) { 
+    int err = 0;
+    int on = 1;
+    int sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+    if (sock_fd == -1) { 
+        err = errno;
+        //perror("socket");
+    } 
+    if (err == 0) {
+        err = setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR,
+                (char*)&on, sizeof(on));
+        if (err != 0) {
             err = errno;
-            //perror("socket");
-        } 
-        if (err == 0) {
-            err = setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR,
-                                                (char*)&on, sizeof(on));
-            if (err != 0) {
-                err = errno;
-                //perror("setsockopt");
-            }
+            //perror("setsockopt");
         }
+    }
 
-        if (err == 0) {
-            err = bind_safe(sock_fd, path);
-            if (err != 0) {
-                err = errno;
-                close(sock_fd);
-                //perror("bind_safe");
-                return false;
-            }
+    if (err == 0) {
+        err = bind_safe(sock_fd, path);
+        if (err != 0) {
+            err = errno;
+            close(sock_fd);
+            //perror("bind_safe");
+            return false;
         }
-        if (err == 0) {
-            if (listen(sock_fd, 10) < 0) {
-                    close(sock_fd);
-                    err = errno;
-                    //perror("listen");
-                    return false;
-            }
+    }
+    if (err == 0) {
+        if (listen(sock_fd, 10) < 0) {
+            close(sock_fd);
+            err = errno;
+            //perror("listen");
+            return false;
         }
+    }
 
-        if (is_daemon == false) {
-            fprintf(stderr, "cage: preparations for listen\n");
-        }
+    if (is_daemon == false) {
+        fprintf(stderr, "cage: preparations for listen\n");
+    }
 
-        event_set(ev, sock_fd, EV_READ | EV_PERSIST, &callback_accept, NULL);
-        event_add(ev, NULL);
+    event_set(ev, sock_fd, EV_READ | EV_PERSIST, &callback_accept, NULL);
+    event_add(ev, NULL);
 
-        return true;
+    return true;
 }
 
 void
@@ -486,623 +486,629 @@ replace(std::string &str, std::string from, std::string to)
 void
 do_command(int sockfd, std::string command)
 {
-        esc_separator sep("\\", ",", "\"");
-        esc_tokenizer tokens(command, sep);
+    esc_separator sep("\\", ",", "\"");
+    esc_tokenizer tokens(command, sep);
 
-        esc_tokenizer::iterator it = tokens.begin();
+    esc_tokenizer::iterator it = tokens.begin();
 
-        if (it == tokens.end())
-                return;
+    if (it == tokens.end())
+        return;
 
-        if (*it == "new") {
-                D(std::cout << "process new" << std::endl);
-                process_new(sockfd, ++it, tokens.end());
-        } else if (*it == "delete") {
-                D(std::cout << "process delete" << std::endl);
-                process_delete(sockfd, ++it, tokens.end());
-        } else if (*it == "set_id") {
-                D(std::cout << "process set_id" << std::endl;);
-                process_set_id(sockfd, ++it, tokens.end());
-        } else if (*it == "get_id") {
-                D(std::cout << "process get_id" << std::endl;);
-                process_get_id(sockfd, ++it, tokens.end());
-        } else if (*it == "join") {
-                D(std::cout << "process join" << std::endl;);
-                process_join(sockfd, ++it, tokens.end());
-        } else if (*it == "put") {
-                D(std::cout << "process put" << std::endl);
-                process_put(sockfd, ++it, tokens.end());
-        } else if (*it == "get") {
-                D(std::cout << "process get" << std::endl);
-                process_get(sockfd, ++it, tokens.end());
-        } else if (*it == "rdp_listen") {
-                D(std::cout << "process rdp_listen" << std::endl);
-                process_rdp_listen(sockfd, ++it, tokens.end());
-        } else if (*it == "rdp_connect") {
-                D(std::cout << "process rdp_connect" << std::endl);
-                process_rdp_connect(sockfd, ++it, tokens.end());
-        } else {
-                D(std::cout << "unknown command: " << *it << std::endl);
-                char result[1024*64];
-                // format: 400,COMMENT
-                snprintf(result, sizeof(result), 
-                         "400,unknown command. cannot recognize '%s'\n", it->c_str());
-                send(sockfd, result, strlen(result), 0);
-        }
+    if (*it == "new") {
+        D(std::cout << "process new" << std::endl);
+        process_new(sockfd, ++it, tokens.end());
+    } else if (*it == "delete") {
+        D(std::cout << "process delete" << std::endl);
+        process_delete(sockfd, ++it, tokens.end());
+    } else if (*it == "set_id") {
+        D(std::cout << "process set_id" << std::endl;);
+        process_set_id(sockfd, ++it, tokens.end());
+    } else if (*it == "get_id") {
+        D(std::cout << "process get_id" << std::endl;);
+        process_get_id(sockfd, ++it, tokens.end());
+    } else if (*it == "join") {
+        D(std::cout << "process join" << std::endl;);
+        process_join(sockfd, ++it, tokens.end());
+    } else if (*it == "put") {
+        D(std::cout << "process put" << std::endl);
+        process_put(sockfd, ++it, tokens.end());
+    } else if (*it == "get") {
+        D(std::cout << "process get" << std::endl);
+        process_get(sockfd, ++it, tokens.end());
+    } else if (*it == "rdp_listen") {
+        D(std::cout << "process rdp_listen" << std::endl);
+        process_rdp_listen(sockfd, ++it, tokens.end());
+    } else if (*it == "rdp_connect") {
+        D(std::cout << "process rdp_connect" << std::endl);
+        process_rdp_connect(sockfd, ++it, tokens.end());
+    } else {
+        D(std::cout << "unknown command: " << *it << std::endl);
+        char result[1024*64];
+        // format: 400,COMMENT
+        snprintf(result, sizeof(result), 
+                "400,unknown command. cannot recognize '%s'\n", it->c_str());
+        send(sockfd, result, strlen(result), 0);
+    }
 }
 
 void
 process_set_id(int sockfd, esc_tokenizer::iterator &it,
                const esc_tokenizer::iterator &end)
 {
-        name2node_type::iterator it_n2n;
-        std::string node_name;
-        std::string esc_node_name;
-        char result[1024 * 64];
+    name2node_type::iterator it_n2n;
+    std::string node_name;
+    std::string esc_node_name;
+    char result[1024 * 64];
 
-        // read node_name
-        if (it == end || it->length() == 0) {
-                // there is no port number
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,node name is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        node_name = *it;
-        esc_node_name = *it;
-        replace(esc_node_name, ",", "\\,");
-
-        it_n2n = name2node.find(node_name);
-        if (it_n2n == name2node.end()) {
-                // invalid node name
-                // format: 404,delete,NODE_NAME,COMMENT
-                snprintf(result, sizeof(result),
-                         "%s,delete,%s,no such node named '%s'\n",
-                         ERR_DEL_NO_SUCH_NODE, esc_node_name.c_str(),
-                         esc_node_name.c_str());
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        ++it;
-
-
-        // read port number
-        if (it == end) {
-                // there is no identifier
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,identifier is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        it_n2n->second->set_id(it->c_str(), it->size());
-
-        // format: 205,set_id,NODE_NAME,IDENTIFIER
-        snprintf(result, sizeof(result), "%s,set_id,%s,%s\n",
-                 SUCCEEDED_SET_ID, esc_node_name.c_str(), it->c_str());
+    // read node_name
+    if (it == end || it->length() == 0) {
+        // there is no port number
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,node name is required\n");
         send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    node_name = *it;
+    esc_node_name = *it;
+    replace(esc_node_name, ",", "\\,");
+
+    it_n2n = name2node.find(node_name);
+    if (it_n2n == name2node.end()) {
+        // invalid node name
+        // format: 404,delete,NODE_NAME,COMMENT
+        snprintf(result, sizeof(result),
+                "%s,delete,%s,no such node named '%s'\n",
+                ERR_DEL_NO_SUCH_NODE, esc_node_name.c_str(),
+                esc_node_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    ++it;
+
+
+    // read port number
+    if (it == end) {
+        // there is no identifier
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,identifier is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    it_n2n->second->set_id(it->c_str(), it->size());
+
+    // format: 205,set_id,NODE_NAME,IDENTIFIER
+    snprintf(result, sizeof(result), "%s,set_id,%s,%s\n",
+            SUCCEEDED_SET_ID, esc_node_name.c_str(), it->c_str());
+    send(sockfd, result, strlen(result), 0);
 }
 
 void
 process_get_id(int sockfd, esc_tokenizer::iterator &it,
                const esc_tokenizer::iterator &end)
 {
-        name2node_type::iterator it_n2n;
-        std::string node_name;
-        std::string esc_node_name;
-        char result[1024 * 64];
+    name2node_type::iterator it_n2n;
+    std::string node_name;
+    std::string esc_node_name;
+    char result[1024 * 64];
 
-        // read node_name
-        if (it == end || it->length() == 0) {
-                // there is no port number
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,node name is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        node_name = *it;
-        esc_node_name = *it;
-        replace(esc_node_name, ",", "\\,");
-
-        it_n2n = name2node.find(node_name);
-        if (it_n2n == name2node.end()) {
-                // invalid node name
-                // format: 404,delete,NODE_NAME,COMMENT
-                snprintf(result, sizeof(result),
-                         "%s,delete,%s,no such node named '%s'\n",
-                         ERR_DEL_NO_SUCH_NODE, esc_node_name.c_str(),
-                         esc_node_name.c_str());
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        uint8_t addr[CAGE_ID_LEN];
-        it_n2n->second->get_id(addr);
-        std::vector<uint8_t> v;
-        v.assign(addr,addr+sizeof(addr));
-        std::string addr_str;
-        base64::encode(v, addr_str);
-
-        // format: 205,set_id,NODE_NAME,IDENTIFIER
-        snprintf(result, sizeof(result), "%s,set_id,%s,%s\n",
-                 SUCCEEDED_GET_ID, esc_node_name.c_str(), addr_str.c_str());
+    // read node_name
+    if (it == end || it->length() == 0) {
+        // there is no port number
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,node name is required\n");
         send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    node_name = *it;
+    esc_node_name = *it;
+    replace(esc_node_name, ",", "\\,");
+
+    it_n2n = name2node.find(node_name);
+    if (it_n2n == name2node.end()) {
+        // invalid node name
+        // format: 404,delete,NODE_NAME,COMMENT
+        snprintf(result, sizeof(result),
+                "%s,delete,%s,no such node named '%s'\n",
+                ERR_DEL_NO_SUCH_NODE, esc_node_name.c_str(),
+                esc_node_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    //if get id is binary
+    /*
+    uint8_t addr[CAGE_ID_LEN];
+    it_n2n->second->get_id(addr);
+    std::vector<uint8_t> v;
+    v.assign(addr,addr+sizeof(addr));
+    std::string addr_str;
+    base64::encode(v, addr_str);
+    */
+
+    //if get id is std::string (HEX)
+    std::string addr_str = it_n2n->second->get_id_str();
+
+    // format: 205,set_id,NODE_NAME,IDENTIFIER
+    snprintf(result, sizeof(result), "%s,set_id,%s,%s\n",
+            SUCCEEDED_GET_ID, esc_node_name.c_str(), addr_str.c_str());
+    send(sockfd, result, strlen(result), 0);
 }
 
 void
 process_new(int sockfd, esc_tokenizer::iterator &it,
             const esc_tokenizer::iterator &end)
 {
-        std::string node_name;
-        std::string esc_node_name;
+    std::string node_name;
+    std::string esc_node_name;
 
-        int port;
-        char result[1024 * 64];
-        bool is_global = false;
+    int port;
+    char result[1024 * 64];
+    bool is_global = false;
 
-        // read node_name
-        if (it == end || it->length() == 0) {
-                // there is no port number
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,node name is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        node_name = *it;
-        esc_node_name = *it;
-        replace(esc_node_name, ",", "\\,");
-        ++it;
-
-
-        // read port number
-        if (it == end) {
-                // there is no port number
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,port number is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        try {
-                port = boost::lexical_cast<int>(*it);
-        } catch (boost::bad_lexical_cast) {
-                // no integer
-                // format: 401,COMMENT
-                std::string esc_port = *it;
-                replace(esc_port, ",", "\\,");
-                snprintf(result, sizeof(result),
-                         "401,'%s' is not a valid number\n",
-                         esc_port.c_str());
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        ++it;
-
-
-        // read option
-        if (it != end) {
-                if (*it == "global")
-                        is_global = true;
-        }
-
-        D(std::cout << "    node_name: " << node_name
-                    << "\n    port:      " << port
-                    << "\n    is_global: " << is_global << std::endl);
-
-        // check whether the node_name has been used already or not
-        if (name2node.find(node_name) != name2node.end()) {
-                // the node name has been already used
-                // format: 403,new,NODE_NAME,PORT_NUMBER,COMMENT
-                snprintf(result, sizeof(result),
-                         "%s,new,%s,%d,the node name '%s' exists already\n",
-                         ERR_ALREADY_EXIST, esc_node_name.c_str(), port,
-                         esc_node_name.c_str());
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        boost::shared_ptr<libcage::cage> c(new libcage::cage);
-
-        // open port
-        if (c->open(PF_INET, port) == false) {
-                // cannot open port
-                // format: 402,new,NODE_NAME,PORT_NUMBER,COMMENT
-                snprintf(result, sizeof(result),
-                         "%s,new,%s,%d,cannot open port(%d)\n",
-                         ERR_CANNOT_OPEN_PORT, esc_node_name.c_str(),
-                         port, port);
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        // set as global
-        if (is_global) {
-                c->set_global();
-        }
-
-        name2node[node_name] = c;
-
-        // send result
-        // format: 200,new,NODE_NAME,PORT_NUMBER
-        snprintf(result, sizeof(result), "%s,new,%s,%d\n", 
-                 SUCCEEDED_NEW, esc_node_name.c_str(), port);
-
+    // read node_name
+    if (it == end || it->length() == 0) {
+        // there is no port number
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,node name is required\n");
         send(sockfd, result, strlen(result), 0);
-
         return;
+    }
+
+    node_name = *it;
+    esc_node_name = *it;
+    replace(esc_node_name, ",", "\\,");
+    ++it;
+
+
+    // read port number
+    if (it == end) {
+        // there is no port number
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,port number is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    try {
+        port = boost::lexical_cast<int>(*it);
+    } catch (boost::bad_lexical_cast) {
+        // no integer
+        // format: 401,COMMENT
+        std::string esc_port = *it;
+        replace(esc_port, ",", "\\,");
+        snprintf(result, sizeof(result),
+                "401,'%s' is not a valid number\n",
+                esc_port.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    ++it;
+
+
+    // read option
+    if (it != end) {
+        if (*it == "global")
+            is_global = true;
+    }
+
+    D(std::cout << "    node_name: " << node_name
+            << "\n    port:      " << port
+            << "\n    is_global: " << is_global << std::endl);
+
+    // check whether the node_name has been used already or not
+    if (name2node.find(node_name) != name2node.end()) {
+        // the node name has been already used
+        // format: 403,new,NODE_NAME,PORT_NUMBER,COMMENT
+        snprintf(result, sizeof(result),
+                "%s,new,%s,%d,the node name '%s' exists already\n",
+                ERR_ALREADY_EXIST, esc_node_name.c_str(), port,
+                esc_node_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    boost::shared_ptr<libcage::cage> c(new libcage::cage);
+
+    // open port
+    if (c->open(PF_INET, port) == false) {
+        // cannot open port
+        // format: 402,new,NODE_NAME,PORT_NUMBER,COMMENT
+        snprintf(result, sizeof(result),
+                "%s,new,%s,%d,cannot open port(%d)\n",
+                ERR_CANNOT_OPEN_PORT, esc_node_name.c_str(),
+                port, port);
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    // set as global
+    if (is_global) {
+        c->set_global();
+    }
+
+    name2node[node_name] = c;
+
+    // send result
+    // format: 200,new,NODE_NAME,PORT_NUMBER
+    snprintf(result, sizeof(result), "%s,new,%s,%d\n", 
+            SUCCEEDED_NEW, esc_node_name.c_str(), port);
+
+    send(sockfd, result, strlen(result), 0);
+
+    return;
 }
 
 void
 process_delete(int sockfd, esc_tokenizer::iterator &it,
                const esc_tokenizer::iterator &end)
 {
-        name2node_type::iterator it_n2n;
-        std::string node_name;
-        std::string esc_node_name;
+    name2node_type::iterator it_n2n;
+    std::string node_name;
+    std::string esc_node_name;
 
-        char result[1024 * 64];
+    char result[1024 * 64];
 
 
-        if (it == end) {
-                // there is no node_name
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,node name is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        node_name = *it;
-        esc_node_name = *it;
-        replace(esc_node_name, ",", "\\,");
-
-        it_n2n = name2node.find(node_name);
-        if (it_n2n == name2node.end()) {
-                // invalid node name
-                // format: 404,delete,NODE_NAME,COMMENT
-                snprintf(result, sizeof(result),
-                         "%s,delete,%s,no such node named '%s'\n",
-                         ERR_DEL_NO_SUCH_NODE, esc_node_name.c_str(),
-                         esc_node_name.c_str());
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        D(std::cout << "    node_name: " << node_name);
-
-        name2node.erase(it_n2n);
-
-        // send result
-        // format: 201,delete,NODE_NAME
+    if (it == end) {
+        // there is no node_name
+        // format: 401,COMMENT
         snprintf(result, sizeof(result),
-                 "%s,delete,%s\n",
-                 SUCCEEDED_DELETE, esc_node_name.c_str());
+                "401,node name is required\n");
         send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    node_name = *it;
+    esc_node_name = *it;
+    replace(esc_node_name, ",", "\\,");
+
+    it_n2n = name2node.find(node_name);
+    if (it_n2n == name2node.end()) {
+        // invalid node name
+        // format: 404,delete,NODE_NAME,COMMENT
+        snprintf(result, sizeof(result),
+                "%s,delete,%s,no such node named '%s'\n",
+                ERR_DEL_NO_SUCH_NODE, esc_node_name.c_str(),
+                esc_node_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    D(std::cout << "    node_name: " << node_name);
+
+    name2node.erase(it_n2n);
+
+    // send result
+    // format: 201,delete,NODE_NAME
+    snprintf(result, sizeof(result),
+            "%s,delete,%s\n",
+            SUCCEEDED_DELETE, esc_node_name.c_str());
+    send(sockfd, result, strlen(result), 0);
 }
 
 class func_join
 {
 public:
-        std::string esc_node_name;
-        std::string esc_host;
-        int         port;
-        int         sockfd;
+    std::string esc_node_name;
+    std::string esc_host;
+    int         port;
+    int         sockfd;
 
-        void operator() (bool is_join) {
-                sock2ev_type::iterator it;
-                char result[1024 * 64];
+    void operator() (bool is_join) {
+        sock2ev_type::iterator it;
+        char result[1024 * 64];
 
-                it = sock2ev.find(sockfd);
-                if (it == sock2ev.end()) {
-                        return;
-                }
-
-                if (is_join) {
-                        // send result of the success
-                        // format: 202,join,NODE_NAME,HOST,PORT
-                        snprintf(result, sizeof(result),
-                                 "%s,join,%s,%s,%d\n",
-                                 SUCCEEDED_JOIN, esc_node_name.c_str(),
-                                 esc_host.c_str(), port);
-                        send(sockfd, result, strlen(result), 0);
-                } else {
-                        // send result of the fail
-                        // format: 406,join,NODE_NAME,HOST,PORT,COMMENT
-                        snprintf(result, sizeof(result),
-                                 "%s,join,%s,%s,%d,failed in connecting to '%s:%d'\n",
-                                 ERR_JOIN_FAILED, esc_node_name.c_str(),
-                                 esc_host.c_str(), port, esc_host.c_str(),
-                                 port);
-                        send(sockfd, result, strlen(result), 0);
-                }
+        it = sock2ev.find(sockfd);
+        if (it == sock2ev.end()) {
+            return;
         }
+
+        if (is_join) {
+            // send result of the success
+            // format: 202,join,NODE_NAME,HOST,PORT
+            snprintf(result, sizeof(result),
+                    "%s,join,%s,%s,%d\n",
+                    SUCCEEDED_JOIN, esc_node_name.c_str(),
+                    esc_host.c_str(), port);
+            send(sockfd, result, strlen(result), 0);
+        } else {
+            // send result of the fail
+            // format: 406,join,NODE_NAME,HOST,PORT,COMMENT
+            snprintf(result, sizeof(result),
+                    "%s,join,%s,%s,%d,failed in connecting to '%s:%d'\n",
+                    ERR_JOIN_FAILED, esc_node_name.c_str(),
+                    esc_host.c_str(), port, esc_host.c_str(),
+                    port);
+            send(sockfd, result, strlen(result), 0);
+        }
+    }
 };
 
 void process_join(int sockfd, esc_tokenizer::iterator &it,
                   const esc_tokenizer::iterator &end)
 {
-        func_join   func;
-        std::string node_name;
-        std::string esc_node_name;
-        std::string host;
-        std::string esc_host;
+    func_join   func;
+    std::string node_name;
+    std::string esc_node_name;
+    std::string host;
+    std::string esc_host;
 
-        int port;
-        char result[1024 * 64];
+    int port;
+    char result[1024 * 64];
 
-        name2node_type::iterator it_n2n;
+    name2node_type::iterator it_n2n;
 
-        if (it == end) {
-                // there is no node_name
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,node name is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
+    if (it == end) {
+        // there is no node_name
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,node name is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
 
-        node_name = *it;
-        esc_node_name = node_name;
-        replace(esc_node_name, ",", "\\,");
+    node_name = *it;
+    esc_node_name = node_name;
+    replace(esc_node_name, ",", "\\,");
 
-        ++it;
-        if (it == end) {
-                // there is no host
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,host is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
+    ++it;
+    if (it == end) {
+        // there is no host
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,host is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
 
-        host = *it;
-        esc_host = host;
-        replace(esc_host, ",", "\\,");
+    host = *it;
+    esc_host = host;
+    replace(esc_host, ",", "\\,");
 
-        ++it;
-        if (it == end) {
-                // there is no port number
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,port number is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
+    ++it;
+    if (it == end) {
+        // there is no port number
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,port number is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
 
 
-        try {
-                port = boost::lexical_cast<int>(*it);
-        } catch (boost::bad_lexical_cast) {
-                // no integer
-                // format: 401,COMMENT
-                std::string esc_port = *it;
-                replace(esc_port, ",", "\\,");
-                snprintf(result, sizeof(result),
-                         "401,'%s' is not a valid number\n",
-                         esc_port.c_str());
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
+    try {
+        port = boost::lexical_cast<int>(*it);
+    } catch (boost::bad_lexical_cast) {
+        // no integer
+        // format: 401,COMMENT
+        std::string esc_port = *it;
+        replace(esc_port, ",", "\\,");
+        snprintf(result, sizeof(result),
+                "401,'%s' is not a valid number\n",
+                esc_port.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
 
-        it_n2n = name2node.find(node_name);
-        if (it_n2n == name2node.end()) {
-                // invalid node name
-                // format: 405,join,NODE_NAME,HOST,PORT,COMMENT
-                snprintf(result, sizeof(result),
-                         "%s,join,%s,%s,%d,no such node named '%s'\n",
-                         ERR_JOIN_NO_SUCH_NODE, esc_node_name.c_str(),
-                         host.c_str(), port, esc_node_name.c_str());
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
+    it_n2n = name2node.find(node_name);
+    if (it_n2n == name2node.end()) {
+        // invalid node name
+        // format: 405,join,NODE_NAME,HOST,PORT,COMMENT
+        snprintf(result, sizeof(result),
+                "%s,join,%s,%s,%d,no such node named '%s'\n",
+                ERR_JOIN_NO_SUCH_NODE, esc_node_name.c_str(),
+                host.c_str(), port, esc_node_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
 
-        D(std::cout << "    node_name: " << node_name
-                    << "\n    host: " << host
-                    << "\n    port: " << port << std::endl;)
+    D(std::cout << "    node_name: " << node_name
+            << "\n    host: " << host
+            << "\n    port: " << port << std::endl;)
 
         func.esc_node_name = esc_node_name;
-        func.esc_host      = esc_host;
-        func.port          = port;
-        func.sockfd        = sockfd;
+    func.esc_host      = esc_host;
+    func.port          = port;
+    func.sockfd        = sockfd;
 
-        // join to the host:port
-        it_n2n->second->join(host, port, func);
+    // join to the host:port
+    it_n2n->second->join(host, port, func);
 }
 
 void process_put(int sockfd, esc_tokenizer::iterator &it,
-                 const esc_tokenizer::iterator &end)
+        const esc_tokenizer::iterator &end)
 {
-        std::string node_name;
-        std::string esc_node_name;
-        std::string key, value;
-        std::string esc_key, esc_value;
+    std::string node_name;
+    std::string esc_node_name;
+    std::string key, value;
+    std::string esc_key, esc_value;
 
-        uint16_t ttl;
-        bool is_unique = false;
-        char result[1024 * 64];
+    uint16_t ttl;
+    bool is_unique = false;
+    char result[1024 * 64];
 
-        if (it == end) {
-                // there is no node_name
-                // format: result,401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,node name is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        node_name = *it;
-        esc_node_name = node_name;
-        replace(esc_node_name, ",", "\\,");
-
-
-        ++it;
-        if (it == end) {
-                // there is no key
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,key is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        key = *it;
-        esc_key = key;
-        replace(esc_key, ",", "\\,");
-
-
-        ++it;
-        if (it == end) {
-                // there is no value
-                // format: result,401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,value is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        value = *it;
-        esc_value = value;
-        replace(esc_value, ",", "\\,");
-
-
-        ++it;
-        if (it == end) {
-                // there is no ttl
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,ttl is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-
-        try {
-                ttl = boost::lexical_cast<uint16_t>(*it);
-        } catch (boost::bad_lexical_cast) {
-                // no integer
-                // format: 401,COMMENT
-                std::string esc_ttl = *it;
-                replace(esc_ttl, ",", "\\,");
-                snprintf(result, sizeof(result),
-                         "401,'%s' is not a valid number\n",
-                         esc_ttl.c_str());
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        ++it;
-        if (it != end && *it == "unique")
-                is_unique = true;
-
-
-        name2node_type::iterator it_n2n;
-        it_n2n = name2node.find(node_name);
-        if (it_n2n == name2node.end()) {
-                // invalid node name
-                // format: 407,put,NODE_NAME,KEY,VALUE,TTL,COMMENT
-                snprintf(result, sizeof(result),
-                         "%s,put,%s,%s,%s,%d,no such node named '%s'\n",
-                         ERR_NO_SUCH_NODE, esc_node_name.c_str(),
-                         esc_key.c_str(), esc_value.c_str(), ttl,
-                         esc_node_name.c_str());
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        it_n2n->second->put(key.c_str(), key.length(),
-                            value.c_str(), value.length(), ttl, is_unique);
-
-        D(std::cout << "    node_name: " << node_name
-                    << "\n    key: " << key
-                    << "\n    value: " << value
-                    << "\n    TTL: " << ttl
-                    << std::endl);
-
-
-        // send result of the success
-        if (is_unique) {
-                // format: 203,put,NODE_NAME,KEY,VALUE,TTL,unique
-                snprintf(result, sizeof(result),
-                         "%s,put,%s,%s,%s,%d,unique\n",
-                         SUCCEEDED_PUT, esc_node_name.c_str(),
-                         esc_key.c_str(), esc_value.c_str(), ttl);
-        } else {
-                // format: 203,put,NODE_NAME,KEY,VALUE,TTL
-                snprintf(result, sizeof(result),
-                         "%s,put,%s,%s,%s,%d\n",
-                         SUCCEEDED_PUT, esc_node_name.c_str(),
-                         esc_key.c_str(), esc_value.c_str(), ttl);
-        }
-
-        //fprintf(stderr, "cage_put:%lu:%s\n", strlen(result), result);
+    if (it == end) {
+        // there is no node_name
+        // format: result,401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,node name is required\n");
         send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    node_name = *it;
+    esc_node_name = node_name;
+    replace(esc_node_name, ",", "\\,");
+
+
+    ++it;
+    if (it == end) {
+        // there is no key
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,key is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    key = *it;
+    esc_key = key;
+    replace(esc_key, ",", "\\,");
+
+
+    ++it;
+    if (it == end) {
+        // there is no value
+        // format: result,401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,value is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    value = *it;
+    esc_value = value;
+    replace(esc_value, ",", "\\,");
+
+
+    ++it;
+    if (it == end) {
+        // there is no ttl
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,ttl is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+
+    try {
+        ttl = boost::lexical_cast<uint16_t>(*it);
+    } catch (boost::bad_lexical_cast) {
+        // no integer
+        // format: 401,COMMENT
+        std::string esc_ttl = *it;
+        replace(esc_ttl, ",", "\\,");
+        snprintf(result, sizeof(result),
+                "401,'%s' is not a valid number\n",
+                esc_ttl.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    ++it;
+    if (it != end && *it == "unique")
+        is_unique = true;
+
+
+    name2node_type::iterator it_n2n;
+    it_n2n = name2node.find(node_name);
+    if (it_n2n == name2node.end()) {
+        // invalid node name
+        // format: 407,put,NODE_NAME,KEY,VALUE,TTL,COMMENT
+        snprintf(result, sizeof(result),
+                "%s,put,%s,%s,%s,%d,no such node named '%s'\n",
+                ERR_NO_SUCH_NODE, esc_node_name.c_str(),
+                esc_key.c_str(), esc_value.c_str(), ttl,
+                esc_node_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    it_n2n->second->put(key.c_str(), key.length(),
+            value.c_str(), value.length(), ttl, is_unique);
+
+    D(std::cout << "    node_name: " << node_name
+            << "\n    key: " << key
+            << "\n    value: " << value
+            << "\n    TTL: " << ttl
+            << std::endl);
+
+
+    // send result of the success
+    if (is_unique) {
+        // format: 203,put,NODE_NAME,KEY,VALUE,TTL,unique
+        snprintf(result, sizeof(result),
+                "%s,put,%s,%s,%s,%d,unique\n",
+                SUCCEEDED_PUT, esc_node_name.c_str(),
+                esc_key.c_str(), esc_value.c_str(), ttl);
+    } else {
+        // format: 203,put,NODE_NAME,KEY,VALUE,TTL
+        snprintf(result, sizeof(result),
+                "%s,put,%s,%s,%s,%d\n",
+                SUCCEEDED_PUT, esc_node_name.c_str(),
+                esc_key.c_str(), esc_value.c_str(), ttl);
+    }
+
+    //fprintf(stderr, "cage_put:%lu:%s\n", strlen(result), result);
+    send(sockfd, result, strlen(result), 0);
 }
 
 class func_get
 {
 public:
-        std::string esc_node_name;
-        std::string esc_key;
-        int         sockfd;
+    std::string esc_node_name;
+    std::string esc_key;
+    int         sockfd;
 
-        void operator() (bool is_get, libcage::dht::value_set_ptr vset)
-        {
-                sock2ev_type::iterator it;
-                char                   result[1024 * 1024];
+    void operator() (bool is_get, libcage::dht::value_set_ptr vset)
+    {
+            sock2ev_type::iterator it;
+            char                   result[1024 * 1024];
 
-                it = sock2ev.find(sockfd);
-                if (it == sock2ev.end()) {
-                        return;
-                }
+            it = sock2ev.find(sockfd);
+            if (it == sock2ev.end()) {
+                    return;
+            }
 
-                if (is_get) {
-                        std::string values;
-                        libcage::dht::value_set::iterator it;
+            if (is_get) {
+                    std::string values;
+                    libcage::dht::value_set::iterator it;
 
-                        for (it = vset->begin(); it != vset->end(); ++it) {
-                                boost::shared_array<char> tmp(new char[it->len + 1]);
-                                std::string value;
+                    for (it = vset->begin(); it != vset->end(); ++it) {
+                            boost::shared_array<char> tmp(new char[it->len + 1]);
+                            std::string value;
 
-                                memcpy(tmp.get(), it->value.get(), it->len);
+                            memcpy(tmp.get(), it->value.get(), it->len);
 
-                                tmp[it->len] = '\0';
+                            tmp[it->len] = '\0';
 
-                                value = tmp.get();
-                                replace(value, ",", "\\,");
+                            value = tmp.get();
+                            replace(value, ",", "\\,");
 
-                                values += ",";
-                                values += value;
-                        }
+                            values += ",";
+                            values += value;
+                    }
 
-                        // send value
-                        // format: 204,get,NODE_NAME,KEY,VALUE
-                        snprintf(result, sizeof(result),
-                                 "%s,get,%s,%s%s\n",
-                                 SUCCEEDED_GET, esc_node_name.c_str(),
-                                 esc_key.c_str(), values.c_str());
+                    // send value
+                    // format: 204,get,NODE_NAME,KEY,VALUE
+                    snprintf(result, sizeof(result),
+                             "%s,get,%s,%s%s\n",
+                             SUCCEEDED_GET, esc_node_name.c_str(),
+                             esc_key.c_str(), values.c_str());
 
-                        send(sockfd, result, strlen(result), 0);
-                        return;
-                } else {
-                        // send result of fail
-                        // format: 409,get,NODE_NAME,KEY
-                        snprintf(result, sizeof(result),
-                                 "%s,get,%s,%s\n",
-                                 ERR_GET_FAILURE, esc_node_name.c_str(),
-                                 esc_key.c_str());
-                        send(sockfd, result, strlen(result), 0);
-                }
-        }
+                    send(sockfd, result, strlen(result), 0);
+                    return;
+            } else {
+                    // send result of fail
+                    // format: 409,get,NODE_NAME,KEY
+                    snprintf(result, sizeof(result),
+                             "%s,get,%s,%s\n",
+                             ERR_GET_FAILURE, esc_node_name.c_str(),
+                             esc_key.c_str());
+                    send(sockfd, result, strlen(result), 0);
+            }
+    }
 };
 
 void process_get(int sockfd, esc_tokenizer::iterator &it,
@@ -1191,7 +1197,7 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
     switch (event) {
         case libcage::CONNECTED:
         {
-            // not implementation
+            std::cout << "accepted from " << addr.did->to_string() << std::endl;
             break;
         }
         case libcage::ACCEPTED:
@@ -1201,7 +1207,12 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
         }
         case libcage::READY2READ:
         {
-            // not implementation
+            /*
+            uint16_t num;
+            int      len;
+            len = sizeof(num);
+            m_cage.rdp_receive(desc, &num, &len);
+            */
             break;
         }
         case libcage::BROKEN:
@@ -1219,6 +1230,7 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
         case libcage::FAILED:
         {
             D(std::cout << "failed in connecting" << std::endl);
+            std::cout << "failed in connecting(listen)" << std::endl;
             m_cage.rdp_close(desc);
             break;
         }
@@ -1384,6 +1396,8 @@ void callback_lsock_read(int fd, short ev, void* arg)
         //int desc = ((struct opaque_lsock_accept*)arg)->desc;
         //libcage::cage* cage = ((struct opaque_lsock_accept*)arg)->cage;
         //cage->rdp_send(desc, buf, size);
+
+        // XXX 確認メッセージ
         send(fd, buf, strlen(buf), 0);
         return;
     } else {
@@ -1398,17 +1412,17 @@ void callback_lsock_read(int fd, short ev, void* arg)
 class func_rdp_connect
 {
 public:
-        int nsockfd;
-        int connfd;
-        int desc;
-        std::string esc_node_name;
-        std::string esc_sock_name;
-        std::string esc_rdp_port;
-        std::string esc_rdp_addr;
-        libcage::cage &m_cage;
+    int nsockfd;
+    int connfd;
+    int desc;
+    std::string esc_node_name;
+    std::string esc_sock_name;
+    std::string esc_rdp_port;
+    std::string esc_rdp_addr;
+    libcage::cage &m_cage;
 
-        func_rdp_connect(libcage::cage &c) : m_cage(c) { }
-        void operator() (int desc, libcage::rdp_addr addr, libcage::rdp_event event);
+    func_rdp_connect(libcage::cage &c) : m_cage(c) { }
+    void operator() (int desc, libcage::rdp_addr addr, libcage::rdp_event event);
 };
 
 void
@@ -1448,6 +1462,7 @@ func_rdp_connect::operator() (int desc,
         case libcage::FAILED:
         {
             D(std::cout << "failed in connecting" << std::endl);
+            std::cout << "failed in connecting(connect)" << std::endl;
             m_cage.rdp_close(desc);
             break;
         }
@@ -1460,7 +1475,7 @@ func_rdp_connect::operator() (int desc,
 
 
 void process_rdp_connect(int sockfd, esc_tokenizer::iterator &it,
-                        const esc_tokenizer::iterator &end)
+                         const esc_tokenizer::iterator &end)
 {
     std::string node_name;
     std::string esc_node_name;
@@ -1507,22 +1522,22 @@ void process_rdp_connect(int sockfd, esc_tokenizer::iterator &it,
         return;
     }
 
-    rdp_addr = *it;
-    esc_rdp_addr = rdp_addr;
-    replace(esc_rdp_addr, ",", "\\,");
+    rdp_port = *it;
+    esc_rdp_port = rdp_port;
+    replace(esc_rdp_port, ",", "\\,");
 
     ++it;
     if (it == end) {
-        // there is no rdp_port
+        // there is no rdp_addr
         // format: 401,COMMENT
-        snprintf(result, sizeof(result), "401,rdp port is required\n");
+        snprintf(result, sizeof(result), "401,rdp address is required\n");
         send(sockfd, result, strlen(result), 0);
         return;
     }
 
-    rdp_port = *it;
-    esc_rdp_port = rdp_port;
-    replace(esc_rdp_port, ",", "\\,");
+    rdp_addr = *it;
+    esc_rdp_addr = rdp_addr;
+    replace(esc_rdp_addr, ",", "\\,");
 
     // -- processing part
     // get node name in node list
@@ -1530,23 +1545,13 @@ void process_rdp_connect(int sockfd, esc_tokenizer::iterator &it,
     it_n2n = name2node.find(node_name);
     if (it_n2n == name2node.end()) {
         // invalid node name
-        // format: 408,NODE_NAME,get,KEY,COMMENT
+        // format: 408,NODE_NAME,sock_name,,COMMENT
         snprintf(result, sizeof(result),
-                "%s,rdp_connect,%s,%s,%s,no such node named '%s'\n",
-                ERR_NO_SUCH_NODE, esc_node_name.c_str(),
-                esc_sock_name.c_str(), esc_rdp_port.c_str(),
-                esc_node_name.c_str());
+                "%s,rdp_connect,%s,no such node named\n",
+                ERR_NO_SUCH_NODE, esc_node_name.c_str());
         send(sockfd, result, strlen(result), 0);
         return;
     }
-
-    // -- debug message --
-    D(std::cout << "    node_name: " << node_name
-                << "\n"
-                << "    sock_name: " << sock_name
-                << "\n"
-                << "    rdp_port : " << rdp_port
-                << std::endl);
 
     // named_socket create..
     int nsockfd;
@@ -1575,10 +1580,12 @@ void process_rdp_connect(int sockfd, esc_tokenizer::iterator &it,
 
     // format: 207,rdp_connect,NODE_NAME,SOCK_NAME,PORT_NUMBER
     snprintf(result, sizeof(result),
-            "%s,rdp_connect,%s,%s,%s\n",
+            "%s,rdp_connect,%s,%s,%s,%s\n",
             SUCCEEDED_RDP_CONNECT, esc_node_name.c_str(),
-            esc_sock_name.c_str(), esc_rdp_port.c_str());
+            esc_sock_name.c_str(), esc_rdp_port.c_str(),
+            esc_rdp_addr.c_str());
     send(sockfd, result, strlen(result), 0);
+
     return;
 }
 
@@ -1596,19 +1603,26 @@ void callback_csock_accept(int fd, short ev, void *arg)
         conn_fd = accept(fd, (struct sockaddr*)&sa_storage, &sa_len);
         opaque->connfd = conn_fd;
 
-        libcage::id_ptr id(new libcage::uint160_t);
+        /*
         std::vector<uint8_t>v;
         base64::decode(opaque->esc_rdp_addr, v);
         uint8_t* mem = (uint8_t*)malloc(v.size());
         uint8_t* seeker = mem;
         memset(mem, 0, v.size());
+
         std::vector<uint8_t>::const_iterator it;
         for (it = v.begin(); it != v.end(); ++it) {
             *seeker = *it;
             seeker++;
         }
+
+        libcage::id_ptr id(new libcage::uint160_t);
         id->from_binary(mem, v.size());
         free(mem);
+        */
+
+        libcage::id_ptr id(new libcage::uint160_t);
+        id->from_string(opaque->esc_rdp_addr);
 
         uint16_t rdp_d_port;
         rdp_d_port = atoi(opaque->esc_rdp_port.c_str());
@@ -1616,13 +1630,22 @@ void callback_csock_accept(int fd, short ev, void *arg)
         uint16_t rdp_s_port;
         rdp_s_port = 0;
 
-        opaque->desc = opaque->m_cage.rdp_connect(rdp_s_port, id, rdp_d_port, *opaque);
+        std::cout << id->to_string() << std::endl;
+        std::cout << rdp_d_port << std::endl;
+        std::cout << rdp_s_port << std::endl;
+
+        opaque->desc = opaque->m_cage.rdp_connect(rdp_s_port,
+                                                  id,
+                                                  rdp_d_port,
+                                                  *opaque);
+
+        printf("desc -> %d\n", opaque->desc);
 
         boost::shared_ptr<event> readev(new event);
         sock2ev[conn_fd] = readev;
 
         event_set(readev.get(), conn_fd, EV_READ | EV_PERSIST,
-                  &callback_lsock_read, (void*)opaque);
+                  &callback_csock_read, (void*)opaque);
         event_add(readev.get(), NULL);
     } 
     return;
@@ -1641,17 +1664,28 @@ void callback_csock_read(int fd, short ev, void *arg)
     if (rsize > 0) {
         //何処に送るのかを調べてrdp_sendに送信する
         // -- ex XXX named_socket から受け取った時の処理を記述--
-        //int desc = ((struct opaque_lsock_accept*)arg)->desc;
-        //libcage::cage* cage = ((struct opaque_lsock_accept*)arg)->cage;
-        //cage->rdp_send(desc, buf, size);
+        int desc = ((func_rdp_connect*)arg)->desc;
+        libcage::cage cage = ((func_rdp_connect*)arg)->m_cage;
+
+        printf("desc -> %d\n", opaque->desc);
+
+        int retval = cage.rdp_send(desc, buf, rsize);
+        // retval : 0    -> succsess
+        // retval : else -> failed
+
+        if (retval == 0) {
+            printf("callback_csock_read: cage->rdp_send success\n");
+        } else {
+            printf("callback_csock_read: cage->rdp_send failed\n");
+        }
+
         send(fd, buf, strlen(buf), 0);
-        return;
+
     } else {
         // peer socket close
         event_del(sock2ev[fd].get());
         sock2ev.erase(fd);
         shutdown(fd, SHUT_RDWR);
-        return;
     }
     return;
 }

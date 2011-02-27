@@ -12,7 +12,7 @@ base64: base64.cpp base64.hpp base64_test.cpp
 	g++ -O3 -fomit-frame-pointer -Wall -o base64_test base64.cpp base64_test.cpp
 
 un: un.c
-	g++ -O3 -fomit-frame-pointer -Wall -o un un_connector.c
+	g++ -O3 -fomit-frame-pointer -Wall -o un un.c
 
 .PHONY: clean
 clean: clean_current

@@ -59,8 +59,8 @@ int main( int argc, char **argv)
         return 1;
     }
 
-    printf("port_number:%d\n", atoi(argv[2]));	
-    printf("hostname:%s\n", (argv[1]));	
+    printf("port_number:%d\n", atoi(argv[2]));
+    printf("hostname:%s\n", (argv[1]));
 
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 

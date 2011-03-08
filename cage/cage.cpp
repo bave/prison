@@ -1197,46 +1197,51 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
     switch (event) {
         case libcage::CONNECTED:
         {
-            std::cout << "accepted from " << addr.did->to_string() << std::endl;
+            std::cout << "(debug) rdp_listen::libcage::CONNECTED"
+                      << addr.did->to_string()
+                      << std::endl;
             break;
         }
         case libcage::ACCEPTED:
         {
-            // not implementation
+            std::cout << "(debug) rdp_liten::libcage::ACCEPTED"
+                      << std::endl;
             break;
         }
         case libcage::READY2READ:
         {
-            /*
-            uint16_t num;
-            int      len;
-            len = sizeof(num);
-            m_cage.rdp_receive(desc, &num, &len);
-            */
+            int len;
+            char buf[1024 * 64];
+            len = sizeof(buf);
+            m_cage.rdp_receive(desc, buf, &len);
+            std::cout << "(debug) rdp_listen::libcage::READE2READ"
+                      << std::endl;
+                      << "buf:"
+                      << buf
+                      << std::endl;
             break;
         }
         case libcage::BROKEN:
         {
-            D(std::cout << "broken pipe" << std::endl);
+            D(std::cout << "(debug) broken pipe" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         case libcage::RESET:
         {
-            D(std::cout << "reset by peer" << std::endl);
+            D(std::cout << "(debug) reset by peer" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         case libcage::FAILED:
         {
             D(std::cout << "failed in connecting" << std::endl);
-            std::cout << "failed in connecting(listen)" << std::endl;
             m_cage.rdp_close(desc);
             break;
         }
         default:
         {
-            ;
+            break;
         }
     }
 }
@@ -1391,14 +1396,13 @@ void callback_lsock_read(int fd, short ev, void* arg)
     //printf("recv_buf:%s\n", buf);
 
     if (rsize > 0) {
-        //何処に送るのかを調べてrdp_sendに送信する
-        // -- ex XXX named_socket から受け取った時の処理を記述--
-        //int desc = ((struct opaque_lsock_accept*)arg)->desc;
-        //libcage::cage* cage = ((struct opaque_lsock_accept*)arg)->cage;
-        //cage->rdp_send(desc, buf, size);
+        int desc = ((struct opaque_lsock_accept*)arg)->desc;
+        libcage::cage* cage = ((struct opaque_lsock_accept*)arg)->cage;
+        cage->rdp_send(desc, buf, size);
 
-        // XXX 確認メッセージ
-        send(fd, buf, strlen(buf), 0);
+        // using debug 
+        //send(fd, buf, strlen(buf), 0);
+
         return;
     } else {
         // peer socket close
@@ -1662,21 +1666,17 @@ void callback_csock_read(int fd, short ev, void *arg)
     int rsize;
     rsize = recv(fd, buf, sizeof(buf), 0);
     if (rsize > 0) {
-        //何処に送るのかを調べてrdp_sendに送信する
-        // -- ex XXX named_socket から受け取った時の処理を記述--
         int desc = ((func_rdp_connect*)arg)->desc;
         libcage::cage cage = ((func_rdp_connect*)arg)->m_cage;
-
-        printf("desc -> %d\n", opaque->desc);
-
+        D(printf("desc -> %d\n", opaque->desc));
         int retval = cage.rdp_send(desc, buf, rsize);
         // retval : 0    -> succsess
         // retval : else -> failed
 
-        if (retval == 0) {
-            printf("callback_csock_read: cage->rdp_send success\n");
+        if (retval >= 0) {
+            D(printf("callback_csock_read: cage->rdp_send success\n"));
         } else {
-            printf("callback_csock_read: cage->rdp_send failed\n");
+            D(printf("callback_csock_read: cage->rdp_send failed\n"));
         }
 
         send(fd, buf, strlen(buf), 0);

@@ -24,7 +24,7 @@ Port Relation Identifier Service with Ovarlay Network
            リンクローカル側でのテストに支障をきたす可能性があり．
 
     libcage
-        -> rdp_socket を利用した caged をつくる
+        -> rdp_socket を利用した caged
 
     FrontEnd
         -> warden の実装がまだ．．

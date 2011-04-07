@@ -64,7 +64,12 @@ int main(int argc, char** argv)
         }
 
     }
-    system("sh -c \"tput clear\"");
+
+    int ret_system;
+    ret_system = system("sh -c \"tput clear\"");
+    if (ret_system != 0) { 
+        printf("Cant Clear this terminal.. Why??\n");
+    }
     printf("Now connecting to %s!!\n", path);
     char buffer[65535];
 
@@ -101,7 +106,12 @@ int main(int argc, char** argv)
         }
 
         if (strcmp(buffer, "clear\n") == 0) {
-            system("sh -c \"tput clear\"");
+
+            ret_system = system("sh -c \"tput clear\"");
+            if (ret_system != 0) { 
+                printf("Cant Clear this terminal.. Why??\n");
+            }
+            printf("Cant Clear this terminal.. Why??\n");
             fflush(stdin);
             continue;
         }

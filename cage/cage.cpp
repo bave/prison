@@ -26,8 +26,7 @@
 
 #include "base64.hpp"
 
-// #define DEBUG
-
+#define DEBUG
 #ifdef DEBUG
   #define D(X) X
 #else
@@ -1177,9 +1176,7 @@ void process_get(int sockfd, esc_tokenizer::iterator &it,
 class func_rdp_listen
 {
 public:
-        int listenfd;
         int nsockfd;
-        int connfd;
         int desc;
         std::string esc_node_name;
         std::string esc_sock_name;
@@ -1206,9 +1203,10 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
         {
             std::cout << "(debug) rdp_liten::libcage::ACCEPTED"
                       << std::endl
-                      << "\t(desc):"
+                      << "(desc):"
                       << desc
-                      << "\t(addr):"
+                      << std::endl
+                      << "(remote-addr):"
                       << addr.did->to_string()
                       << std::endl;
             break;
@@ -1224,34 +1222,36 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             m_cage.rdp_receive(desc, buf, &len);
             std::cout << "(debug) rdp_listen::libcage::READE2READ"
                       << std::endl
-                      << "\t(recive_desc:)"
+                      << "(desc):"
                       << desc
                       << std::endl
-                      << "\tbuf:"
+                      << "(buf):"
                       << buf
                       << std::endl;
+            send(nsockfd, buf, strlen(buf), 0);
             break;
         }
         case libcage::BROKEN:
         {
-            D(std::cout << "(debug) broken pipe" << std::endl);
+            D(std::cout << "(debug) rdp_listen::libcage::BROKEN" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         case libcage::RESET:
         {
-            D(std::cout << "(debug) reset by peer" << std::endl);
+            D(std::cout << "(debug) rdp_listen::libcage::RESET" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         case libcage::FAILED:
         {
-            D(std::cout << "failed in connecting" << std::endl);
+            D(std::cout << "(debug) rdp_listen::libcage::FAILED" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         default:
         {
+            D(std::cout << "(debug) rdp_listen::default" << std::endl);
             break;
         }
     }
@@ -1347,7 +1347,6 @@ void process_rdp_listen(int sockfd, esc_tokenizer::iterator &it,
     opaque->esc_node_name    = esc_node_name;
     opaque->esc_sock_name    = esc_sock_name;
     opaque->esc_rdp_port     = esc_rdp_port;
-    opaque->listenfd         = sockfd;
     opaque->nsockfd          = nsockfd;
 
     // set to ev for writing event callback
@@ -1378,7 +1377,6 @@ void callback_lsock_accept(int fd, short ev, void* arg)
 
         int conn_fd;
         conn_fd = accept(fd, (struct sockaddr*)&sa_storage, &sa_len);
-        opaque->connfd = conn_fd;
 
         uint16_t num_port = atoi(opaque->esc_rdp_port.c_str());
         opaque->desc = opaque->m_cage.rdp_listen(num_port, *opaque);
@@ -1421,7 +1419,6 @@ class func_rdp_connect
 {
 public:
     int nsockfd;
-    int connfd;
     int desc;
     std::string esc_node_name;
     std::string esc_sock_name;
@@ -1442,41 +1439,40 @@ func_rdp_connect::operator() (int desc,
     switch (event) {
         case libcage::CONNECTED:
         {
-            // not implementation
+            std::cout << "(debug) rdp_connect::libcage::CONNECTED" << std::endl;
             break;
         }
         case libcage::ACCEPTED:
         {
-            // not implementation
+            std::cout << "(debug) rdp_connect::libcage::ACCEPTED" << std::endl;
             break;
         }
         case libcage::READY2READ:
         {
-            // not implementation
+            std::cout << "(debug) rdp_connect::libcage::READY2READ" << std::endl;
             break;
         }
         case libcage::BROKEN:
         {
-            D(std::cout << "broken pipe" << std::endl);
+            D(std::cout << "(debug) rdp_connect::libcage::BROKEN" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         case libcage::RESET:
         {
-            D(std::cout << "reset by peer" << std::endl);
+            D(std::cout << "(debug) rdp_connect::libcage::RESET" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         case libcage::FAILED:
         {
-            D(std::cout << "failed in connecting" << std::endl);
-            std::cout << "failed in connecting(connect)" << std::endl;
+            D(std::cout << "(debug) rdp_connect::libcage::FAILED" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         default:
         {
-            ;
+            D(std::cout << "(debug) rdp_connect::default" << std::endl);
         }
     }
 }
@@ -1609,7 +1605,6 @@ void callback_csock_accept(int fd, short ev, void *arg)
 
         int conn_fd;
         conn_fd = accept(fd, (struct sockaddr*)&sa_storage, &sa_len);
-        opaque->connfd = conn_fd;
 
         /*
         std::vector<uint8_t>v;
@@ -1674,19 +1669,15 @@ void callback_csock_read(int fd, short ev, void *arg)
         libcage::cage cage = ((func_rdp_connect*)arg)->m_cage;
         D(printf("desc -> %d\n", opaque->desc));
         int retval = cage.rdp_send(desc, buf, rsize);
-        // retval : 0    -> succsess
-        // retval : else -> failed
         if (retval >= 0) {
             D(printf("callback_csock_read: cage->rdp_send success\n"));
         } else {
             D(printf("callback_csock_read: cage->rdp_send failed\n"));
         }
 
-        //-- to ./un debug message send
-        //send(fd, buf, strlen(buf), 0);
-
     } else {
         // peer socket close
+        D(printf("callback_csock_read: Peer socket Close\n"));
         event_del(sock2ev[fd].get());
         sock2ev.erase(fd);
         shutdown(fd, SHUT_RDWR);

@@ -98,7 +98,7 @@ void* thread_callback(void *opaque)
         if (rsize ==0) {
             break;
         }
-        printf("\nrecv:%s\nsend:", buffer); 
+        printf("\nrecv:%ssend:", buffer); 
     }
 
     free(opaque);

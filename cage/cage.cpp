@@ -1197,14 +1197,19 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
     switch (event) {
         case libcage::CONNECTED:
         {
+            // dont use in func_rdp_listen.
             std::cout << "(debug) rdp_listen::libcage::CONNECTED"
-                      << addr.did->to_string()
                       << std::endl;
             break;
         }
         case libcage::ACCEPTED:
         {
             std::cout << "(debug) rdp_liten::libcage::ACCEPTED"
+                      << std::endl
+                      << "\t(desc):"
+                      << desc
+                      << "\t(addr):"
+                      << addr.did->to_string()
                       << std::endl;
             break;
         }
@@ -1212,11 +1217,17 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
         {
             int len;
             char buf[1024 * 64];
+
             len = sizeof(buf);
+            memset(buf, 0, len);
+
             m_cage.rdp_receive(desc, buf, &len);
             std::cout << "(debug) rdp_listen::libcage::READE2READ"
-                      << std::endl;
-                      << "buf:"
+                      << std::endl
+                      << "\t(recive_desc:)"
+                      << desc
+                      << std::endl
+                      << "\tbuf:"
                       << buf
                       << std::endl;
             break;
@@ -1396,13 +1407,6 @@ void callback_lsock_read(int fd, short ev, void* arg)
     //printf("recv_buf:%s\n", buf);
 
     if (rsize > 0) {
-        int desc = ((struct opaque_lsock_accept*)arg)->desc;
-        libcage::cage* cage = ((struct opaque_lsock_accept*)arg)->cage;
-        cage->rdp_send(desc, buf, size);
-
-        // using debug 
-        //send(fd, buf, strlen(buf), 0);
-
         return;
     } else {
         // peer socket close
@@ -1672,14 +1676,14 @@ void callback_csock_read(int fd, short ev, void *arg)
         int retval = cage.rdp_send(desc, buf, rsize);
         // retval : 0    -> succsess
         // retval : else -> failed
-
         if (retval >= 0) {
             D(printf("callback_csock_read: cage->rdp_send success\n"));
         } else {
             D(printf("callback_csock_read: cage->rdp_send failed\n"));
         }
 
-        send(fd, buf, strlen(buf), 0);
+        //-- to ./un debug message send
+        //send(fd, buf, strlen(buf), 0);
 
     } else {
         // peer socket close

@@ -449,6 +449,7 @@ callback_read(int sockfd, short ev, void *arg)
             sock2ev.erase(sockfd);
 
             shutdown(sockfd, SHUT_RDWR);
+            close(sockfd);
 
             return;
         }
@@ -609,6 +610,7 @@ process_get_id(int sockfd, esc_tokenizer::iterator &it,
     esc_node_name = *it;
     replace(esc_node_name, ",", "\\,");
 
+
     it_n2n = name2node.find(node_name);
     if (it_n2n == name2node.end()) {
         // invalid node name
@@ -633,6 +635,9 @@ process_get_id(int sockfd, esc_tokenizer::iterator &it,
 
     //if get id is std::string (HEX)
     std::string addr_str = it_n2n->second->get_id_str();
+
+    D(std::cout << "    node_name:" << esc_node_name <<std::endl);
+    D(std::cout << "    node_id  :" << addr_str <<std::endl);
 
     // format: 205,set_id,NODE_NAME,IDENTIFIER
     snprintf(result, sizeof(result), "%s,set_id,%s,%s\n",
@@ -700,9 +705,9 @@ process_new(int sockfd, esc_tokenizer::iterator &it,
             is_global = true;
     }
 
-    D(std::cout << "    node_name: " << node_name
-            << "\n    port:      " << port
-            << "\n    is_global: " << is_global << std::endl);
+    D(std::cout << "    node_name: " << node_name << "\n"
+                << "    port     : " << port << "\n"
+                << "    is_global: " << is_global << std::endl);
 
     // check whether the node_name has been used already or not
     if (name2node.find(node_name) != name2node.end()) {
@@ -783,7 +788,7 @@ process_delete(int sockfd, esc_tokenizer::iterator &it,
         return;
     }
 
-    D(std::cout << "    node_name: " << node_name);
+    D(std::cout << "    node_name: " << node_name << std::endl);
 
     name2node.erase(it_n2n);
 
@@ -911,9 +916,9 @@ void process_join(int sockfd, esc_tokenizer::iterator &it,
         return;
     }
 
-    D(std::cout << "    node_name: " << node_name
-            << "\n    host: " << host
-            << "\n    port: " << port << std::endl;)
+    D(std::cout << "    node_name: " << node_name << "\n"
+                << "    host     : " << host << "\n"
+                << "    port     : " << port << std::endl);
 
         func.esc_node_name = esc_node_name;
     func.esc_host      = esc_host;
@@ -1027,11 +1032,10 @@ void process_put(int sockfd, esc_tokenizer::iterator &it,
     it_n2n->second->put(key.c_str(), key.length(),
             value.c_str(), value.length(), ttl, is_unique);
 
-    D(std::cout << "    node_name: " << node_name
-            << "\n    key: " << key
-            << "\n    value: " << value
-            << "\n    TTL: " << ttl
-            << std::endl);
+    D(std::cout << "    node_name: " << node_name << std::endl
+                << "    key      : " << key << std::endl
+                << "    value    : " << value << std::endl
+                << "    TTL      : " << ttl << std::endl);
 
 
     // send result of the success
@@ -1163,9 +1167,8 @@ void process_get(int sockfd, esc_tokenizer::iterator &it,
                 return;
         }
 
-        D(std::cout << "    node_name: " << node_name
-                    << "\n    key: " << key
-                    << std::endl);
+        D(std::cout << "    node_name: " << node_name << "\n"
+                    << "    key: " << key << std::endl);
 
         func.esc_node_name = esc_node_name;
         func.esc_key       = esc_key;
@@ -1176,7 +1179,8 @@ void process_get(int sockfd, esc_tokenizer::iterator &it,
 class func_rdp_listen
 {
 public:
-        int nsockfd;
+        int nsockfd; // listen socket
+        int connfd;  // connection socket rdp_liste <-> ./un
         int desc;
         std::string esc_node_name;
         std::string esc_sock_name;
@@ -1191,28 +1195,30 @@ void
 func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_event event)
 {
     // XXX rdpから受け取った時の処理を記述
+    D(std::cout << "function func_rdp_listen" << std::endl);
     switch (event) {
         case libcage::CONNECTED:
         {
             // dont use in func_rdp_listen.
-            std::cout << "(debug) rdp_listen::libcage::CONNECTED"
-                      << std::endl;
+            D(std::cout << "    CONNECTED" << std::endl);
             break;
         }
         case libcage::ACCEPTED:
         {
-            std::cout << "(debug) rdp_liten::libcage::ACCEPTED"
-                      << std::endl
-                      << "(desc):"
-                      << desc
-                      << std::endl
-                      << "(remote-addr):"
-                      << addr.did->to_string()
-                      << std::endl;
+            D(std::cout << "    ACCEPTED"
+                        << std::endl
+                        << "    desc:"
+                        << desc
+                        << std::endl
+                        << "    addr:"
+                        << addr.did->to_string()
+                        << std::endl);
             break;
         }
         case libcage::READY2READ:
         {
+            int ssize = 0;
+
             int len;
             char buf[1024 * 64];
 
@@ -1220,38 +1226,47 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             memset(buf, 0, len);
 
             m_cage.rdp_receive(desc, buf, &len);
-            std::cout << "(debug) rdp_listen::libcage::READE2READ"
-                      << std::endl
-                      << "(desc):"
-                      << desc
-                      << std::endl
-                      << "(buf):"
-                      << buf
-                      << std::endl;
-            send(nsockfd, buf, strlen(buf), 0);
+            D(std::cout << "    READE2READ"
+                        << std::endl
+                        << "    desc:"
+                        << desc
+                        << std::endl
+                        << "    addr:"
+                        << addr.did->to_string()
+                        << std::endl
+                        << "    buf :"
+                        << buf
+                        << std::endl);
+            ssize = send(connfd, buf, len, 0);
+            if (ssize <= 0) {
+                // debug message
+                D(perror("    send:"));
+                D(std::cout << "    cant send to rdp_listen named socket" << std::endl);
+            } else {
+            }
             break;
         }
         case libcage::BROKEN:
         {
-            D(std::cout << "(debug) rdp_listen::libcage::BROKEN" << std::endl);
+            D(std::cout << "    BROKEN" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         case libcage::RESET:
         {
-            D(std::cout << "(debug) rdp_listen::libcage::RESET" << std::endl);
+            D(std::cout << "    RESET" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         case libcage::FAILED:
         {
-            D(std::cout << "(debug) rdp_listen::libcage::FAILED" << std::endl);
+            D(std::cout << "    FAILED" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         default:
         {
-            D(std::cout << "(debug) rdp_listen::default" << std::endl);
+            D(std::cout << "    default" << std::endl);
             break;
         }
     }
@@ -1324,14 +1339,6 @@ void process_rdp_listen(int sockfd, esc_tokenizer::iterator &it,
         return;
     }
 
-    // -- debug message --
-    D(std::cout << "    node_name: " << node_name
-                << "\n"
-                << "    sock_name: " << sock_name
-                << "\n"
-                << "    rdp_port : " << rdp_port
-                << std::endl);
-
     // named_socket create..
     int nsockfd;
     nsockfd = create_named_socket(esc_sock_name.c_str());
@@ -1348,6 +1355,11 @@ void process_rdp_listen(int sockfd, esc_tokenizer::iterator &it,
     opaque->esc_sock_name    = esc_sock_name;
     opaque->esc_rdp_port     = esc_rdp_port;
     opaque->nsockfd          = nsockfd;
+
+    // -- debug message --
+    D(std::cout << "    node_name: " << node_name << "\n"
+                << "    sock_name: " << sock_name << "\n"
+                << "    rdp_port : " << rdp_port  << std::endl);
 
     // set to ev for writing event callback
     boost::shared_ptr<event> readev(new event);
@@ -1377,6 +1389,7 @@ void callback_lsock_accept(int fd, short ev, void* arg)
 
         int conn_fd;
         conn_fd = accept(fd, (struct sockaddr*)&sa_storage, &sa_len);
+        opaque->connfd = conn_fd;
 
         uint16_t num_port = atoi(opaque->esc_rdp_port.c_str());
         opaque->desc = opaque->m_cage.rdp_listen(num_port, *opaque);
@@ -1396,21 +1409,34 @@ void callback_lsock_read(int fd, short ev, void* arg)
     func_rdp_listen* opaque;
     opaque = (func_rdp_listen*)arg;
 
+    D(std::cout << "function callback_lsock_read" << "\n"
+                << "    node_name       :" << (std::string)((func_rdp_listen*)arg)->esc_node_name << "\n"
+                << "    rdp_port        :" << (std::string)((func_rdp_listen*)arg)->esc_rdp_port << "\n" 
+                << "    rdp_description :" << (int)((func_rdp_listen*)arg)->desc << std::endl);
+
     char buf[1024 * 64];
     memset(buf, 0, sizeof(buf));
 
     int rsize;
     rsize = recv(fd, buf, sizeof(buf), 0);
-    //printf("recv_size:%d\n", rsize);
-    //printf("recv_buf:%s\n", buf);
-
     if (rsize > 0) {
+        // debug message
+        //printf("recv_size:%d\n", rsize);
+        //printf("recv_buf:%s\n", buf);
+        //send(fd, buf, rsize, 0);
         return;
     } else {
         // peer socket close
+        opaque->m_cage.rdp_close(opaque->desc);
+        D(printf("    Peer socket Close\n"));
         event_del(sock2ev[fd].get());
         sock2ev.erase(fd);
         shutdown(fd, SHUT_RDWR);
+        close(fd);
+        event_del(sock2ev[opaque->nsockfd].get());
+        sock2ev.erase(opaque->nsockfd);
+        shutdown(opaque->nsockfd, SHUT_RDWR);
+        close(opaque->nsockfd);
         return;
     }
 }
@@ -1418,7 +1444,8 @@ void callback_lsock_read(int fd, short ev, void* arg)
 class func_rdp_connect
 {
 public:
-    int nsockfd;
+    int nsockfd; // listen socket
+    int connfd;  // connection socket rdp_connect <-> un
     int desc;
     std::string esc_node_name;
     std::string esc_sock_name;
@@ -1436,43 +1463,51 @@ func_rdp_connect::operator() (int desc,
                               libcage::rdp_event event)
 {
     // XXX rdpから受け取った時の処理を記述
+    D(std::cout << "function func_rdp_connect" << std::endl);
     switch (event) {
         case libcage::CONNECTED:
         {
-            std::cout << "(debug) rdp_connect::libcage::CONNECTED" << std::endl;
+            D(std::cout << "    CONNECTED"
+                        << std::endl
+                        << "    desc:"
+                        << desc
+                        << std::endl
+                        << "    addr:"
+                        << addr.did->to_string()
+                        << std::endl);
             break;
         }
         case libcage::ACCEPTED:
         {
-            std::cout << "(debug) rdp_connect::libcage::ACCEPTED" << std::endl;
+            D(std::cout << "    ACCEPTED" << std::endl);
             break;
         }
         case libcage::READY2READ:
         {
-            std::cout << "(debug) rdp_connect::libcage::READY2READ" << std::endl;
+            D(std::cout << "    READY2READ" << std::endl);
             break;
         }
         case libcage::BROKEN:
         {
-            D(std::cout << "(debug) rdp_connect::libcage::BROKEN" << std::endl);
+            D(std::cout << "    BROKEN" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         case libcage::RESET:
         {
-            D(std::cout << "(debug) rdp_connect::libcage::RESET" << std::endl);
+            D(std::cout << "    RESET" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         case libcage::FAILED:
         {
-            D(std::cout << "(debug) rdp_connect::libcage::FAILED" << std::endl);
+            D(std::cout << "    FAILED" << std::endl);
             m_cage.rdp_close(desc);
             break;
         }
         default:
         {
-            D(std::cout << "(debug) rdp_connect::default" << std::endl);
+            D(std::cout << "    default" << std::endl);
         }
     }
 }
@@ -1567,6 +1602,11 @@ void process_rdp_connect(int sockfd, esc_tokenizer::iterator &it,
         return;
     }
 
+    // -- debug message --
+    D(std::cout << "    node_name: " << node_name << "\n"
+                << "    sock_name: " << sock_name << "\n"
+                << "    rdp_port : " << rdp_port  << std::endl);
+
     // dispatch processing in libcage
     func_rdp_connect* opaque = new func_rdp_connect(*it_n2n->second.get());
     opaque->esc_node_name    = esc_node_name;
@@ -1605,6 +1645,7 @@ void callback_csock_accept(int fd, short ev, void *arg)
 
         int conn_fd;
         conn_fd = accept(fd, (struct sockaddr*)&sa_storage, &sa_len);
+        opaque->connfd = conn_fd;
 
         /*
         std::vector<uint8_t>v;
@@ -1633,16 +1674,19 @@ void callback_csock_accept(int fd, short ev, void *arg)
         uint16_t rdp_s_port;
         rdp_s_port = 0;
 
-        std::cout << id->to_string() << std::endl;
-        std::cout << rdp_d_port << std::endl;
-        std::cout << rdp_s_port << std::endl;
 
         opaque->desc = opaque->m_cage.rdp_connect(rdp_s_port,
                                                   id,
                                                   rdp_d_port,
                                                   *opaque);
 
-        printf("desc -> %d\n", opaque->desc);
+        // -- debug message --
+        D(std::cout << "function callback_csock_accept" << "\n"
+                    << "    rdp_dst_id       :" << id->to_string() << "\n"
+                    << "    rdp_dst_port     :" << rdp_d_port << "\n"
+                    << "    rdp_src_port     :" << rdp_s_port << "\n"
+                    << "    sock_description :" << opaque->desc << std::endl);
+
 
         boost::shared_ptr<event> readev(new event);
         sock2ev[conn_fd] = readev;
@@ -1664,23 +1708,42 @@ void callback_csock_read(int fd, short ev, void *arg)
 
     int rsize;
     rsize = recv(fd, buf, sizeof(buf), 0);
-    if (rsize > 0) {
-        int desc = ((func_rdp_connect*)arg)->desc;
-        libcage::cage cage = ((func_rdp_connect*)arg)->m_cage;
-        D(printf("desc -> %d\n", opaque->desc));
-        int retval = cage.rdp_send(desc, buf, rsize);
-        if (retval >= 0) {
-            D(printf("callback_csock_read: cage->rdp_send success\n"));
-        } else {
-            D(printf("callback_csock_read: cage->rdp_send failed\n"));
-        }
 
+    // -- debug message --
+    /*
+     * int nsockfd;
+     * int desc;
+     * std::string esc_node_name;
+     * std::string esc_sock_name;
+     * std::string esc_rdp_port;
+     * std::string esc_rdp_addr;
+     * libcage::cage &m_cage;
+    */
+    D(std::cout << "function callback_csock_read" << "\n"
+                << "    node_name       :" << (std::string)((func_rdp_connect*)arg)->esc_node_name << "\n"
+                << "    rdp_port        :" << (std::string)((func_rdp_connect*)arg)->esc_rdp_port << "\n" 
+                << "    rdp_addr        :" << (std::string)((func_rdp_connect*)arg)->esc_rdp_addr << "\n"
+                << "    rdp_description :" << (int)((func_rdp_connect*)arg)->desc << std::endl);
+
+    if (rsize > 0) {
+        int retval = opaque->m_cage.rdp_send(opaque->desc, buf, rsize);
+        if (retval >= 0) {
+            D(printf("    rdp_send success\n"));
+        } else {
+            D(printf("    rdp_send failed\n"));
+        }
     } else {
         // peer socket close
-        D(printf("callback_csock_read: Peer socket Close\n"));
+        opaque->m_cage.rdp_close(opaque->desc);
+        D(printf("    Peer socket Close\n"));
         event_del(sock2ev[fd].get());
         sock2ev.erase(fd);
         shutdown(fd, SHUT_RDWR);
+        close(fd);
+        event_del(sock2ev[opaque->nsockfd].get());
+        sock2ev.erase(opaque->nsockfd);
+        shutdown(opaque->nsockfd, SHUT_RDWR);
+        close(opaque->nsockfd);
     }
     return;
 }

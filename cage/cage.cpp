@@ -208,7 +208,13 @@ main(int argc, char** argv)
         } else {
             //printf("forked process!!\n");
             setsid();
-            chdir("/");
+            int retval;
+            retval = chdir("/");
+            if (retval == 0) {
+                // success
+            } else {
+                // error
+            }
             umask(0);
         }
     }

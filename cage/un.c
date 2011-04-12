@@ -77,7 +77,6 @@ int main(int argc, char** argv)
         memset(buffer, 0, sizeof(buffer));
         fgets(buffer, sizeof(buffer), stdin);
         send(sock_fd, buffer, strlen(buffer), 0);
-        usleep(1000);
     }
 
     close(sock_fd);
@@ -95,7 +94,7 @@ void* thread_callback(void *opaque)
     for (;;) {
         memset(buffer, 0, sizeof(buffer));
         rsize = recv(thread_arg->sock, buffer, sizeof(buffer), 0);
-        if (rsize ==0) {
+        if (rsize == 0) {
             break;
         }
         printf("recv:%s", buffer); 

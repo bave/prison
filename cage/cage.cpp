@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdint.h>
 
 #include <arpa/inet.h>
 
@@ -53,6 +54,7 @@ int instance_identifier = 0;
 // pair(instance_identifier, lsock_side_rdp_descriptor)
 std::multimap<int,int> id_mapper;
 static bool id_mapper_fixed_erase(int key, int value);
+std::string bin2hex(const char* buf, unsigned int size);
 
 sock2ev_type   sock2ev;
 name2node_type name2node;
@@ -1194,6 +1196,8 @@ public:
         int connfd;  // connection socket rdp_liste <-> ./un
         int instance_identifier;
         int listen_desc;
+        uint8_t node_id[CAGE_ID_LEN];
+        std::string esc_node_id;
         std::string esc_node_name;
         std::string esc_sock_name;
         std::string esc_rdp_port;
@@ -1235,7 +1239,7 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
 
             int len;
             char recv_buf[1024 * 64];
-            char send_buf[1024 * 64 + 40];
+            char send_buf[1024 * 64 + 84]; // peer_addr(40) + own_addr(40) + desc_handler(4) = 84
             char* ptr_send_buf = send_buf;
 
             len = sizeof(recv_buf);
@@ -1245,15 +1249,18 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             m_cage.rdp_receive(desc, recv_buf, &len);
             D(std::cout << "    READE2READ"
                         << std::endl
-                        << "    desc:"
+                        << "    desc     :"
                         << desc
                         << std::endl
-                        << "    addr:"
+                        << "    peer_addr:"
                         << addr.did->to_string()
                         << std::endl
-                        << "    buf :"
+                        << "    own_addr :"
+                        << esc_node_id
+                        << std::endl
+                        << "    buf      :"
                         << recv_buf
-                        << "    len :"
+                        << "    len      :"
                         << len
                         << std::endl);
 
@@ -1263,13 +1270,43 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
                 break;
             }
 
-            const char* ptr_sender_address = addr.did->to_string().c_str();
-            int addr_len = strlen(ptr_sender_address);
-            int send_len = len + addr_len;
+            /* cage_rdp to named_socket protocol header
+             * max size is lo0_mtu (16384byte-macosx 10.6.7)
+             * |----------------------------------------|
+             * | peer_node_id (40byte)                  |
+             * |----------------------------------------|
+             * | own_node_id (40byte)                   |
+             * |----------------------------------------|
+             * | rdp_socket_descriptor_handler (4byte)  |
+             * |----------------------------------------|
+             * | payload                                |
+             * | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  |
+             * |                                        |
+             */
+            // binary header 
+            struct _pack {
+                char peer_addr[CAGE_ID_LEN];
+                char own_addr[CAGE_ID_LEN];
+                int  descriptor;
+            } header;
+            addr.did->to_binary(header.peer_addr, CAGE_ID_LEN);
+            memcpy(header.own_addr, node_id, CAGE_ID_LEN);
 
-            // copy(arg2 -> arg1)
-            memcpy(ptr_send_buf, ptr_sender_address, addr_len);
-            memcpy(ptr_send_buf+addr_len, recv_buf, len);
+            header.descriptor = desc;
+            int send_len = len + sizeof(header);
+            memcpy(ptr_send_buf, &header, sizeof(header));
+            memcpy(ptr_send_buf+sizeof(header), recv_buf, len);
+
+            /* string header send
+            const char* ptr_peer_address = addr.did->to_string().c_str();
+            const char* ptr_own_address = esc_node_id.c_str();
+            int addr_len = strlen(ptr_peer_address);
+            int send_len = len + addr_len + addr_len + 4;
+            memcpy(ptr_send_buf, ptr_peer_address, addr_len);
+            memcpy(ptr_send_buf+addr_len, ptr_own_address, addr_len);
+            memcpy(ptr_send_buf+addr_len+addr_len, &desc, 4);
+            memcpy(ptr_send_buf+addr_len+addr_len+4, recv_buf, len);
+            */
 
             ssize = send(connfd, send_buf, send_len, 0);
             if (ssize <= 0) {
@@ -1389,6 +1426,9 @@ void process_rdp_listen(int sockfd, esc_tokenizer::iterator &it,
 
     // dispatch processing in libcage
     func_rdp_listen* opaque = new func_rdp_listen(*it_n2n->second.get());
+
+    it_n2n->second->get_id(opaque->node_id);
+    opaque->esc_node_id         = it_n2n->second->get_id_str();
     opaque->esc_node_name       = esc_node_name;
     opaque->esc_sock_name       = esc_sock_name;
     opaque->esc_rdp_port        = esc_rdp_port;
@@ -1880,4 +1920,23 @@ static bool id_mapper_fixed_erase(int key, int value)
     return ret_flag;
 }
 
+std::string bin2hex(const char* buf, unsigned int size)
+{
+    const char *hexstr[16] = {"0", "1", "2", "3", "4",
+                              "5", "6", "7", "8", "9",
+                              "a", "b", "c", "d", "e", "f"};
 
+    std::string str = "";
+    char* p = (char*)buf;
+
+    uint32_t i;
+    for (i = 0; i < size; i++) {
+            uint8_t t1, t2;
+            t1 = (0x00f0 & (p[i])) >> 4;
+            t2 = 0x000f & (p[i]);
+            str += hexstr[t1];
+            str += hexstr[t2];
+    }
+
+    return str;
+}

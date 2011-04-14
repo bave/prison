@@ -9,12 +9,16 @@
 #include <errno.h>
 #include <pthread.h>
 
+#include <iostream>
+#include <string>
+
 struct _thread_arg {
     int sock;
     struct sockaddr_un addr;
 };
 
 void *thread_callback(void *opaque);
+std::string bin2hex(const char* buf, unsigned int size);
 
 
 
@@ -97,11 +101,43 @@ void* thread_callback(void *opaque)
         if (rsize == 0) {
             break;
         }
-        printf("recv:%s", buffer); 
-    }
 
+        struct _pack {
+            char peer_addr[20];
+            char own_addr[20];
+            int  descriptor;
+        };
+        struct _pack* header = (struct _pack*)buffer;
+
+        printf("\n");
+        printf("src_addr  :%s\n", bin2hex((const char*)&(header->peer_addr), 20).c_str());
+        printf("dst_addr  :%s\n", bin2hex((const char*)&(header->own_addr),  20).c_str());
+        printf("descriptor:%d\n", header->descriptor);
+        printf("recv:%s", buffer+44); 
+    }
     free(opaque);
     exit(0);
     return 0;
+}
+
+std::string bin2hex(const char* buf, unsigned int size)
+{
+    const char *hexstr[16] = {"0", "1", "2", "3", "4",
+                              "5", "6", "7", "8", "9",
+                              "a", "b", "c", "d", "e", "f"};
+
+    std::string str = "";
+    char* p = (char*)buf;
+
+    uint32_t i;
+    for (i = 0; i < size; i++) {
+            uint8_t t1, t2;
+            t1 = (0x00f0 & (p[i])) >> 4;
+            t2 = 0x000f & (p[i]);
+            str += hexstr[t1];
+            str += hexstr[t2];
+    }
+
+    return str;
 }
 

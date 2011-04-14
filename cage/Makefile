@@ -11,8 +11,8 @@ cli: cli.m
 base64: base64.cpp base64.hpp base64_test.cpp
 	g++ -O3 -fomit-frame-pointer -Wall -o base64_test base64.cpp base64_test.cpp
 
-un: un.c
-	g++ -O3 -fomit-frame-pointer -Wall -o ../bin/un un.c
+un: un.cpp
+	g++ -O3 -fomit-frame-pointer -Wall -o ../bin/un un.cpp
 
 .PHONY: clean
 clean: clean_current

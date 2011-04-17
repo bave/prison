@@ -17,8 +17,38 @@ struct _thread_arg {
     struct sockaddr_un addr;
 };
 
+struct _short_header
+{
+    uint16_t f_type;
+    uint16_t m_type;
+    uint32_t descriptor;
+};
+
+struct _long_header
+{
+    uint16_t f_type;
+    uint16_t m_type;
+    uint32_t descriptor;
+    char peer_addr[20];
+    char own_addr[20];
+};
+
+#define F_RDP_CONNECT_T2B 1  
+#define F_RDP_CONNECT_B2T 2  
+#define F_RDP_LISTEN_T2B  4  
+#define F_RDP_LISTEN_B2T  8  
+
+#define M_RDP_DATA    1  
+#define M_RDP_ACCEPT  2  
+#define M_RDP_CONNECT 4  
+#define M_RDP_CLOSED  8  
+
+int handler;
+
 void *thread_callback(void *opaque);
 std::string bin2hex(const char* buf, unsigned int size);
+const char* tras_f_type(int f_type);
+const char* tras_m_type(int f_type);
 
 
 
@@ -75,12 +105,36 @@ int main(int argc, char** argv)
     memcpy(&conn_request, &thread_arg->addr, sizeof(struct sockaddr_un));
     pthread_create(&t_id, 0, thread_callback, (void *)thread_arg);
 
+    handler = 0;
+    int len;
     char buffer[BUFSIZ];
+    struct _short_header
+    {
+        uint16_t f_type;
+        uint16_t m_type;
+        uint32_t descriptor;
+    }s_header;
+    char* ptr_fgetting = buffer+sizeof(s_header);
+
     for (;;) {
         printf("send:"); 
+
         memset(buffer, 0, sizeof(buffer));
-        fgets(buffer, sizeof(buffer), stdin);
-        send(sock_fd, buffer, strlen(buffer), 0);
+        memset(&s_header, 0, sizeof(s_header));
+
+        s_header.descriptor = htonl(handler);
+        s_header.f_type = htons(F_RDP_LISTEN_T2B & F_RDP_CONNECT_T2B);
+        s_header.m_type = htons(M_RDP_DATA);
+        memcpy(buffer, &s_header, sizeof(s_header));
+
+        fgets(ptr_fgetting, sizeof(buffer)-sizeof(s_header), stdin);
+        if (*ptr_fgetting == '\0') {
+            break;
+        }
+
+        len = sizeof(s_header) + strlen(ptr_fgetting);
+        printf("    send_size is %lu\n", send(sock_fd, buffer, len, 0));
+                
     }
 
     close(sock_fd);
@@ -98,22 +152,45 @@ void* thread_callback(void *opaque)
     for (;;) {
         memset(buffer, 0, sizeof(buffer));
         rsize = recv(thread_arg->sock, buffer, sizeof(buffer), 0);
-        if (rsize == 0) {
+
+        if (rsize <= 0) {
             break;
+        } else {
+
+            uint16_t* ptr;
+            ptr = (uint16_t*)buffer;
+            uint16_t f_type = ntohs(*ptr);
+            ptr++;
+            uint16_t m_type = ntohs(*ptr);
+
+            if (M_RDP_DATA == m_type)
+            {
+                struct _short_header* s_header = (struct _short_header*)buffer;
+                printf("\nrecv:\n");
+                printf("    size    :%lu\n", rsize);
+                printf("    f_type  :%s\n", tras_f_type(f_type));
+                printf("    m_type  :%s\n", tras_m_type(m_type));
+                printf("    handler :%d\n", s_header->descriptor);
+                printf("    buffer  :%s", buffer+sizeof(struct _short_header)); 
+                handler = s_header->descriptor;
+            }
+            else 
+            {
+                struct _long_header* l_header = (struct _long_header*)buffer;
+                const char* src_addr;
+                const char* dst_addr;
+                src_addr = bin2hex((const char*)&(l_header->peer_addr), 20).c_str();
+                dst_addr = bin2hex((const char*)&(l_header->own_addr),  20).c_str();
+                printf("\nrecv:\n");
+                printf("    size    :%lu\n", rsize);
+                printf("    f_type  :%s\n", tras_f_type(f_type));
+                printf("    m_type  :%s\n", tras_m_type(m_type));
+                printf("    src_addr:%s\n", src_addr);
+                printf("    dst_addr:%s\n", dst_addr);
+                printf("    handler :%d\n", l_header->descriptor);
+                handler = l_header->descriptor;
+            }
         }
-
-        struct _pack {
-            char peer_addr[20];
-            char own_addr[20];
-            int  descriptor;
-        };
-        struct _pack* header = (struct _pack*)buffer;
-
-        printf("\n");
-        printf("src_addr  :%s\n", bin2hex((const char*)&(header->peer_addr), 20).c_str());
-        printf("dst_addr  :%s\n", bin2hex((const char*)&(header->own_addr),  20).c_str());
-        printf("descriptor:%d\n", header->descriptor);
-        printf("recv:%s", buffer+44); 
     }
     free(opaque);
     exit(0);
@@ -141,3 +218,39 @@ std::string bin2hex(const char* buf, unsigned int size)
     return str;
 }
 
+const char* tras_f_type(int f_type)
+{
+    if (f_type == 1) {
+        return "CONNECT_TopToBottom";
+    }
+    else if (f_type == 2) {
+        return "CONNECT_BottomToTop";
+    }
+    else if (f_type == 4) {
+        return "LISTEN_TopToBottom";
+    }
+    else if (f_type == 8) {
+        return "LISTEN_BottomToTop";
+    } else {
+        return "undefined";
+    }
+}
+
+const char* tras_m_type(int m_type)
+{
+
+    if (m_type == 1) {
+        return "RDP_DATA";
+    }
+    else if (m_type == 2) {
+        return "RDP_ACCEPT";
+    }
+    else if (m_type == 4) {
+        return "RDP_CONNECT";
+    }
+    else if (m_type == 8) {
+        return "RDP_CLOSE";
+    } else {
+        return "undefined";
+    }
+}

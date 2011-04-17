@@ -1,8 +1,8 @@
 all:cage cli un
 
 cage: cage.cpp
-	g++ -O3 -fomit-frame-pointer -Wall -levent -lcage -o ../bin/cage cage.cpp base64.cpp
-	#g++ -g -Wall -levent -lcage -o ../bin/cage cage.cpp
+	#g++ -O3 -fomit-frame-pointer -Wall -levent -lcage -o ../bin/cage cage.cpp base64.cpp
+	g++ -g -Wall -levent -lcage -o ../bin/cage cage.cpp base64.cpp
 
 cli: cli.m
 	gcc -O3 -fomit-frame-pointer -Wall -o ../bin/cli cli.m

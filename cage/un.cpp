@@ -12,43 +12,18 @@
 #include <iostream>
 #include <string>
 
+#include "header.hpp"
+
 struct _thread_arg {
     int sock;
     struct sockaddr_un addr;
 };
 
-struct _short_header
-{
-    uint16_t f_type;
-    uint16_t m_type;
-    uint32_t descriptor;
-};
-
-struct _long_header
-{
-    uint16_t f_type;
-    uint16_t m_type;
-    uint32_t descriptor;
-    char peer_addr[20];
-    char own_addr[20];
-};
-
-#define F_RDP_CONNECT_T2B 1  
-#define F_RDP_CONNECT_B2T 2  
-#define F_RDP_LISTEN_T2B  4  
-#define F_RDP_LISTEN_B2T  8  
-
-#define M_RDP_DATA    1  
-#define M_RDP_ACCEPT  2  
-#define M_RDP_CONNECT 4  
-#define M_RDP_CLOSED  8  
 
 int handler;
 
 void *thread_callback(void *opaque);
 std::string bin2hex(const char* buf, unsigned int size);
-const char* tras_f_type(int f_type);
-const char* tras_m_type(int f_type);
 
 
 
@@ -168,8 +143,8 @@ void* thread_callback(void *opaque)
                 struct _short_header* s_header = (struct _short_header*)buffer;
                 printf("\nrecv:\n");
                 printf("    size    :%lu\n", rsize);
-                printf("    f_type  :%s\n", tras_f_type(f_type));
-                printf("    m_type  :%s\n", tras_m_type(m_type));
+                printf("    f_type  :%s\n", trans_f_type(f_type));
+                printf("    m_type  :%s\n", trans_m_type(m_type));
                 printf("    handler :%d\n", s_header->descriptor);
                 printf("    buffer  :%s", buffer+sizeof(struct _short_header)); 
                 handler = s_header->descriptor;
@@ -183,8 +158,8 @@ void* thread_callback(void *opaque)
                 dst_addr = bin2hex((const char*)&(l_header->own_addr),  20).c_str();
                 printf("\nrecv:\n");
                 printf("    size    :%lu\n", rsize);
-                printf("    f_type  :%s\n", tras_f_type(f_type));
-                printf("    m_type  :%s\n", tras_m_type(m_type));
+                printf("    f_type  :%s\n", trans_f_type(f_type));
+                printf("    m_type  :%s\n", trans_m_type(m_type));
                 printf("    src_addr:%s\n", src_addr);
                 printf("    dst_addr:%s\n", dst_addr);
                 printf("    handler :%d\n", l_header->descriptor);
@@ -216,41 +191,4 @@ std::string bin2hex(const char* buf, unsigned int size)
     }
 
     return str;
-}
-
-const char* tras_f_type(int f_type)
-{
-    if (f_type == 1) {
-        return "CONNECT_TopToBottom";
-    }
-    else if (f_type == 2) {
-        return "CONNECT_BottomToTop";
-    }
-    else if (f_type == 4) {
-        return "LISTEN_TopToBottom";
-    }
-    else if (f_type == 8) {
-        return "LISTEN_BottomToTop";
-    } else {
-        return "undefined";
-    }
-}
-
-const char* tras_m_type(int m_type)
-{
-
-    if (m_type == 1) {
-        return "RDP_DATA";
-    }
-    else if (m_type == 2) {
-        return "RDP_ACCEPT";
-    }
-    else if (m_type == 4) {
-        return "RDP_CONNECT";
-    }
-    else if (m_type == 8) {
-        return "RDP_CLOSE";
-    } else {
-        return "undefined";
-    }
 }

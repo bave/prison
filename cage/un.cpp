@@ -92,6 +92,7 @@ int main(int argc, char** argv)
     struct _short_header s_header;
     struct _long_header l_header;
 
+    char* retval;
     char* ptr_fgetting = buffer+sizeof(s_header);
 
     for (;;) {
@@ -109,9 +110,9 @@ int main(int argc, char** argv)
         s_header.m_type = M_RDP_DATA;
         memcpy(buffer, &s_header, sizeof(s_header));
 
-        fgets(ptr_fgetting, sizeof(buffer)-sizeof(s_header), stdin);
+        retval = fgets(ptr_fgetting, sizeof(buffer)-sizeof(s_header), stdin);
 
-        if (*ptr_fgetting == '\0') {
+        if (retval == NULL) {
             break;
         }
 
@@ -124,9 +125,10 @@ int main(int argc, char** argv)
             char tmp_buf[BUFSIZ];
             memset(tmp_buf, 0, sizeof(tmp_buf));
             printf("flow_type:"); 
-            fgets(tmp_buf, sizeof(tmp_buf), stdin);
-            if (*tmp_buf == '\0') {
-                continue;
+            retval = fgets(tmp_buf, sizeof(tmp_buf), stdin);
+
+            if (retval == NULL) {
+                break;
             }
 
             if (*tmp_buf == '\n') {
@@ -142,9 +144,10 @@ int main(int argc, char** argv)
             char tmp_buf[BUFSIZ];
             memset(tmp_buf, 0, sizeof(tmp_buf));
             printf("destination handler:"); 
-            fgets(tmp_buf, sizeof(tmp_buf), stdin);
-            if (*tmp_buf == '\0') {
-                continue;
+            retval = fgets(tmp_buf, sizeof(tmp_buf), stdin);
+
+            if (retval == NULL) {
+                break;
             }
 
             if (*tmp_buf == '\n') {
@@ -161,9 +164,10 @@ int main(int argc, char** argv)
             memset(tmp_buf, 0, sizeof(tmp_buf));
 
             printf("message_type:"); 
-            fgets(tmp_buf, sizeof(tmp_buf), stdin);
-            if (*tmp_buf == '\0') {
-                continue;
+            retval = fgets(tmp_buf, sizeof(tmp_buf), stdin);
+
+            if (retval == NULL) {
+                break;
             }
 
             if (*tmp_buf == '\n') {

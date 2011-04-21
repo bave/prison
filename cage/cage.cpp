@@ -83,22 +83,31 @@ int create_named_socket(const char* path);
 // cli processing
 void do_command(int sockfd, std::string command);
 void replace(std::string &str, std::string from, std::string to);
+
 void process_set_id(int sockfd, esc_tokenizer::iterator &it,
                     const esc_tokenizer::iterator &end);
+
 void process_get_id(int sockfd, esc_tokenizer::iterator &it,
                     const esc_tokenizer::iterator &end);
+
 void process_new(int sockfd, esc_tokenizer::iterator &it,
                  const esc_tokenizer::iterator &end);
+
 void process_delete(int sockfd, esc_tokenizer::iterator &it,
                     const esc_tokenizer::iterator &end);
+
 void process_join(int sockfd, esc_tokenizer::iterator &it,
                   const esc_tokenizer::iterator &end);
+
 void process_put(int sockfd, esc_tokenizer::iterator &it,
                  const esc_tokenizer::iterator &end);
+
 void process_get(int sockfd, esc_tokenizer::iterator &it,
                  const esc_tokenizer::iterator &end);
+
 void process_rdp_listen(int sockfd, esc_tokenizer::iterator &it,
                         const esc_tokenizer::iterator &end);
+
 void process_rdp_connect(int sockfd, esc_tokenizer::iterator &it,
                          const esc_tokenizer::iterator &end);
 
@@ -182,7 +191,7 @@ static const char* const ERR_GET_FAILURE       = "409";
  * max size is lo0_mtu (16384byte - macosx 10.6.7)
  * max size is lo0_mtu (16436byte - linux 2.6.32-30(ubuntu 10.4))
  *
- * Flow_Type
+ * Flow_Type 16bit
  * 1   -> 00000001 : F_RDP_CONNECT_T2B
  * 2   -> 00000010 : F_RDP_CONNECT_B2T
  * 4   -> 00000100 : F_RDP_LISTEN_T2B
@@ -191,12 +200,13 @@ static const char* const ERR_GET_FAILURE       = "409";
  * 32  -> 00100000 : RESERVE
  * 64  -> 01000000 : RESERVE
  * 128 -> 10000000 : RESERVE
+ * :
  *
  * - comment
  *     T2B -> Top to Bottom
  *     B2T -> Bottom to Top
  *
- * Mesg_Type
+ * Mesg_Type 16bit
  * 1   -> 00000001 : M_RDP_DATA
  * 2   -> 00000010 : M_RDP_ACCEPT
  * 4   -> 00000100 : M_RDP_CONNECT
@@ -205,6 +215,7 @@ static const char* const ERR_GET_FAILURE       = "409";
  * 32  -> 00100000 : RESERVE
  * 64  -> 01000000 : RESERVE
  * 128 -> 10000000 : RESERVE
+ * :
  *
  *
  * Packet Format of Types which are Flow_Type and Mesg_Type
@@ -217,6 +228,7 @@ static const char* const ERR_GET_FAILURE       = "409";
  * F_RDP_LISTEN_B2T  + M_RDP_ACCEPT
  * F_RDP_CONNECT_B2T + M_RDP_CLOSED
  * F_RDP_LISTEN_B2T  + M_RDP_CLOSED
+ * :
  *  -> |----------------------------------------|
  *     | XXXXXXXX          | XXXXXXXXX          |
  *     |----------------------------------------|
@@ -314,7 +326,7 @@ main(int argc, char** argv)
 void
 usage(char *cmd)
 {
-        printf("%s [-d] [-f port]\n", cmd);
+        printf("%s [-d] [-f name_socket]\n", cmd);
         printf("    -d: run as daemon\n");
         printf("    -h: show this help\n");
         printf("    -f: af_local socket, default is /tmp/sock_cage\n");
@@ -1635,7 +1647,7 @@ void callback_lsock_read(int fd, short ev, void* arg)
         uint16_t m_type = *ptr;
         ptr++;
         uint32_t desc = *(uint32_t*)ptr;
-        D(printf("    accept_desc   :%d\n", desc));
+        D(printf("    accept_desc   : %d\n", desc));
 
         if (m_type == M_RDP_DATA) {
             // -- data type --
@@ -1689,12 +1701,6 @@ void callback_lsock_read(int fd, short ev, void* arg)
         sock2ev.erase(fd);
         shutdown(fd, SHUT_RDWR);
         close(fd);
-        /*
-        event_del(sock2ev[opaque->nsockfd].get());
-        sock2ev.erase(opaque->nsockfd);
-        shutdown(opaque->nsockfd, SHUT_RDWR);
-        close(opaque->nsockfd);
-        */
         delete opaque->dup_instance;
     }
     return;
@@ -1786,7 +1792,67 @@ func_rdp_connect::operator() (int desc,
         {
             D(std::cout << "    READY2READ" << std::endl);
             // XXX
-            // いまからインプリメント
+            int len;
+            char recv_buf[1024 * 64];
+            char send_buf[1024 * 64 + sizeof(struct _long_header)];
+            char* ptr_send_buf = send_buf;
+
+            len = sizeof(recv_buf);
+            memset(recv_buf, 0, sizeof(recv_buf));
+            memset(send_buf, 0, sizeof(send_buf));
+
+            m_cage.rdp_receive(desc, recv_buf, &len);
+
+            D(std::cout << "    READY2READ"
+                        << std::endl
+                        << "    desc : "
+                        << desc
+                        << std::endl
+                        << "    len  : "
+                        << len
+                        << std::endl
+                        << "    buf  : "
+                        << recv_buf
+                        << std::endl);
+
+            if (len == 0) {
+                struct _long_header  l_header;
+                l_header.f_type = F_RDP_CONNECT_B2T;
+                l_header.m_type = M_RDP_CLOSED;
+                l_header.descriptor = desc;
+                addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
+                memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+                send(connfd, &l_header, sizeof(l_header), 0);
+
+                event_del(sock2ev[connfd].get());
+                sock2ev.erase(connfd);
+                shutdown(connfd, SHUT_RDWR);
+                close(connfd);
+                m_cage.rdp_close(desc);
+                break;
+            }
+
+            struct _short_header s_header;
+            s_header.f_type = F_RDP_CONNECT_B2T;
+            s_header.m_type = M_RDP_DATA;
+            s_header.descriptor = desc;
+
+            int send_len = len + sizeof(s_header);
+            memcpy(ptr_send_buf, &s_header, sizeof(s_header));
+            memcpy(ptr_send_buf+sizeof(s_header), recv_buf, len);
+            send(connfd, send_buf, send_len, 0);
+
+            /* string header send
+            const char* ptr_peer_address = addr.did->to_string().c_str();
+            const char* ptr_own_address = esc_node_id.c_str();
+            int addr_len = strlen(ptr_peer_address);
+            int send_len = len + addr_len + addr_len + 4;
+            memcpy(ptr_send_buf, ptr_peer_address, addr_len);
+            memcpy(ptr_send_buf+addr_len, ptr_own_address, addr_len);
+            memcpy(ptr_send_buf+addr_len+addr_len, &desc, 4);
+            memcpy(ptr_send_buf+addr_len+addr_len+4, recv_buf, len);
+            */
+
             break;
         }
         case libcage::BROKEN:

@@ -137,7 +137,7 @@ int main(int argc, char** argv)
             continue;
         }
 
-        if (strncmp(ptr_fgetting, "ESC\n", sizeof("ESC")) == 0) {
+        if (strncmp(ptr_fgetting, "HANDLER\n", sizeof("HANDLER")) == 0) {
             ESC:
             char tmp_buf[BUFSIZ];
             memset(tmp_buf, 0, sizeof(tmp_buf));
@@ -192,7 +192,7 @@ int main(int argc, char** argv)
             printf("    src_addr:%s\n", src_addr.c_str());
             printf("    dst_addr:%s\n", dst_addr.c_str());
             len = sizeof(s_header) + strlen(ptr_fgetting);
-            printf("    ssize is %lu\n", send(sock_fd, buffer, len, 0));
+            printf("    size is %lu\n", send(sock_fd, buffer, len, 0));
         } else { 
             len = sizeof(s_header) + strlen(ptr_fgetting);
             printf("    send is %lu\n", send(sock_fd, buffer, len, 0));
@@ -269,6 +269,7 @@ std::string bin2hex(const char* buf, unsigned int size)
                               "c", "d", "e", "f"};
 
     std::string str = "";
+
     char* p = (char*)buf;
 
     uint32_t i;

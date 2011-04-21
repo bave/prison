@@ -54,11 +54,11 @@ int instance_identifier = 0;
 
 std::multimap<int,int> id_mapper;
 static bool id_mapper_fixed_erase(int key, int value);
+//static bool id_mapper_exist_match(int key, int value)
 std::string bin2hex(const char* buf, unsigned int size);
 
 sock2ev_type   sock2ev;
 name2node_type name2node;
-
 
 
 // rdp_csock -> rdp_connect side socket
@@ -252,7 +252,6 @@ main(int argc, char** argv)
 
     int   opt;
     const char* path = NULL;
-
 
     while ((opt = getopt(argc, argv, "dhf:")) != -1) {
         switch (opt) {
@@ -724,8 +723,8 @@ process_get_id(int sockfd, esc_tokenizer::iterator &it,
     //if get id is std::string (HEX)
     std::string addr_str = it_n2n->second->get_id_str();
 
-    D(std::cout << "    node_name:" << esc_node_name <<std::endl);
-    D(std::cout << "    node_id  :" << addr_str <<std::endl);
+    D(std::cout << "    node_name: " << esc_node_name <<std::endl);
+    D(std::cout << "    node_id  : " << addr_str <<std::endl);
 
     // format: 205,set_id,NODE_NAME,IDENTIFIER
     snprintf(result, sizeof(result), "%s,set_id,%s,%s\n",
@@ -1157,139 +1156,148 @@ public:
 
     void operator() (bool is_get, libcage::dht::value_set_ptr vset)
     {
-            sock2ev_type::iterator it;
-            char                   result[1024 * 1024];
+        sock2ev_type::iterator it;
+        char                   result[1024 * 1024];
 
-            it = sock2ev.find(sockfd);
-            if (it == sock2ev.end()) {
-                    return;
+        it = sock2ev.find(sockfd);
+        if (it == sock2ev.end()) {
+            return;
+        }
+
+        if (is_get) {
+            std::string values;
+            libcage::dht::value_set::iterator it;
+
+            for (it = vset->begin(); it != vset->end(); ++it) {
+                boost::shared_array<char> tmp(new char[it->len + 1]);
+                std::string value;
+
+                memcpy(tmp.get(), it->value.get(), it->len);
+
+                tmp[it->len] = '\0';
+
+                value = tmp.get();
+                replace(value, ",", "\\,");
+
+                values += ",";
+                values += value;
             }
 
-            if (is_get) {
-                    std::string values;
-                    libcage::dht::value_set::iterator it;
+            // send value
+            // format: 204,get,NODE_NAME,KEY,VALUE
+            snprintf(result,
+                    sizeof(result),
+                    "%s,get,%s,%s%s\n",
+                    SUCCEEDED_GET,
+                    esc_node_name.c_str(),
+                    esc_key.c_str(),
+                    values.c_str());
 
-                    for (it = vset->begin(); it != vset->end(); ++it) {
-                            boost::shared_array<char> tmp(new char[it->len + 1]);
-                            std::string value;
+            send(sockfd, result, strlen(result), 0);
+            return;
 
-                            memcpy(tmp.get(), it->value.get(), it->len);
+        } else {
+            // send result of fail
+            // format: 409,get,NODE_NAME,KEY
+            snprintf(result,
+                    sizeof(result),
+                    "%s,get,%s,%s\n",
+                    ERR_GET_FAILURE,
+                    esc_node_name.c_str(),
+                    esc_key.c_str());
 
-                            tmp[it->len] = '\0';
-
-                            value = tmp.get();
-                            replace(value, ",", "\\,");
-
-                            values += ",";
-                            values += value;
-                    }
-
-                    // send value
-                    // format: 204,get,NODE_NAME,KEY,VALUE
-                    snprintf(result, sizeof(result),
-                             "%s,get,%s,%s%s\n",
-                             SUCCEEDED_GET, esc_node_name.c_str(),
-                             esc_key.c_str(), values.c_str());
-
-                    send(sockfd, result, strlen(result), 0);
-                    return;
-            } else {
-                    // send result of fail
-                    // format: 409,get,NODE_NAME,KEY
-                    snprintf(result, sizeof(result),
-                             "%s,get,%s,%s\n",
-                             ERR_GET_FAILURE, esc_node_name.c_str(),
-                             esc_key.c_str());
-                    send(sockfd, result, strlen(result), 0);
-            }
+            send(sockfd, result, strlen(result), 0);
+        }
     }
 };
 
 void process_get(int sockfd, esc_tokenizer::iterator &it,
                  const esc_tokenizer::iterator &end)
 {
-        func_get    func;
-        std::string node_name;
-        std::string esc_node_name;
-        std::string key;
-        std::string esc_key;
+    func_get    func;
+    std::string node_name;
+    std::string esc_node_name;
+    std::string key;
+    std::string esc_key;
 
-        char result[1024 * 64];
+    char result[1024 * 64];
 
-        if (it == end) {
-                // there is no node_name
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,node name is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
+    if (it == end) {
+        // there is no node_name
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,node name is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
 
-        node_name = *it;
-        esc_node_name = node_name;
-        replace(esc_node_name, ",", "\\,");
-
-
-        ++it;
-        if (it == end) {
-                // there is no key
-                // format: 401,COMMENT
-                snprintf(result, sizeof(result),
-                         "401,key is required\n");
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
-
-        key = *it;
-        esc_key = key;
-        replace(esc_key, ",", "\\,");
+    node_name = *it;
+    esc_node_name = node_name;
+    replace(esc_node_name, ",", "\\,");
 
 
-        name2node_type::iterator it_n2n;
-        it_n2n = name2node.find(node_name);
-        if (it_n2n == name2node.end()) {
-                // invalid node name
-                // format: 408,NODE_NAME,get,KEY,COMMENT
-                snprintf(result, sizeof(result),
-                         "%s,get,%s,%s,no such node named '%s'\n",
-                         ERR_NO_SUCH_NODE, esc_node_name.c_str(),
-                         esc_key.c_str(), esc_node_name.c_str());
-                send(sockfd, result, strlen(result), 0);
-                return;
-        }
+    ++it;
+    if (it == end) {
+        // there is no key
+        // format: 401,COMMENT
+        snprintf(result, sizeof(result),
+                "401,key is required\n");
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
 
-        D(std::cout << "    node_name: " << node_name << "\n"
-                    << "    key: " << key << std::endl);
+    key = *it;
+    esc_key = key;
+    replace(esc_key, ",", "\\,");
 
-        func.esc_node_name = esc_node_name;
-        func.esc_key       = esc_key;
-        func.sockfd        = sockfd;
-        it_n2n->second->get(key.c_str(), key.length(), func);
+
+    name2node_type::iterator it_n2n;
+    it_n2n = name2node.find(node_name);
+    if (it_n2n == name2node.end()) {
+        // invalid node name
+        // format: 408,NODE_NAME,get,KEY,COMMENT
+        snprintf(result, sizeof(result),
+                "%s,get,%s,%s,no such node named '%s'\n",
+                ERR_NO_SUCH_NODE, esc_node_name.c_str(),
+                esc_key.c_str(), esc_node_name.c_str());
+        send(sockfd, result, strlen(result), 0);
+        return;
+    }
+
+    D(std::cout << "    node_name: " << node_name << "\n"
+            << "    key: " << key << std::endl);
+
+    func.esc_node_name = esc_node_name;
+    func.esc_key       = esc_key;
+    func.sockfd        = sockfd;
+    it_n2n->second->get(key.c_str(), key.length(), func);
 }
 
 class func_rdp_listen
 {
 public:
-        func_rdp_listen* dup_instance;
-        int nsockfd; // listen socket
-        int connfd;  // connection socket rdp_liste <-> ./un
-        int instance_identifier;
-        int listen_desc;
-        uint8_t node_id[CAGE_ID_LEN];
-        std::string esc_node_id;
-        std::string esc_node_name;
-        std::string esc_sock_name;
-        std::string esc_rdp_port;
-        libcage::cage &m_cage;
+    func_rdp_listen* dup_instance;
+    int nsockfd; // listen socket
+    int connfd;  // connection socket rdp_liste <-> ./un
+    int instance_identifier;
+    int listen_desc;
+    uint8_t node_id[CAGE_ID_LEN];
+    std::string esc_node_id;
+    std::string esc_node_name;
+    std::string esc_sock_name;
+    std::string esc_rdp_port;
+    libcage::cage &m_cage;
 
-        func_rdp_listen(libcage::cage &c) : m_cage(c) { }
-        void operator() (int desc, libcage::rdp_addr addr, libcage::rdp_event event);
+    func_rdp_listen(libcage::cage &c) : m_cage(c) { }
+    void operator() (int desc, libcage::rdp_addr addr, libcage::rdp_event event);
 };
 
 void
 func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_event event)
 {
-    D(std::cout << "function func_rdp_listen" << std::endl);
+    D(std::cout << "function func_rdp_listen" << std::endl
+                << "    node_name : " << esc_node_name << std::endl);
+
     switch (event) {
         case libcage::CONNECTED:
         {
@@ -1299,19 +1307,24 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
         }
         case libcage::ACCEPTED:
         {
-            D(std::cout << "    ACCEPTED"
+            D(std::cout << "    ACCEPT"
                         << std::endl
-                        << "    desc:"
+                        << "    accept_desc : "
                         << desc
                         << std::endl
-                        << "    addr:"
+                        << "    own_addr    : "
+                        << esc_node_id
+                        << std::endl
+                        << "    peer_addr   : "
                         << addr.did->to_string()
                         << std::endl);
+
             id_mapper.insert(std::pair<int,int>(instance_identifier, desc));
 
             struct _long_header  l_header;
-            l_header.f_type = htons(F_RDP_LISTEN_B2T);
-            l_header.m_type = htons(M_RDP_ACCEPT);
+            memset(&l_header, 0, sizeof(l_header));
+            l_header.f_type = F_RDP_LISTEN_B2T;
+            l_header.m_type = M_RDP_ACCEPT;
             l_header.descriptor = desc;
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
@@ -1331,21 +1344,16 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
 
             m_cage.rdp_receive(desc, recv_buf, &len);
 
-            D(std::cout << "    READE2READ"
+            D(std::cout << "    READY2READ"
                         << std::endl
-                        << "    desc     :"
+                        << "    desc : "
                         << desc
                         << std::endl
-                        << "    peer_addr:"
-                        << addr.did->to_string()
-                        << std::endl
-                        << "    own_addr :"
-                        << esc_node_id
-                        << std::endl
-                        << "    buf      :"
-                        << recv_buf
-                        << "    len      :"
+                        << "    len  : "
                         << len
+                        << std::endl
+                        << "    buf  : "
+                        << recv_buf
                         << std::endl);
 
             if (len == 0) {
@@ -1355,8 +1363,8 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             }
 
             struct _short_header s_header;
-            s_header.f_type = htons(F_RDP_LISTEN_B2T);
-            s_header.m_type = htons(M_RDP_DATA);
+            s_header.f_type = F_RDP_LISTEN_B2T;
+            s_header.m_type = M_RDP_DATA;
             s_header.descriptor = desc;
 
             int send_len = len + sizeof(s_header);
@@ -1381,51 +1389,51 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
         {
             // retransmit failed phase
             D(std::cout << "    BROKEN" << std::endl
-                        << "    close desc :" << desc << std::endl);
+                        << "    close desc : " << desc << std::endl);
             id_mapper_fixed_erase(instance_identifier, desc);
-            m_cage.rdp_close(desc);
 
             struct _long_header  l_header;
-            l_header.f_type = htons(F_RDP_LISTEN_B2T);
-            l_header.m_type = htons(M_RDP_CLOSED);
+            l_header.f_type = F_RDP_LISTEN_B2T;
+            l_header.m_type = M_RDP_CLOSED;
             l_header.descriptor = desc;
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
+            m_cage.rdp_close(desc);
             break;
         }
         case libcage::RESET:
         {
             // CLOSE phase
             D(std::cout << "    RESET" << std::endl
-                        << "    close desc :" << desc << std::endl);
+                        << "    close desc : " << desc << std::endl);
             id_mapper_fixed_erase(instance_identifier, desc);
-            m_cage.rdp_close(desc);
 
             struct _long_header  l_header;
-            l_header.f_type = htons(F_RDP_LISTEN_B2T);
-            l_header.m_type = htons(M_RDP_CLOSED);
+            l_header.f_type = F_RDP_LISTEN_B2T;
+            l_header.m_type = M_RDP_CLOSED;
             l_header.descriptor = desc;
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
+            m_cage.rdp_close(desc);
             break;
         }
         case libcage::FAILED:
         {
             // SYN_SENT & SYN_RCVD timeout phase
             D(std::cout << "    FAILED" << std::endl
-                        << "    close desc :" << desc << std::endl);
+                        << "    close desc : " << desc << std::endl);
             id_mapper_fixed_erase(instance_identifier, desc);
-            m_cage.rdp_close(desc);
 
             struct _long_header  l_header;
-            l_header.f_type = htons(F_RDP_LISTEN_B2T);
-            l_header.m_type = htons(M_RDP_CLOSED);
+            l_header.f_type = F_RDP_LISTEN_B2T;
+            l_header.m_type = M_RDP_TIMEOUT;
             l_header.descriptor = desc;
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
+            m_cage.rdp_close(desc);
             break;
         }
         default:
@@ -1532,9 +1540,9 @@ void process_rdp_listen(int sockfd, esc_tokenizer::iterator &it,
     instance_identifier++;
 
     // -- debug message --
-    D(std::cout << "    node_name: " << node_name << std::endl
-                << "    sock_name: " << sock_name << std::endl
-                << "    rdp_port : " << rdp_port  << std::endl);
+    D(std::cout << "    node_name    : " << node_name << std::endl
+                << "    sock_name    : " << sock_name << std::endl
+                << "    rdp_own_port : " << rdp_port  << std::endl);
 
     // set to ev for writing event callback
     boost::shared_ptr<event> readev(new event);
@@ -1557,12 +1565,6 @@ void callback_lsock_accept(int fd, short ev, void* arg)
     func_rdp_listen* opaque;
     opaque = (func_rdp_listen*)arg;
 
-    D(std::cout << "function callback_lsock_accept" 
-                << std::endl
-                << "    rdp_port: "
-                << opaque->esc_rdp_port
-                << std::endl);
-
     if (ev == EV_READ) {
         struct sockaddr_storage sa_storage;
         socklen_t sa_len = sizeof(sa_storage);
@@ -1575,6 +1577,22 @@ void callback_lsock_accept(int fd, short ev, void* arg)
         uint16_t num_port = atoi(opaque->esc_rdp_port.c_str());
         opaque->listen_desc = opaque->m_cage.rdp_listen(num_port, *opaque);
         id_mapper.insert(std::pair<int,int>(opaque->instance_identifier, opaque->listen_desc));
+
+        D(std::cout << "function callback_lsock_accept" 
+                    << std::endl
+                    << "    node_name      : "
+                    << opaque->esc_node_name
+                    << std::endl
+                    << "    node_id        : "
+                    << opaque->esc_node_id
+                    << std::endl
+                    << "    rdp_peer_port  : "
+                    << opaque->esc_rdp_port
+                    << std::endl
+                    << "    rdp_listen_desc: "
+                    << opaque->listen_desc
+                    << std::endl);
+
 
         // -- close listen socket --
         event_del(sock2ev[opaque->nsockfd].get());
@@ -1598,9 +1616,9 @@ void callback_lsock_read(int fd, short ev, void* arg)
     opaque = (func_rdp_listen*)arg;
 
     D(std::cout << "function callback_lsock_read" << "\n"
-                << "    node_name   :" << opaque->esc_node_name << "\n"
-                << "    rdp_port    :" << opaque->esc_rdp_port << "\n" 
-                << "    listen_desc :" << opaque->listen_desc << std::endl);
+                << "    node_name     : " << opaque->esc_node_name << "\n"
+                << "    rdp_peer_port : " << opaque->esc_rdp_port << "\n" 
+                << "    listen_desc   : " << opaque->listen_desc << std::endl);
 
     char buf[1024 * 64];
     memset(buf, 0, sizeof(buf));
@@ -1608,17 +1626,56 @@ void callback_lsock_read(int fd, short ev, void* arg)
     int rsize;
     rsize = recv(fd, buf, sizeof(buf), 0);
 
-    // --- protocol processing ---
-    // XXX
-    rsize = rsize - sizeof(struct _short_header);
-    //char* sbuf = buf + sizeof(struct _short_header);
-    // ---------------------------
-
     if (rsize > 0) {
-        //printf("recv_size:%d\n", rsize);
-        //printf("recv_buf:%s\n", buf);
-        //send(fd, buf, rsize, 0);
-        return;
+        // -- protocol processing --
+        uint16_t* ptr;
+        ptr = (uint16_t*)buf;
+        uint16_t f_type = *ptr;
+        ptr++;
+        uint16_t m_type = *ptr;
+        ptr++;
+        uint32_t desc = *(uint32_t*)ptr;
+        D(printf("    accept_desc   :%d\n", desc));
+
+        if (m_type == M_RDP_DATA) {
+            // -- data type --
+            rsize = rsize - sizeof(struct _short_header);
+            char* sbuf = buf + sizeof(struct _short_header);
+            int retval = opaque->m_cage.rdp_send(desc, sbuf, rsize);
+            if (retval >= 0) {
+                D(printf("    rdp_send success\n"));
+            } else {
+                D(printf("    rdp_send failed\n"));
+            }
+        } else {
+            // -- message type --
+            D(printf("    f_type:%s\n", trans_f_type(f_type)));
+            D(printf("    m_type:%s\n", trans_m_type(m_type)));
+            if (f_type == F_RDP_LISTEN_T2B && m_type == M_RDP_CLOSED) {
+                // -- delete event descriptor of cage_rdp --
+                struct _long_header* ptr_l_header = (struct _long_header*)buf;
+                if (id_mapper_fixed_erase(opaque->instance_identifier, ptr_l_header->descriptor)) {
+                    opaque->m_cage.rdp_close(ptr_l_header->descriptor);
+                    ptr_l_header->f_type = F_RDP_LISTEN_B2T;
+                    ptr_l_header->m_type = M_RDP_CLOSED;
+                    //memcpy(ptr_l_header->peer_addr, opaque->peer_id, CAGE_ID_LEN);
+                    //memcpy(ptr_l_header->own_addr, opaque->node_id, CAGE_ID_LEN);
+                    send(opaque->connfd, ptr_l_header, sizeof(struct _long_header), 0);
+                    D(printf("    Peer socket Close\n"));
+                    D(printf("    rdp_message_send: M_RDP_CLOSED\n"));
+                } else {
+                    ptr_l_header->f_type = F_RDP_LISTEN_B2T;
+                    ptr_l_header->m_type = M_RDP_ERROR;
+                    //memcpy(ptr_l_header->peer_addr, opaque->peer_id, CAGE_ID_LEN);
+                    //memcpy(ptr_l_header->own_addr, opaque->node_id, CAGE_ID_LEN);
+                    send(opaque->connfd, ptr_l_header, sizeof(struct _long_header), 0);
+                    D(printf("    rdp_message_send: M_RDP_ERROR\n"));
+                }
+            } else {
+                ;
+            }
+        }
+
     } else {
         // peer socket close
         D(printf("    Peer socket Close\n"));
@@ -1639,16 +1696,19 @@ void callback_lsock_read(int fd, short ev, void* arg)
         close(opaque->nsockfd);
         */
         delete opaque->dup_instance;
-        return;
     }
+    return;
 }
 
 class func_rdp_connect
 {
 public:
-    int nsockfd; // listen socket
-    int connfd;  // connection socket rdp_connect <-> un
-    int connect_desc;    // coonnect description
+    int nsockfd;      // listen socket
+    int connfd;       // connection socket rdp_connect <-> un
+    int connect_desc; // coonnect description
+    uint8_t node_id[CAGE_ID_LEN];
+    uint8_t peer_id[CAGE_ID_LEN];
+    std::string esc_node_id;
     std::string esc_node_name;
     std::string esc_sock_name;
     std::string esc_rdp_port;
@@ -1656,33 +1716,61 @@ public:
     libcage::cage &m_cage;
 
     func_rdp_connect(libcage::cage &c) : m_cage(c) { }
-    ~func_rdp_connect() {
-            //D(std::cout << "destructor of func_rdp_connect" << std::endl);
-    }
     void operator() (int desc, libcage::rdp_addr addr, libcage::rdp_event ev);
+    //func_rdp_connect &operator= (const func_rdp_connect& rhs);
 };
+
+/*
+func_rdp_connect &operator= (const func_rdp_connect& rhs)
+{
+    nsockfd       = rhs.nsockfd;
+    connfd        = rhs.connfd;
+    connect_desc  = rhs.connect_desc;
+    esc_node_name = rhs.esc_node_name;
+    esc_sock_name = rhs.esc_sock_name;
+    esc_rdp_port  = rhs.esc_rdp_port;
+    esc_rdp_addr  = rhs.esc_rdp_addr;
+    dup_instance  = rhs.this;
+    memcpy(node_id, rhs.node_id, CAGE_ID_LEN);
+    return *this;
+}
+*/
 
 void
 func_rdp_connect::operator() (int desc,
                               libcage::rdp_addr addr,
                               libcage::rdp_event ev)
 {
-    D(std::cout << "function func_rdp_connect" << std::endl);
+    D(std::cout << "function func_rdp_connect" << std::endl
+                << "    node_name : " << esc_node_name << std::endl);
     switch (ev) {
         case libcage::CONNECTED:
         {
             D(std::cout << "    CONNECTED"
                         << std::endl
-                        << "    desc:"
+                        << "    connect_desc  : "
                         << desc
                         << std::endl
-                        << "    addr:"
+                        << "    rdp_own_addr  : "
+                        << esc_node_id 
+                        << std::endl
+                        << "    rdp_peer_addr : "
                         << addr.did->to_string()
                         << std::endl);
 
+            struct _long_header  l_header;
+            l_header.f_type = F_RDP_CONNECT_B2T;
+            l_header.m_type = M_RDP_CONNECT;
+            l_header.descriptor = desc;
+            addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
+            memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+            send(connfd, &l_header, sizeof(l_header), 0);
+
             connect_desc = desc;
+            addr.did->to_binary(peer_id, CAGE_ID_LEN);
             boost::shared_ptr<event> readev(new event);
             sock2ev[connfd] = readev;
+
             event_set(readev.get(), connfd, EV_READ | EV_PERSIST,
                       &callback_csock_read, this);
             event_add(readev.get(), NULL);
@@ -1697,52 +1785,83 @@ func_rdp_connect::operator() (int desc,
         case libcage::READY2READ:
         {
             D(std::cout << "    READY2READ" << std::endl);
+            // XXX
+            // いまからインプリメント
             break;
         }
         case libcage::BROKEN:
         {
-            D(std::cout << "    BROKEN" << std::endl
+            D(std::cout << "    BROKEN"
                         << std::endl
-                        << "    close desc :"
+                        << "    close conn_fd      : "
+                        << connfd
+                        << std::endl
+                        << "    close connect_desc : "
                         << desc 
                         << std::endl);
 
-            m_cage.rdp_close(desc);
+            struct _long_header  l_header;
+            l_header.f_type = F_RDP_CONNECT_B2T;
+            l_header.m_type = M_RDP_CLOSED;
+            l_header.descriptor = desc;
+            addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
+            memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+            send(connfd, &l_header, sizeof(l_header), 0);
+
             event_del(sock2ev[connfd].get());
             sock2ev.erase(connfd);
             shutdown(connfd, SHUT_RDWR);
             close(connfd);
+            m_cage.rdp_close(desc);
             break;
         }
         case libcage::RESET:
         {
-            D(std::cout << "    RESET" << std::endl
+            D(std::cout << "    RESET"
                         << std::endl
-                        << "    close desc :"
+                        << "    close conn_fd      : "
+                        << connfd
+                        << std::endl
+                        << "    close connect_desc : "
                         << desc 
                         << std::endl);
+            struct _long_header  l_header;
+            l_header.f_type = F_RDP_CONNECT_B2T;
+            l_header.m_type = M_RDP_CLOSED;
+            l_header.descriptor = desc;
+            addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
+            memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+            send(connfd, &l_header, sizeof(l_header), 0);
 
-            m_cage.rdp_close(desc);
             event_del(sock2ev[connfd].get());
             sock2ev.erase(connfd);
             shutdown(connfd, SHUT_RDWR);
             close(connfd);
+            m_cage.rdp_close(desc);
             break;
         }
         case libcage::FAILED:
         {
             D(std::cout << "    FAILED"
                         << std::endl
-                        << "    close conn_fd      :"
+                        << "    close conn_fd      : "
                         << connfd
                         << std::endl
-                        << "    close connect_desc :"
+                        << "    close connect_desc : "
                         << desc 
                         << std::endl);
 
-            m_cage.rdp_close(desc);
+            struct _long_header  l_header;
+            l_header.f_type = F_RDP_CONNECT_B2T;
+            l_header.m_type = M_RDP_TIMEOUT;
+            l_header.descriptor = desc;
+            addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
+            memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+            send(connfd, &l_header, sizeof(l_header), 0);
+
             shutdown(connfd, SHUT_RDWR);
             close(connfd);
+            m_cage.rdp_close(desc);
             break;
         }
         default:
@@ -1847,17 +1966,19 @@ void process_rdp_connect(int sockfd, esc_tokenizer::iterator &it,
                 << "    sock_name: " << sock_name << "\n"
                 << "    rdp_port : " << rdp_port  << std::endl);
 
+
     // dispatch processing in libcage
     // XXX
     //boost::shared_ptr<func_rdp_connect> opaque(new func_rdp_connect(*it_n2n->second.get()));
     func_rdp_connect* opaque = new func_rdp_connect(*it_n2n->second.get());
   
+    it_n2n->second->get_id(opaque->node_id);
+    opaque->esc_node_id   = it_n2n->second->get_id_str();
     opaque->esc_node_name = esc_node_name;
     opaque->esc_sock_name = esc_sock_name;
     opaque->esc_rdp_port  = esc_rdp_port;
     opaque->esc_rdp_addr  = esc_rdp_addr;
     opaque->nsockfd       = nsockfd;
-    opaque->connfd        = 0;
 
     // set to ev for writing event callback
     boost::shared_ptr<event> readev(new event);
@@ -1912,8 +2033,6 @@ void callback_csock_accept(int fd, short ev, void *arg)
         uint16_t rdp_s_port;
         rdp_s_port = 0;
 
-
-
         int conn_fd;
         struct sockaddr_storage sa_storage;
         socklen_t sa_len = sizeof(sa_storage);
@@ -1927,10 +2046,12 @@ void callback_csock_accept(int fd, short ev, void *arg)
 
         // -- debug message --
         D(std::cout << "function callback_csock_accept" << "\n"
-                    << "    rdp_dst_id   :" << id->to_string() << "\n"
-                    << "    rdp_dst_port :" << rdp_d_port << "\n"
-                    << "    rdp_src_port :" << rdp_s_port << "\n"
-                    << "    conn_fd      :" << conn_fd << std::endl);
+                    << "    node_name    : " << opaque->esc_node_name << "\n"
+                    << "    node_id      : " << opaque->esc_node_id << "\n"
+                    << "    rdp_dst_id   : " << id->to_string() << "\n"
+                    << "    rdp_dst_port : " << rdp_d_port << "\n"
+                    << "    rdp_src_port : " << rdp_s_port << "\n"
+                    << "    conn_fd      : " << conn_fd << std::endl);
 
         /*
         switch (opaque->m_cage.rdp_get_desc_state(opaque->connect_desc)) {
@@ -2012,10 +2133,10 @@ void callback_csock_read(int fd, short ev, void *arg)
     // ---------------------------
 
     D(std::cout << "function callback_csock_read" << "\n"
-                << "    node_name        :" << opaque->esc_node_name << "\n"
-                << "    rdp_port         :" << opaque->esc_rdp_port << "\n" 
-                << "    rdp_addr         :" << opaque->esc_rdp_addr << "\n"
-                << "    rdp_connect_desc :" << (int)opaque->connect_desc << std::endl);
+                << "    node_name        : " << opaque->esc_node_name << "\n"
+                << "    rdp_own_port     : " << opaque->esc_rdp_port << "\n" 
+                << "    rdp_own_addr     : " << opaque->esc_rdp_addr << "\n"
+                << "    rdp_connect_desc : " << opaque->connect_desc << std::endl);
 
     if (rsize > 0) {
         int retval = opaque->m_cage.rdp_send(opaque->connect_desc, sbuf, rsize);
@@ -2027,11 +2148,11 @@ void callback_csock_read(int fd, short ev, void *arg)
     } else {
         // peer socket close
         D(printf("    Peer socket Close\n"));
-        opaque->m_cage.rdp_close(opaque->connect_desc);
         event_del(sock2ev[fd].get());
         sock2ev.erase(fd);
         shutdown(fd, SHUT_RDWR);
         close(fd);
+        opaque->m_cage.rdp_close(opaque->connect_desc);
     }
     return;
 }
@@ -2093,11 +2214,26 @@ static bool id_mapper_fixed_erase(int key, int value)
     return ret_flag;
 }
 
+/*
+static bool id_mapper_exist_match(int key, int value)
+{
+    std::pair<std::multimap<int,int>::iterator,std::multimap<int,int>::iterator> it;
+    it = id_mapper.equal_range(key);
+    for (std::multimap<int,int>::iterator iter = it.first; iter != it.second; iter++) {
+        if (iter->second == value) {
+            return true;
+        }
+    }
+    return false;
+}
+*/
+
 std::string bin2hex(const char* buf, unsigned int size)
 {
-    const char *hexstr[16] = {"0", "1", "2", "3", "4",
-                              "5", "6", "7", "8", "9",
-                              "a", "b", "c", "d", "e", "f"};
+    const char *hexstr[16] = {"0", "1", "2", "3",
+                              "4", "5", "6", "7",
+                              "8", "9", "a", "b",
+                              "c", "d", "e", "f"};
 
     std::string str = "";
     char* p = (char*)buf;

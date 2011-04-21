@@ -24,6 +24,7 @@ set m [string trim \$l]
 send \"rdp_listen,kris1,/tmp/rdp_listen,1000\n\"
 expect \"send_message:\"
 send \"rdp_connect,kris2,/tmp/rdp_connect,1000,\$m\n\"
+#send \"rdp_connect,kris2,/tmp/rdp_connect,1000,1a7d7677b099214ded676c8e677b20521645faebn\n\"
 expect \"send_message:\"
 send \"quit\n\"
 expect

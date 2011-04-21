@@ -31,6 +31,8 @@ struct _long_header
 #define M_RDP_ACCEPT  2  
 #define M_RDP_CONNECT 4  
 #define M_RDP_CLOSED  8  
+#define M_RDP_TIMEOUT 16 
+#define M_RDP_ERROR   32 
 
 const char* trans_f_type(int f_type)
 {
@@ -45,7 +47,8 @@ const char* trans_f_type(int f_type)
     }
     else if (f_type == 8) {
         return "LISTEN_BottomToTop";
-    } else {
+    }
+    else {
         return "undefined";
     }
 }
@@ -64,7 +67,14 @@ const char* trans_m_type(int m_type)
     }
     else if (m_type == 8) {
         return "RDP_CLOSE";
-    } else {
+    } 
+    else if (m_type == 16) {
+        return "RDP_TIMEOUT";
+    }
+    else if (m_type == 32) {
+        return "RDP_ERROR";
+    }
+    else {
         return "undefined";
     }
 }

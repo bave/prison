@@ -60,7 +60,9 @@ int main(int argc, char** argv)
     memset(&conn_request, 0, sizeof(conn_request));
 
     if (err == 0) {
+        #ifdef __linux__
         conn_request.sun_len = sizeof(conn_request);
+        #endif
         conn_request.sun_family = AF_LOCAL;
         memcpy(conn_request.sun_path, argv[1], strlen(argv[1]));
     }

@@ -76,6 +76,9 @@ task: task.m
 mgmt: mgmt.m
 	${CC} ${CFLAGS} mgmt.m -lgpgme -lgpg-error
 
+base64: ../base64.hpp base64.cpp
+		g++ -O3 -fomit-frame-pointer -Wall base64.cpp
+
 clean:
 	rm ./a.out
 	rm -rf ./a.out.dSYM

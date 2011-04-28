@@ -26,7 +26,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/unordered_map.hpp>
 
-#include "base64.hpp"
+#include "../base64.hpp"
 #include "header.hpp"
 
 #define DEBUG
@@ -442,11 +442,6 @@ bind_safe(int sock_fd, const char* path)
         if (err != 0) {
             err = errno;
         }
-        if (err == EADDRINUSE) {
-        }
-    }
-
-    if (err == 0) {
     }
 
     // rwxr-xr-x

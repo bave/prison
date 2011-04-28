@@ -500,9 +500,14 @@ extern bool is_linking;
     [niLock unlock];
 
     // if own ip address is private network address....
+    // XXX
     if (!is_global(ip)) {
         return false;
     }
+
+    // いまはまだデータベースからなにかをぷっとしていない
+    // なので、いまからここにサービスネームとTransNatName を
+    // putting するコードを書く!
 
     NSString* user = [rc getPrisonName];
     NSString* key = [NSString stringWithFormat:@"%@.p2p", user];

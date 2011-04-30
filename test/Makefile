@@ -27,6 +27,10 @@ endif
 all:
 	ls
 
+rdp: rdp.m
+	${CC} ${CFLAGS} rdp.m
+
+
 name: name.m
 	${CC} ${CFLAGS} name.m
 

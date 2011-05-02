@@ -362,7 +362,6 @@ int main(int argc, char** argv)
         object:nil
     ];
 
-    sleep(1);
 
     // - event loop ------------------------------------------
     Timer* t = [Timer new];

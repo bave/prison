@@ -263,15 +263,19 @@ main(int argc, char** argv)
     pid_t pid;
 
     int   opt;
-    const char* path = NULL;
+    const char* nsock_path = NULL;
+    const char* rc_path = NULL;
 
-    while ((opt = getopt(argc, argv, "dhf:")) != -1) {
+    while ((opt = getopt(argc, argv, "dhn:f:")) != -1) {
         switch (opt) {
         case 'h':
             usage(argv[0]);
             return 0;
+        case 'n':
+            nsock_path = optarg;
+            break;
         case 'f':
-            path = optarg;
+            rc_path = optarg;
             break;
         case 'd':
             is_daemon = true;
@@ -305,15 +309,14 @@ main(int argc, char** argv)
         }
     }
 
-    if (path == NULL) {
-        path = "/tmp/sock_cage";
-        //printf("path:%s\n", path);
+    if (nsock_path == NULL) {
+        nsock_path = "/tmp/sock_cage";
     }
 
 
     event_init();
 
-    if (start_listen(path) == false) {
+    if (start_listen(nsock_path) == false) {
         perror("start_listen");
         return -1;
     }
@@ -326,10 +329,10 @@ main(int argc, char** argv)
 void
 usage(char *cmd)
 {
-        printf("%s [-d] [-f name_socket]\n", cmd);
+        printf("%s [-d] [-n name_socket]\n", cmd);
         printf("    -d: run as daemon\n");
         printf("    -h: show this help\n");
-        printf("    -f: af_local socket, default is /tmp/sock_cage\n");
+        printf("    -n: af_local socket, default is /tmp/sock_cage\n");
 }
 
 int
@@ -2085,8 +2088,8 @@ void callback_csock_accept(int fd, short ev, void *arg)
         */
 
 
-        libcage::id_ptr id(new libcage::uint160_t);
-        id->from_string(opaque->esc_rdp_addr);
+        libcage::id_ptr cage_id(new libcage::uint160_t);
+        cage_id->from_string(opaque->esc_rdp_addr);
 
         uint16_t rdp_d_port;
         rdp_d_port = atoi(opaque->esc_rdp_port.c_str());
@@ -2109,7 +2112,7 @@ void callback_csock_accept(int fd, short ev, void *arg)
         D(std::cout << "function callback_csock_accept" << "\n"
                     << "    node_name    : " << opaque->esc_node_name << "\n"
                     << "    node_id      : " << opaque->esc_node_id << "\n"
-                    << "    rdp_dst_id   : " << id->to_string() << "\n"
+                    << "    rdp_dst_id   : " << cage_id->to_string() << "\n"
                     << "    rdp_dst_port : " << rdp_d_port << "\n"
                     << "    rdp_src_port : " << rdp_s_port << "\n"
                     << "    conn_fd      : " << conn_fd << std::endl);
@@ -2160,7 +2163,7 @@ void callback_csock_accept(int fd, short ev, void *arg)
         }
         */
 
-        opaque->connect_desc = opaque->m_cage.rdp_connect(rdp_s_port, id, rdp_d_port, *opaque);
+        opaque->connect_desc = opaque->m_cage.rdp_connect(rdp_s_port, cage_id, rdp_d_port, *opaque);
         D(std::cout << "    rdp_connect_desc: " << opaque->connect_desc << std::endl);
         delete opaque;
 

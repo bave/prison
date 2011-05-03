@@ -178,14 +178,14 @@ void list(void) {
     //"   408,get,KEY,COMMENT\n"
     //"   409,get,KEY\n"
     "\n"
-    "rdp_listen,NODE_NAME,SOCK_NAME,PORT\n"
-    "-> 206,rdp_listen,NODE_NAME,SOCK_NAME,PORT\n"
+    "rdp_listen,NODE_NAME,SOCK_NAME,RDP_SPORT\n"
+    "-> 206,rdp_listen,NODE_NAME,SOCK_NAME,RDP_SPORT\n"
     //"400,COMMENT\n"
     //"401,COMMENT\n"
     //"407,rdp_listen,NODE_NAME,SOCK_NAME,PORT\n"
     //"408,rdp_listen,NODE_NAME,SOCK_NAME,PORT\n"
     "\n"
-    "rdp_connect,NODE_NAME,SOCK_NAME,PORT\n"
+    "rdp_connect,NODE_NAME,SOCK_NAME,RDP_DPORT,RDP_DADDR\n"
     "-> 207,rdp_listen,NODE_NAME,SOCK_NAME,RDP_DPORT,RDP_DADDR\n"
     "\n";
     printf("%s", usage_list);

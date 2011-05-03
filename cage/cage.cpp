@@ -21,6 +21,9 @@
 #include <string>
 #include <set>
 
+#include <grp.h>
+#include <pwd.h>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/shared_ptr.hpp>
@@ -51,15 +54,19 @@ typedef boost::unordered_map<std::string, boost::shared_ptr<libcage::cage> > nam
 
 bool  is_daemon = false;
 int instance_identifier = 0;
+const char* nsock_path = NULL;
 
 std::multimap<int,int> id_mapper;
 static bool id_mapper_fixed_erase(int key, int value);
 //static bool id_mapper_exist_match(int key, int value)
 std::string bin2hex(const char* buf, unsigned int size);
 
+#ifdef __APPLE__
+extern "C" int getgrouplist_2(const char*, gid_t, gid_t**);
+#endif
+
 sock2ev_type   sock2ev;
 name2node_type name2node;
-
 
 // rdp_csock -> rdp_connect side socket
 void callback_csock_accept(int fd, short ev, void *arg);
@@ -77,7 +84,7 @@ bool start_listen(const char* path);
 
 // utils function
 void usage(char *cmd);
-int bind_safe(int sock_fd, const char* path);
+int bind_safe(int sock_fd, const char* path, bool forceful);
 int create_named_socket(const char* path);
 
 // cli processing
@@ -263,19 +270,14 @@ main(int argc, char** argv)
     pid_t pid;
 
     int   opt;
-    const char* nsock_path = NULL;
-    const char* rc_path = NULL;
 
-    while ((opt = getopt(argc, argv, "dhn:f:")) != -1) {
+    while ((opt = getopt(argc, argv, "dhn:")) != -1) {
         switch (opt) {
         case 'h':
             usage(argv[0]);
             return 0;
         case 'n':
             nsock_path = optarg;
-            break;
-        case 'f':
-            rc_path = optarg;
             break;
         case 'd':
             is_daemon = true;
@@ -336,16 +338,17 @@ usage(char *cmd)
 }
 
 int
-bind_safe(int sock_fd, const char* path)
+bind_safe(int sock_fd, const char* path, bool forceful)
 {
-    //mode_t umask_old;
     struct stat st;
     memset(&st, 0, sizeof(st));
+
     struct sockaddr_un bind_request;
     memset(&bind_request, 0, sizeof(bind_request));
 
     // path size checking
     int err = 0;
+
     if (strlen(path) >= sizeof(bind_request.sun_path)) {
         err = EINVAL;
     }
@@ -367,10 +370,6 @@ bind_safe(int sock_fd, const char* path)
         } else {
             *last_slash = '\0';
         }
-    }
-
-    // get parent directory status
-    if (err == 0) {        
         err = stat(path_dir, &st);
         if (err != 0) {
             err = errno;
@@ -382,7 +381,48 @@ bind_safe(int sock_fd, const char* path)
         err = EINVAL;
     }
 
-    // check writing....
+    // writable checking...
+    if (err == 0) {
+        uid_t uid = geteuid();
+        gid_t gid = getegid();
+
+        if (st.st_mode & S_IWUSR && st.st_uid == uid) {
+            goto safe_bind_writable;
+        } else if (st.st_mode & S_IWOTH) {
+            goto safe_bind_writable;
+        } else if (st.st_mode & S_IWGRP && st.st_gid == gid) {
+            goto safe_bind_writable;
+        }
+
+        struct passwd* pw;
+        pw = getpwuid(uid);
+        int number_of_groups = 0;
+        gid_t* gid_buffer = NULL;
+
+#ifdef __APPLE__
+        number_of_groups = getgrouplist_2(pw->pw_name, gid, &gid_buffer);
+#else
+        getgrouplist(pw->pw_name, gid, gid_buffer, &number_of_groups);
+        gid_buffer = (gid_t*)malloc(number_of_groups * sizeof(gid_t));
+        memset(gid_buffer, 0, number_of_groups * sizeof(gid_t));
+        getgrouplist(pw->pw_name, gid, gid_buffer, &number_of_groups);
+#endif
+
+        for (int i = 0; i < number_of_groups; i++) {
+            if (st.st_mode & S_IWGRP && st.st_gid == gid_buffer[i]) {
+                free(gid_buffer);
+                goto safe_bind_writable;
+            }
+        }
+
+        free(gid_buffer);
+        err = EINVAL;
+    }
+
+safe_bind_writable:
+
+    /*
+    // writable checking...
     if (err == 0) {
         const char* mkdir_test_name = "/mkdir_test";
         int mkdir_test_size = strlen(path_dir) + strlen(mkdir_test_name) + 1;
@@ -418,40 +458,53 @@ bind_safe(int sock_fd, const char* path)
         }
     }
 
-    /*
-    if ( (err == 0) && ( ! (st.st_mode & S_ISTXT) || (st.st_uid != 0) ) ) {
+    if ((err == 0) && (!(st.st_mode & S_ISTXT) || (st.st_uid != 0))) {
         err = EINVAL;
     }
-    if ( (err == 0) && (st.st_uid != geteuid()) ) {
+    if ((err == 0) && (st.st_uid != geteuid())) {
         err = EINVAL;
     }
-    if ( (err == 0) && ((st.st_mode & ACCESSPERMS) != mode_required)) {
+    if ((err == 0) && ((st.st_mode & ACCESSPERMS) != mode_required)) {
         err = EINVAL;
     }
     */
 
+    // check file exist
     if (err == 0) {
-        //umask_old = umask(0);
-        unlink(path);
-#ifndef __linux__
+        int ret = stat(path, &st);
+        if (ret == 0) {
+            // exist
+            if (S_ISSOCK(st.st_mode)) {
+                // socket
+                if (forceful == true) {
+                    unlink(path);
+                } else {
+                    err = EEXIST;
+                }
+            } else {
+                // not socket
+                err = EEXIST;
+            }
+        } else {
+            // nothing
+        }
+    }
+
+    if (err == 0) {
+#ifdef __APPLE__
         bind_request.sun_len = sizeof(bind_request);
 #endif
         bind_request.sun_family = AF_LOCAL;
         memcpy(bind_request.sun_path, path, strlen(path));
-    }
-
-    if (err == 0) {
         err = bind(sock_fd, (struct sockaddr*)&bind_request, SUN_LEN(&bind_request));
+        perror("bind");
         if (err != 0) {
             err = errno;
         }
     }
 
-    // rwxr-xr-x
-    //umask(umask_old);
-
     free(path_dir);
-
+    errno = err;
     return err;
 }
 
@@ -467,6 +520,7 @@ start_listen(const char* path)
         err = errno;
         //perror("socket");
     } 
+
     if (err == 0) {
         err = setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR,
                 (char*)&on, sizeof(on));
@@ -477,12 +531,12 @@ start_listen(const char* path)
     }
 
     if (err == 0) {
-        err = bind_safe(sock_fd, path);
+        err = bind_safe(sock_fd, path, true);
         if (err != 0) {
+            //perror("bind_safe");
             err = errno;
             close(sock_fd);
             delete ev;
-            //perror("bind_safe");
             return false;
         }
     }
@@ -510,6 +564,7 @@ void
 callback_accept(int sockfd, short ev, void *arg)
 {
     if (ev == EV_READ) {
+        D(std::cout << "function callback_cli_accept" << std::endl); 
         sockaddr_in saddr_in;
         socklen_t len = sizeof(saddr_in);
         int fd = accept(sockfd, (sockaddr*)&saddr_in, &len);
@@ -536,22 +591,22 @@ callback_read(int sockfd, short ev, void *arg)
 
         if (size <= 0) {
             if (size == -1) {
-                if (errno == EINTR)
+                if (errno == EINTR) {
                     goto retry;
-
+                }
                 perror("recv");
             }
-
+            D(std::cout << "function cli_close" << std::endl); 
             event_del(sock2ev[sockfd].get());
             sock2ev.erase(sockfd);
-
             shutdown(sockfd, SHUT_RDWR);
             close(sockfd);
-
             return;
         }
 
+
         //fprintf(stderr, "cage_read:%lu:%s\n", strlen(buf), buf);
+        D(std::cout << "function callback_cli_read" << std::endl); 
 
         buf[size - 1] = '\0';
 
@@ -1609,6 +1664,7 @@ void callback_lsock_accept(int fd, short ev, void* arg)
         sock2ev.erase(opaque->nsockfd);
         shutdown(opaque->nsockfd, SHUT_RDWR);
         close(opaque->nsockfd);
+        unlink(opaque->esc_sock_name.c_str());
 
         boost::shared_ptr<event> readev(new event);
         sock2ev[conn_fd] = readev;
@@ -2107,6 +2163,7 @@ void callback_csock_accept(int fd, short ev, void *arg)
         sock2ev.erase(opaque->nsockfd);
         shutdown(opaque->nsockfd, SHUT_RDWR);
         close(opaque->nsockfd);
+        unlink(opaque->esc_sock_name.c_str());
 
         // -- debug message --
         D(std::cout << "function callback_csock_accept" << "\n"
@@ -2229,7 +2286,7 @@ int create_named_socket(const char* path)
         sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
 
         if (sock_fd == -1) { 
-            err = -1;
+            err = errno;
         } 
 
         if (err == 0) {
@@ -2237,29 +2294,30 @@ int create_named_socket(const char* path)
             int ret;
             ret = setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
             if (ret != 0) {
-                err = -1;
+                err = errno;
             }
         }
 
         if (err == 0) {
             int ret;
-            ret = bind_safe(sock_fd, path);
+            ret = bind_safe(sock_fd, path, false);
             if (ret != 0) {
+                err = errno;
                 close(sock_fd);
-                err = -1;
             }
         }
 
         if (err == 0) {
             if (listen(sock_fd, 10) < 0) {
+                err = errno;
                 close(sock_fd);
-                err = -1;
             }
         }
 
         if (err == 0) {
             return sock_fd;
         } else {
+            errno = err;
             return -1;
         }
 }

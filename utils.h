@@ -204,6 +204,42 @@ bool mkdir(NSString* dir)
 */
 #endif
 
+bool isExist(NSString* path)
+{
+    NSFileManager* manager;
+    manager = [NSFileManager defaultManager];
+    return [manager fileExistsAtPath:path];
+}
+
+bool isExec(NSString* path)
+{
+    NSFileManager* manager;
+    manager = [NSFileManager defaultManager];
+    return [manager isExecutableFileAtPath:path];
+}
+
+bool isRead(NSString* path)
+{
+    NSFileManager* manager;
+    manager = [NSFileManager defaultManager];
+    return [manager isReadableFileAtPath:path];
+}
+
+
+bool isWrite(NSString* path)
+{
+    NSFileManager* manager;
+    manager = [NSFileManager defaultManager];
+    return [manager isWritableFileAtPath:path];
+}
+
+bool isDelete(NSString* path)
+{
+    NSFileManager* manager;
+    manager = [NSFileManager defaultManager];
+    return [manager isDeletableFileAtPath:path];
+}
+
 NSString* currentdir(void)
 {
     id pool = [NSAutoreleasePool new];

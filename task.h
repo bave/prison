@@ -161,7 +161,7 @@ extern bool is_verbose;
 
         NSMutableArray* args;
         args = [NSMutableArray array];
-        [args addObject:@"-f"];
+        [args addObject:@"-n"];
         [args addObject:sock_path];
 
         // task

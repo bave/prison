@@ -28,7 +28,6 @@ int main(int argc, char** argv)
     }
 
     int err = 0;
-    int on = 1;
     int sock_fd;
     sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
     if (sock_fd == -1) { 
@@ -36,13 +35,16 @@ int main(int argc, char** argv)
         perror("socket");
     } 
 
+    /*
     if (err == 0) {
+        int on = 1;
         err = setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
         if (err != 0) {
             err = errno;
             perror("setsockopt");
         }
     }
+    */
 
     struct sockaddr_un conn_request;
     memset(&conn_request, 0, sizeof(conn_request));
@@ -124,7 +126,7 @@ int main(int argc, char** argv)
             break;
         }
 
-        send(sock_fd, buffer, (socklen_t)sizeof(buffer), 0);
+        send(sock_fd, buffer, strlen(buffer), 0);
         memset(buffer, 0, sizeof(buffer));
         recv(sock_fd, buffer, sizeof(buffer), 0);
         printf("recv_message:%s", buffer); 

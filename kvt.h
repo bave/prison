@@ -34,8 +34,9 @@ extern bool is_linking;
 
     NSLock* kvtLock;
     NSMutableDictionary* kvtRequestQueue;
-    NSMutableArray* kvtReputQueue;
     NSMutableDictionary* kvtCageCache;
+    NSMutableArray* kvtReputQueue;
+    NSString* kvtOwnID;
 
     NSMutableDictionary* kvtLocalDB;
 
@@ -148,6 +149,7 @@ extern bool is_linking;
         kvtCageCache = [[NSMutableDictionary alloc] init];
         kvtRequestQueue = [[NSMutableDictionary alloc] init];
         kvtReputQueue = [[NSMutableArray alloc] init];
+        kvtOwnID = nil;
         id pool = [NSAutoreleasePool new];
         [self _gpg_init];
         [self _cage_init];
@@ -239,6 +241,7 @@ extern bool is_linking;
     [kvtReputQueue release];
     [kvtLocalDB release];
     [kvtCageCache release];
+    if (kvtOwnID != nil)[kvtOwnID release];
 
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [super dealloc];
@@ -465,6 +468,7 @@ extern bool is_linking;
         [self cage_leave];
     }
 
+
     cage_file = [[NSFileHandle alloc] initWithFileDescriptor:cage_sock_fd];
     [[NSNotificationCenter defaultCenter]
         addObserver:self
@@ -499,9 +503,9 @@ extern bool is_linking;
     NSString* ip = [ni defaultIP4];
     [niLock unlock];
 
-    // if own ip address is private network address....
-    // XXX
     if (!is_global(ip)) {
+        // XXX
+        // if own ip address is private network address....
         return false;
     }
 
@@ -509,21 +513,26 @@ extern bool is_linking;
     // なので、いまからここにサービスネームとTransNatName を
     // putting するコードを書く!
 
+    // prison name
     NSString* user = [rc getPrisonName];
     NSString* key = [NSString stringWithFormat:@"%@.p2p", user];
-
     NSString* value = [NSString stringWithFormat:@"%@:NULL:NULL", ip];
     NSString* sign = [gpg sign:value];
     NSString* value_sign = [GPGME trimContentFromArmor:sign];
-
     [self sendMessage:[NSString stringWithFormat:
                 @"put,prison,%@,%@,%d,unique\n", key, value_sign, KVT_CAGE_TTL]];
 
+    // prison gpg key
     key = [NSString stringWithFormat:@"%@@prison", user];
     value = [GPGME trimContentFromArmor:[gpg exportPubring:key]];
-
     [self sendMessage:[NSString stringWithFormat:
                 @"put,prison,%@,%@,%d,unique\n", key, value, KVT_CAGE_TTL]];
+
+    // prison socket 
+    key = [NSString stringWithFormat:@"%@@ps", user];
+    [self sendMessage:[NSString stringWithFormat:
+                @"put,prison,%@,%@,%d,unique\n", key, kvtOwnID, KVT_CAGE_TTL]];
+
 
     return true;
 }
@@ -652,6 +661,7 @@ extern bool is_linking;
         return false;
     }
 
+    // set_own_id
     const NSStringEncoding* encode;
     encode = [NSString availableStringEncodings];
     NSString* user  = [rc getPrisonName];
@@ -681,6 +691,29 @@ extern bool is_linking;
             ret = false;
         }
     }
+
+    // get_own_id
+    if (ret == true) {
+        buf_string = [self _commit_message:@"get_id,prison\n"];
+        if (buf_string == nil) {
+            ret = false;
+        } else {
+            ret = true;
+        }
+    }
+
+    if (ret == true) {
+        NSArray* buf_array = [buf_string componentsSeparatedByString:@","];
+
+        //SUCCEEDED_GET_ID = "208";
+        if ([[buf_array objectAtIndex:0] isEqualToString:@"208"]) {
+            kvtOwnID = [[[buf_array objectAtIndex:3] trim]copy];
+            ret = true;
+        } else {
+            ret = false;
+        }
+    }
+
     return ret;
 }
 

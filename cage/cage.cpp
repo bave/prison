@@ -1509,9 +1509,26 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             m_cage.rdp_close(desc);
             break;
         }
+        case libcage::REFUSED:
+        {
+            // peer is not servicing 
+            D(std::cout << "    REFUSED" << std::endl
+                        << "    close desc: " << desc << std::endl);
+            id_mapper_fixed_erase(instance_identifier, desc);
+
+            struct _long_header  l_header;
+            l_header.f_type = F_RDP_LISTEN_B2T;
+            l_header.m_type = M_RDP_TIMEOUT;
+            l_header.descriptor = desc;
+            addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
+            memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+            send(connfd, &l_header, sizeof(l_header), 0);
+            m_cage.rdp_close(desc);
+            break;
+        }
         default:
         {
-            D(std::cout << "    default" << std::endl);
+            D(std::cout << "    libcage::default" << std::endl);
             break;
         }
     }
@@ -1992,9 +2009,35 @@ func_rdp_connect::operator() (int desc,
             m_cage.rdp_close(desc);
             break;
         }
+        case libcage::REFUSED:
+        {
+            // peer is not servicing 
+            D(std::cout << "    REFUSED"
+                        << std::endl
+                        << "    close conn_fd     : "
+                        << connfd
+                        << std::endl
+                        << "    close connect_desc: "
+                        << desc 
+                        << std::endl);
+
+            struct _long_header  l_header;
+            l_header.f_type = F_RDP_CONNECT_B2T;
+            l_header.m_type = M_RDP_TIMEOUT;
+            l_header.descriptor = desc;
+            addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
+            memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+            send(connfd, &l_header, sizeof(l_header), 0);
+
+            shutdown(connfd, SHUT_RDWR);
+            close(connfd);
+            m_cage.rdp_close(desc);
+            break;
+        }
         default:
         {
-            D(std::cout << "    default" << std::endl);
+            D(std::cout << "    libcage::default" << std::endl);
+            D(std::cout << "    value:" <<  ev << std::endl);
         }
     }
 }

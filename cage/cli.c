@@ -1,13 +1,14 @@
 
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+#include <sys/select.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/un.h>
 
 void list(void);
 
@@ -75,12 +76,31 @@ int main(int argc, char** argv)
     printf("Now connecting to %s!!\n", path);
     char buffer[65535];
 
+    fd_set fds;
+    struct timeval t;
+    t.tv_sec=1;
+    t.tv_usec=0;
+    int sel;
+
     for (;;) {
 
         printf("send_message:");
         fflush(stdout);
 
         memset(buffer, '\0', sizeof(buffer));
+
+SELECT_LOOP:
+        FD_ZERO(&fds);
+        FD_SET(fileno(stdin), &fds);
+        FD_SET(sock_fd, &fds);
+        sel = select(sock_fd+1, &fds, NULL, NULL, &t);
+        if (sel == 0) {
+            goto SELECT_LOOP;
+        } else if (FD_ISSET(sock_fd, &fds)) {
+            printf("cage process closed");
+            close(sock_fd);
+            return 0;
+        }
 
         char* ret = NULL;
         ret = fgets(buffer, sizeof(buffer), stdin);
@@ -128,7 +148,13 @@ int main(int argc, char** argv)
 
         send(sock_fd, buffer, strlen(buffer), 0);
         memset(buffer, 0, sizeof(buffer));
-        recv(sock_fd, buffer, sizeof(buffer), 0);
+        ssize_t rsize = recv(sock_fd, buffer, sizeof(buffer), 0);
+        if (rsize == 0) {
+            printf("cage process closed");
+            close(sock_fd);
+            return 0;
+        }
+        
         printf("recv_message:%s", buffer); 
     }
     //leave:

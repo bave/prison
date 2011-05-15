@@ -19,11 +19,11 @@
 
 @interface PrisonSockBuffer : NSObject
 {
-    int m_type;
+    //int m_type;
     int handler;
     NSData* payload;
 }
-@property (getter=m_type, setter=set_m_type:, assign, readwrite) int m_type;
+//@property (getter=m_type, setter=set_m_type:, assign, readwrite) int m_type;
 @property (getter=handler, setter=set_handler:, assign, readwrite) int handler;
 @property (getter=payload, setter=set_payload:, copy, readwrite) NSData* payload;
 - (id)init;
@@ -31,7 +31,7 @@
 @end
 
 @implementation PrisonSockBuffer
-@synthesize m_type;
+//@synthesize m_type;
 @synthesize handler;
 @synthesize payload;
 
@@ -39,6 +39,7 @@
 {
     self = [super init];
     if (self != nil) {
+        handler = 0;
         payload = nil;
     }
     return self;
@@ -317,13 +318,13 @@
     struct _short_header* sh = (struct _short_header*)buf;
     if (sh->f_type == F_RDP_CONNECT_B2T && sh->m_type != M_RDP_DATA) {
         // maybe.. peer rdp close ...
-        [psb set_m_type:sh->m_type];
+        //[psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
         [psb set_payload:nil];
         return psb;
     } else {
         // M_RDP_DATA
-        [psb set_m_type:sh->m_type];
+        //[psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
         char* payload = buf + sizeof(struct _short_header);
         int payload_size = rsize - sizeof(struct _short_header);
@@ -335,11 +336,34 @@
 
 - (int)ps_sendto:(PrisonSockBuffer*)psbuf
 {
-    id peer = [ps_handler objectForKey:[NSNumber numberWithInt:[psbuf handler]]];
-    if (peer != nil) {
-        return 1;
+    if (psbuf == nil) {
+        return 0;
     }
-    return 0;
+
+    int desc = [psbuf handler];
+
+    if ([ps_handler objectForKey:[NSNumber numberWithInt:desc]]) {
+        // correct descriptor
+        struct _short_header sh;
+        sh.f_type = F_RDP_CONNECT_T2B;
+        sh.m_type = M_RDP_DATA;
+        sh.descriptor = desc;
+
+        id send_psbuf = [[NSMutableData new] autorelease];
+        [send_psbuf appendBytes:&sh length:sizeof(sh)];
+        [send_psbuf appendData:[psbuf payload]];
+
+        ssize_t ssize = send(sock_fd, [send_psbuf bytes], [send_psbuf length], 0);
+        int result = ssize - sizeof(struct _short_header);
+        if (result <= 0) {
+            return 0;
+        } else {
+            return result;
+        }
+    } else {
+        // error descriptor
+        return 0;
+    }
 }
 
 - (BOOL)ps_close:(int)handler

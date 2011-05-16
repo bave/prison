@@ -1869,8 +1869,6 @@ func_rdp_connect::operator() (int desc,
         }
         case libcage::READY2READ:
         {
-            D(std::cout << "    READY2READ" << std::endl);
-            // XXX
             int len;
             char recv_buf[1024 * 64];
             char send_buf[1024 * 64 + sizeof(struct _long_header)];

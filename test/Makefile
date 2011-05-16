@@ -27,8 +27,11 @@ endif
 all:
 	ls
 
-ps: ps.m
-	${CC} ${CFLAGS} ps.m
+ps_c: ps_c.m
+	${CC} ${CFLAGS} ps_c.m
+
+ps_s: ps_s.m
+	${CC} ${CFLAGS} ps_s.m
 
 
 name: name.m

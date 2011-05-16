@@ -19,11 +19,11 @@
 
 @interface PrisonSockBuffer : NSObject
 {
-    //int m_type;
+    int m_type;
     int handler;
     NSData* payload;
 }
-//@property (getter=m_type, setter=set_m_type:, assign, readwrite) int m_type;
+@property (getter=m_type, setter=set_m_type:, assign, readwrite) int m_type;
 @property (getter=handler, setter=set_handler:, assign, readwrite) int handler;
 @property (getter=payload, setter=set_payload:, copy, readwrite) NSData* payload;
 - (id)init;
@@ -31,7 +31,7 @@
 @end
 
 @implementation PrisonSockBuffer
-//@synthesize m_type;
+@synthesize m_type;
 @synthesize handler;
 @synthesize payload;
 
@@ -82,6 +82,7 @@
 - (BOOL)ps_create;
 - (BOOL)ps_close:(int)handler;
 - (BOOL)ps_destroy;
+- (BOOL)ps_listen:(NSString*)psport;
 - (int)ps_connect:(NSString*)psid :(NSString*)psport;
 
 - (NSString*)get_own_addr;
@@ -90,9 +91,6 @@
 - (PrisonSockBuffer*)ps_recvfrom;
 - (int)ps_sendto:(PrisonSockBuffer*)psbuf;
 
-// TODO
-- (int)ps_listen;
-- (int)ps_accept;
 
 @end
 
@@ -126,34 +124,87 @@
     return;
 }
 
-/*
--(int)ps_bind:(NSString*)psport
+
+- (BOOL)ps_listen:(NSString*)psport
 {
+    if (already_use) {
+        errno = EISCONN;
+        return NO;
+    }
+
     // cant use following rdp_ports in this porgram.
     // because,, rdp_port 100 is cage_store_port and rdp_port 101 is cage_get_port.
     int psport_int = [psport intValue];
     if (psport_int == 0) {
         errno = EADDRNOTAVAIL;
-        return -1;
+        return NO;
     } else if (psport_int == 100) {
         errno = EADDRINUSE;
-        return -1;
+        return NO;
     } else if (psport_int == 101) {
         errno = EADDRINUSE;
-        return -1;
+        return NO;
     }
-    return 0;
-}
-*/
 
-- (int)ps_listen
-{
-    return 0;
-}
+    // listen messsage format
+    //rdp_listen,NODE_NAME,SOCK_NAME,RDP_DPORT
+    NSString* sock_name;
+    sock_name = [NSString stringWithFormat:@"%@psListen_%@",
+                                           work_dir,
+                                           psport];
+    NSString* message;
+    message   = [NSString stringWithFormat:@"rdp_listen,%@,%@,%@\n",
+                                           node_name,
+                                           sock_name,
+                                           psport];
 
-- (int)ps_accept
-{
-    return 0;
+    ssize_t rsize;
+    char buf[1024 * 64];
+    memset(buf, 0, sizeof(buf));
+
+    rsize = send(cage_fd, [message UTF8String], [message length], 0);
+    if (rsize == -1) {
+        return NO;
+    }
+
+    rsize = recv(cage_fd, buf, sizeof(buf), 0);
+    if (rsize == -1) {
+        return NO;
+    }
+
+    NSString* element_string = [NSString stringWithUTF8String:buf];
+    NSArray* element_array = [element_string componentsSeparatedByString:@","];
+
+    if ([[element_array objectAtIndex:0] isEqualToString:@"206"]) {
+        // success : rdp_listen..
+        struct sockaddr_un conn_request;
+        memset(&conn_request, 0, sizeof(conn_request));
+        sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+        if (sock_fd <= 0) { 
+            sock_fd = 0;
+            return NO;
+        } 
+
+        #ifndef __APPLE__
+        conn_request.sun_len = sizeof(conn_request);
+        #endif
+        conn_request.sun_family = AF_LOCAL;
+        memcpy(conn_request.sun_path, [sock_name UTF8String], [sock_name length]);
+
+        int ret;
+        ret = connect(sock_fd, (struct sockaddr*)&conn_request, SUN_LEN(&conn_request));
+        if (ret != 0) {
+            close(sock_fd);
+            sock_fd = 0;
+            return NO;
+        }
+        already_use = YES;
+        listen_port = [psport copy];
+    } else {
+        return NO;
+    }
+
+    return YES;
 }
 
 - (int)ps_connect:(NSString*)psid :(NSString*)psport
@@ -263,11 +314,11 @@
         if (f_type == F_RDP_CONNECT_B2T && m_type == M_RDP_CONNECT) {
             //printf("debug:return handler\n");
             errno = 0;
-            already_use = YES;
             struct _long_header* lh = (struct _long_header*)buf;
             ssize_t s = sizeof(lh->peer_addr);
             [ps_handler setObject:[NSData dataWithBytes:lh->peer_addr length:s]
                            forKey:[NSNumber numberWithInt:handler]];
+            already_use = YES;
             connect_port = [psport copy];
             return handler;
         } else if (f_type == F_RDP_CONNECT_B2T && m_type == M_RDP_TIMEOUT) {
@@ -317,14 +368,20 @@
 
     struct _short_header* sh = (struct _short_header*)buf;
     if (sh->f_type == F_RDP_CONNECT_B2T && sh->m_type != M_RDP_DATA) {
-        // maybe.. peer rdp close ...
-        //[psb set_m_type:sh->m_type];
+        // maybe.. peer rdp close ... (connect socket)
+        [psb set_m_type:sh->m_type];
+        [psb set_handler:sh->descriptor];
+        [psb set_payload:nil];
+        return psb;
+    } else if (sh->f_type == F_RDP_LISTEN_B2T && sh->m_type != M_RDP_DATA) { 
+        // maybe.. peer rdp close ... (listen socket)
+        [psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
         [psb set_payload:nil];
         return psb;
     } else {
         // M_RDP_DATA
-        //[psb set_m_type:sh->m_type];
+        [psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
         char* payload = buf + sizeof(struct _short_header);
         int payload_size = rsize - sizeof(struct _short_header);

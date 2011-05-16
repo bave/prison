@@ -5,7 +5,6 @@ cage: cage.cpp
 
 cli: cli.c
 	gcc -O3 -fomit-frame-pointer -Wall -o ../bin/cli cli.c
-	#gcc -g -Wall -o ../bin/cli cli.c
 
 un: un.cpp
 	g++ -O3 -fomit-frame-pointer -Wall -o ../bin/un un.cpp -lpthread

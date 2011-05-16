@@ -41,12 +41,13 @@ int main(int argc, char** argv)
             // exceptional!!
             // - remote ps_server process is not servicing
             // - local prison/cage is not servicing
-            ;
+            NSLog(@"exceptional close");
         } else if ([psb payload] == nil) {
             // server side is closed or shutdowned by remote host!!
-            ;
+            NSLog(@"server side close");
         } else  { 
             // message receive processing... 
+            NSLog(@"m_type:%d", [psb m_type]);
             NSLog(@"handler:%d", [psb handler]);
             NSLog(@"payload:%s", [[psb payload] bytes]);
         }

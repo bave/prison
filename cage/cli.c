@@ -90,6 +90,8 @@ int main(int argc, char** argv)
         memset(buffer, '\0', sizeof(buffer));
 
 SELECT_LOOP:
+        t.tv_sec=1;
+        t.tv_usec=0;
         FD_ZERO(&fds);
         FD_SET(fileno(stdin), &fds);
         FD_SET(sock_fd, &fds);

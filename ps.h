@@ -375,6 +375,13 @@
         return psb;
     } else if (sh->f_type == F_RDP_LISTEN_B2T && sh->m_type != M_RDP_DATA) { 
         // maybe.. peer rdp close ... (listen socket)
+        if (sh->m_type == M_RDP_ACCEPT) {
+            errno = 0;
+            struct _long_header* lh = (struct _long_header*)buf;
+            ssize_t s = sizeof(lh->peer_addr);
+            [ps_handler setObject:[NSData dataWithBytes:lh->peer_addr length:s]
+                           forKey:[NSNumber numberWithInt:lh->descriptor]];
+        }
         [psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
         [psb set_payload:nil];
@@ -458,6 +465,7 @@
         } else if (listen_port != nil) {
             // listen socket
             // TODO
+            printf("ps_close listen side!!");
             ssize_t rsize;
             struct _long_header lh;
             lh.f_type = F_RDP_LISTEN_T2B;
@@ -465,14 +473,19 @@
             lh.descriptor = handler;
             memcpy(lh.peer_addr, [peer bytes], [peer length]);
             memcpy(lh.own_addr, [own_addr_bin bytes], [own_addr_bin length]);
-            rsize = send(cage_fd, &lh, sizeof(lh), 0);
+            rsize = send(sock_fd, &lh, sizeof(lh), 0);
             if (rsize == -1) {
                 errno = EBADF;
                 return NO;
             }
+            printf("    send close message!!");
+            [ps_handler removeObjectForKey:[NSNumber numberWithInt:handler]];
+            return YES;
+            /*
             ps_close_listen_recv:
             memset(&lh, 0, sizeof(lh));
             rsize = recv(sock_fd, &lh, sizeof(lh), 0);
+            printf("    recv closed message!!");
             if (rsize == -1) {
                 errno = EBADF;
                 return NO;
@@ -486,6 +499,7 @@
             } else {
                 goto ps_close_listen_recv;
             }
+            */
         }
     } else {
         errno = EBADF;

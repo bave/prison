@@ -10,10 +10,13 @@ int main(int argc, char** argv)
 
     // configuration
     [ps set_node_name:@"prison"];
-    [ps set_sock_path:@"/tmp/sock_cage"];
-    //[ps set_sock_path:@"/tmp/prison/sock_cage"];
+    //[ps set_sock_path:@"/tmp/sock_cage"];
+    [ps set_sock_path:@"/tmp/prison/sock_cage"];
 
-    id peer_id = @"78e305742ac743ecf22d8139502576ac8709e0ad";
+    //set_id "aris" 
+
+    id peer_id = [ps ps_lookup:@"prison@ps"];
+    //id peer_id = @"78e305742ac743ecf22d8139502576ac8709e0ad";
     id peer_port= @"1000";
 
     // create prison socket

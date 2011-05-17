@@ -1,7 +1,9 @@
 #ifndef __HEADER_HPP__
 #define __HEADER_HPP__
 
-#include <libcage/cage.hpp>
+//#include <libcage/cage.hpp>
+
+#define CAGE_ID_LEN 20
 
 const char* trans_m_type(int m_type);
 const char* trans_f_type(int f_type);

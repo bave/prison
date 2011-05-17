@@ -67,7 +67,7 @@
 
 - (void)set_m_type:(int)set
 {
-    m_type = set
+    m_type = set;
     return;
 }
 
@@ -319,7 +319,7 @@
             return NO;
         } 
 
-        #ifndef __APPLE__
+        #ifdef __MACH__
         conn_request.sun_len = sizeof(conn_request);
         #endif
         conn_request.sun_family = AF_LOCAL;
@@ -422,7 +422,7 @@
             return -1;
         } 
 
-        #ifndef __APPLE__
+        #ifdef __APPLE__
         conn_request.sun_len = sizeof(conn_request);
         #endif
         conn_request.sun_family = AF_LOCAL;
@@ -758,7 +758,7 @@
 
     if (err == 0) { 
         // -- connect to cage_path --
-        #ifndef __APPLE__
+        #ifdef __APPLE__
         conn_request.sun_len = sizeof(conn_request);
         #endif
         conn_request.sun_family = AF_LOCAL;

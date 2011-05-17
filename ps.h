@@ -5,6 +5,7 @@
 // this source code has 2 class PrisonSockBuffer and PrisonSock
 // prison socket's max frame size is 16384 bytes
 
+
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
@@ -30,9 +31,11 @@
 }
 
 #ifdef __MACH__
+
 @property (getter=m_type, setter=set_m_type:, assign, readwrite) int m_type;
 @property (getter=handler, setter=set_handler:, assign, readwrite) int handler;
 @property (getter=payload, setter=set_payload:, copy, readwrite) NSData* payload;
+
 #else
 
 - (int)m_type;

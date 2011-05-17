@@ -4,20 +4,23 @@
 
 int main(int argc, char** argv)
 {
+
+    if (argc != 3) {
+        printf("./a.out hoge@ps port_num message\n");
+        return -1;
+    }
+
     id pool = [NSAutoreleasePool new];
 
     id ps = [[PrisonSock new] autorelease];
 
     // configuration
     [ps set_node_name:@"prison"];
-    //[ps set_sock_path:@"/tmp/sock_cage"];
-    [ps set_sock_path:@"/tmp/prison/sock_cage"];
+    [ps set_sock_path:@"/tmp/sock_cage"];
+    //[ps set_sock_path:@"/tmp/prison/sock_cage"];
 
-    //set_id "aris" 
-
-    id peer_id = [ps ps_lookup:@"prison@ps"];
-    //id peer_id = @"78e305742ac743ecf22d8139502576ac8709e0ad";
-    id peer_port= @"1000";
+    id peer_id = [ps ps_lookup:[NSString stringWithUTF9String:argv[1]]];
+    id peer_port= [NSString stringWithUTF8String:argv[2]];
 
     // create prison socket
     BOOL retval = [ps ps_create];
@@ -32,7 +35,7 @@ int main(int argc, char** argv)
         // ps_sendto sample
         psb = [[PrisonSockBuffer new] autorelease];
         [psb set_handler:handler];
-        [psb set_payload:[NSData dataWithBytes:"test\n" length:strlen("test\n")]];
+        [psb set_payload:[NSData dataWithBytes:argv[3] length:strlen(argv[3])]];
         int size = [ps ps_sendto:psb];
         printf("send_size:%d\n", size);
         // -------------------------------------------------------------

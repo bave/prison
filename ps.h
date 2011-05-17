@@ -1,6 +1,10 @@
 #ifndef __PRISON_SOCKET_H__
 #define __PRISON_SOCKET_H__
 
+// -- memo --
+// this source code has 2 class PrisonSockBuffer and PrisonSock
+// prison socket's max frame size is 16384 bytes
+
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
@@ -16,6 +20,7 @@
 #include "cage/header.hpp"
 
 #import <Cocoa/Cocoa.h>
+
 
 @interface PrisonSockBuffer : NSObject
 {
@@ -53,7 +58,6 @@
 }
 @end
 
-
 @interface PrisonSock : NSObject
 {
     int sock_fd;
@@ -72,6 +76,7 @@
     NSMutableDictionary* ps_handler;
 }
 
+// XXX setter いらない？
 @property (getter=sock_fd, setter=set_sock_fd:, assign, readwrite) int sock_fd;
 @property (getter=cage_fd, setter=set_cage_fd:, assign, readwrite) int cage_fd;
 
@@ -91,6 +96,7 @@
 - (PrisonSockBuffer*)ps_recvfrom;
 - (int)ps_sendto:(PrisonSockBuffer*)psbuf;
 
+- (NSString*)ps_lookup:(NSString*)psname;
 
 @end
 
@@ -99,6 +105,38 @@
 
 @synthesize sock_fd;
 @synthesize cage_fd;
+
+- (NSString*)ps_lookup:(NSString*)psname
+{
+    NSString* message;
+    message   = [NSString stringWithFormat:@"get,%@,%@\n",
+                                           node_name,
+                                           psname];
+
+    ssize_t rsize;
+    char buf[1024 * 64];
+    memset(buf, 0, sizeof(buf));
+
+    rsize = send(cage_fd, [message UTF8String], [message length], 0);
+    if (rsize == -1) {
+        return nil;
+    }
+
+    rsize = recv(cage_fd, buf, sizeof(buf), 0);
+    if (rsize == -1) {
+        return nil;
+    }
+
+    NSString* element_string = [NSString stringWithUTF8String:buf];
+    NSArray* element_array = [element_string componentsSeparatedByString:@","];
+
+    if ([[element_array objectAtIndex:0] isEqualToString:@"204"]) {
+        return [element_array objectAtIndex:4];
+    } else {
+        errno = ECONNREFUSED;
+        return nil;
+    }
+}
 
 - (NSString*)get_own_addr
 {
@@ -231,11 +269,19 @@
         return -1;
     }
 
-    // psid is sha1 hashing digest valuse ,, 20 bytes charactor
-    if ([psid length] == 20) {
+    // psid is sha1 hashing digest valuse 
+    // CAGE_ID_LEN
+    if (psid == nil) {
         errno = EADDRNOTAVAIL;
         return -1;
-    }
+    } else if (psport == nil) {
+        errno = EADDRNOTAVAIL;
+        return -1;
+    } else if ([psid length] == CAGE_ID_LEN) {
+        errno = EADDRNOTAVAIL;
+        return -1;
+    } 
+
 
     // connect messsage format
     //rdp_connect,NODE_NAME,SOCK_NAME,RDP_DPORT,RDP_DADDR
@@ -382,11 +428,12 @@
             [ps_handler setObject:[NSData dataWithBytes:lh->peer_addr length:s]
                            forKey:[NSNumber numberWithInt:lh->descriptor]];
         }
+
         [psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
         [psb set_payload:nil];
         return psb;
-    } else {
+    } else if (sh->m_type == M_RDP_DATA) {
         // M_RDP_DATA
         [psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
@@ -394,8 +441,9 @@
         int payload_size = rsize - sizeof(struct _short_header);
         [psb set_payload:[NSData dataWithBytes:payload length:payload_size]];
         return psb;
+    } else {
+        return nil;
     }
-    return nil;
 }
 
 - (int)ps_sendto:(PrisonSockBuffer*)psbuf

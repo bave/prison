@@ -27,6 +27,9 @@ endif
 all:
 	ls
 
+lookup: lookup.m
+	${CC} ${CFLAGS} lookup.m
+
 ps_c: ps_c.m
 	${CC} ${CFLAGS} ps_c.m
 

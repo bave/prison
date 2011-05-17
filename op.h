@@ -35,7 +35,6 @@
 #define OP_EXT2ME 2
 #define OP_ROUTE  3
 
-extern NSLock* extLock;
 extern NSLock*  niLock;
 extern Manager*   mgmt;
 extern NetInfo*     ni; 
@@ -562,7 +561,6 @@ extern bool is_verbose;
         memset(&buf, 0, sizeof(buf));
 
         size = recvfrom(socketFD, buf, sizeof(buf), 0, (SA*)&sin_recv, &len);
-        //[extLock lock];
         if (size < 0) {
             perror("recvfrom");
             raise(SIGINT);
@@ -731,10 +729,8 @@ extern bool is_verbose;
 
         [loop_pool drain];
         if ([self isCancelled] == YES) {
-            //[extLock unlock];
             break;
         }
-        //[extLock unlock];
     }
 
     [pool drain];

@@ -22,7 +22,8 @@ int main(int argc, char** argv)
             id tmp = [NSString stringWithUTF8String:argv[1]];
             peer_id = [ps ps_lookup:tmp];
         }
-        NSLog(@"%@", peer_id);
+        NSLog(@"id:%@", peer_id);
+        NSLog(@"length%d", [peer_id length]);
     }
     [ps ps_destroy];
 

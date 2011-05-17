@@ -19,14 +19,21 @@ int main(int argc, char** argv)
     [ps set_sock_path:@"/tmp/sock_cage"];
     //[ps set_sock_path:@"/tmp/prison/sock_cage"];
 
-    id peer_id = [ps ps_lookup:[NSString stringWithUTF8String:argv[1]]];
-    id peer_port= [NSString stringWithUTF8String:argv[2]];
-
     // create prison socket
     BOOL retval = [ps ps_create];
     if (retval) {
         // connect
+
+        id peer_id = [ps ps_lookup:[NSString stringWithUTF8String:argv[1]]];
+        id peer_port= [NSString stringWithUTF8String:argv[2]];
+        NSLog(@"peer_id  :%s -> %@", argv[1],peer_id);
+        NSLog(@"peer_port:%@", peer_port);
+
         int handler = [ps ps_connect:peer_id :peer_port];
+        if (handler == -1) {
+            NSLog(@"cant connect");
+            goto finish;
+        }
 
         // prison socket buffer
         id psb = nil;
@@ -36,8 +43,7 @@ int main(int argc, char** argv)
         psb = [[PrisonSockBuffer new] autorelease];
         [psb set_handler:handler];
         [psb set_payload:[NSData dataWithBytes:argv[3] length:strlen(argv[3])]];
-        int size = [ps ps_sendto:psb];
-        printf("send_size:%d\n", size);
+        [ps ps_sendto:psb];
         // -------------------------------------------------------------
 
         // -------------------------------------------------------------
@@ -53,9 +59,9 @@ int main(int argc, char** argv)
             NSLog(@"server side close");
         } else  { 
             // message receive processing... 
-            NSLog(@"m_type:%d", [psb m_type]);
-            NSLog(@"handler:%d", [psb handler]);
-            NSLog(@"payload:%s", [[psb payload] bytes]);
+            NSLog(@"m_type   :%s", trans_m_type([psb m_type]));
+            NSLog(@"handler  :%d", [psb handler]);
+            NSLog(@"payload  :%s", [[psb payload] bytes]);
         }
         // -------------------------------------------------------------
         [ps ps_close:handler];
@@ -63,8 +69,8 @@ int main(int argc, char** argv)
         NSLog(@"cant create prisonsock..");
     }
 
+finish:
     [ps ps_destroy];
-
     [pool drain];
     return 0;
 }

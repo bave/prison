@@ -227,7 +227,7 @@
     NSArray* element_array = [element_string componentsSeparatedByString:@","];
 
     if ([[element_array objectAtIndex:0] isEqualToString:@"204"]) {
-        return [element_array objectAtIndex:4];
+        return [[element_array objectAtIndex:4] trim];
     } else {
         errno = ECONNREFUSED;
         return nil;
@@ -373,11 +373,10 @@
     } else if (psport == nil) {
         errno = EADDRNOTAVAIL;
         return -1;
-    } else if ([psid length] == CAGE_ID_LEN) {
+    } else if ([psid length] != 40) {
         errno = EADDRNOTAVAIL;
         return -1;
     } 
-
 
     // connect messsage format
     //rdp_connect,NODE_NAME,SOCK_NAME,RDP_DPORT,RDP_DADDR

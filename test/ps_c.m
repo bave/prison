@@ -5,7 +5,7 @@
 int main(int argc, char** argv)
 {
 
-    if (argc != 3) {
+    if (argc != 4) {
         printf("./a.out hoge@ps port_num message\n");
         return -1;
     }
@@ -19,7 +19,7 @@ int main(int argc, char** argv)
     [ps set_sock_path:@"/tmp/sock_cage"];
     //[ps set_sock_path:@"/tmp/prison/sock_cage"];
 
-    id peer_id = [ps ps_lookup:[NSString stringWithUTF9String:argv[1]]];
+    id peer_id = [ps ps_lookup:[NSString stringWithUTF8String:argv[1]]];
     id peer_port= [NSString stringWithUTF8String:argv[2]];
 
     // create prison socket

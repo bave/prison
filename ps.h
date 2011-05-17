@@ -28,17 +28,72 @@
     int handler;
     NSData* payload;
 }
+
+#ifdef __MACH__
 @property (getter=m_type, setter=set_m_type:, assign, readwrite) int m_type;
 @property (getter=handler, setter=set_handler:, assign, readwrite) int handler;
 @property (getter=payload, setter=set_payload:, copy, readwrite) NSData* payload;
+#else
+
+- (int)m_type;
+- (void)set_m_type:(int)set;
+- (int)handler;
+- (void)set_handler:(int)set;
+- (NSData*)payload;
+- (void)set_payload:(NSData*)set;
+
+#endif
+
 - (id)init;
 - (void)dealloc;
+
 @end
 
+
 @implementation PrisonSockBuffer
+
+#ifdef __MACH__
+
 @synthesize m_type;
 @synthesize handler;
 @synthesize payload;
+
+#else
+
+- (int)m_type
+{
+    return m_type;
+}
+
+- (void)set_m_type:(int)set
+{
+    m_type = set
+    return;
+}
+
+- (int)handler;
+{
+    return handler;
+}
+
+- (void)set_handler:(int)set
+{
+    handler = set;
+    return;
+}
+
+- (NSData*)payload
+{
+    return payload;
+}
+
+- (void)set_payload:(NSData*)set
+{
+    payload = [set copy];
+    return;
+}
+
+#endif
 
 - (id)init
 {
@@ -56,7 +111,9 @@
     [payload release];
     return;
 }
+
 @end
+
 
 @interface PrisonSock : NSObject
 {
@@ -77,8 +134,19 @@
 }
 
 // XXX setter いらない？
+#ifdef __MACH__
+
 @property (getter=sock_fd, setter=set_sock_fd:, assign, readwrite) int sock_fd;
 @property (getter=cage_fd, setter=set_cage_fd:, assign, readwrite) int cage_fd;
+
+#else
+
+- (int)sock_fd;
+- (void)set_sock_fd:(int)set;
+- (int)cage_fd;
+- (void)set_cage_fd:(int)set;
+
+#endif
 
 - (id)init;
 - (void)dealloc;
@@ -103,8 +171,36 @@
 
 @implementation PrisonSock
 
+#ifdef __MACH__
+
 @synthesize sock_fd;
 @synthesize cage_fd;
+
+#else
+
+- (int)sock_fd
+{
+    return sock_fd;
+}
+
+- (void)set_sock_fd:(int)set
+{
+    sock_fd = set;
+    return;
+}
+
+- (int)cage_fd
+{
+    return cage_fd;
+}
+
+- (void)set_cage_fd:(int)set
+{
+    cage_fd = set;
+    return;
+}
+
+#endif
 
 - (NSString*)ps_lookup:(NSString*)psname
 {

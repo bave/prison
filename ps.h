@@ -596,7 +596,7 @@
                 [own_addr_str release];
                 own_addr_str = nil;
             }
-            if (connect != nil) {
+            if (connect_port != nil) {
                 [connect_port release];
                 connect_port =nil;
             }
@@ -675,7 +675,7 @@
             [own_addr_str release];
             own_addr_str = nil;
         }
-        if (connect != nil) {
+        if (connect_port != nil) {
             [connect_port release];
             connect_port =nil;
         }

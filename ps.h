@@ -503,41 +503,50 @@
 
     PrisonSockBuffer* psb = [[PrisonSockBuffer new] autorelease];
     ssize_t rsize;
-    char buf[64 * 1024];
+    char buf[sizeof(struct _short_header)];
     memset(buf, 0, sizeof(buf));
     rsize = recv(sock_fd, buf, sizeof(buf), 0);
     if (rsize <= 0) {
         return nil;
     } 
-
     struct _short_header* sh = (struct _short_header*)buf;
+
+    char* extbuf = NULL;
+    uint32_t extbuf_size = sh->m_size - sizeof(struct _short_header);
+    extbuf = (char*)malloc(extbuf_size);
+    rsize = recv(sock_fd, extbuf, extbuf_size, 0);
+    if (rsize <= 0) {
+        free(extbuf);
+        return nil;
+    } 
+
     if (sh->f_type == F_RDP_CONNECT_B2T && sh->m_type != M_RDP_DATA) {
         [psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
         [psb set_payload:nil];
+        free(extbuf);
         return psb;
     } else if (sh->f_type == F_RDP_LISTEN_B2T && sh->m_type != M_RDP_DATA) { 
         if (sh->m_type == M_RDP_ACCEPT) {
             errno = 0;
-            struct _long_header* lh = (struct _long_header*)buf;
-            ssize_t s = sizeof(lh->peer_addr);
-            [ps_handler setObject:[NSData dataWithBytes:lh->peer_addr length:s]
-                           forKey:[NSNumber numberWithInt:lh->descriptor]];
+            struct _addr_header* ah = (struct _addr_header*)extbuf;
+            [ps_handler setObject:[NSData dataWithBytes:ah->peer_addr length:CAGE_ID_LEN]
+                           forKey:[NSNumber numberWithInt:sh->descriptor]];
         }
 
         [psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
         [psb set_payload:nil];
+        free(extbuf);
         return psb;
     } else if (sh->m_type == M_RDP_DATA) {
         // M_RDP_DATA
         [psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
-        char* payload = buf + sizeof(struct _short_header);
-        int payload_size = rsize - sizeof(struct _short_header);
-        [psb set_payload:[NSData dataWithBytes:payload length:payload_size]];
+        [psb set_payload:[NSData dataWithBytes:extbuf length:extbuf_size]];
         return psb;
     } else {
+        free(extbuf);
         return nil;
     }
 }

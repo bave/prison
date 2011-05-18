@@ -26,6 +26,12 @@ struct _long_header
     char own_addr[CAGE_ID_LEN];
 };
 
+struct _addr_header
+{
+    char peer_addr[CAGE_ID_LEN];
+    char own_addr[CAGE_ID_LEN];
+};
+
 #define F_RDP_CONNECT_T2B 1  
 #define F_RDP_CONNECT_B2T 2  
 #define F_RDP_LISTEN_T2B  4  

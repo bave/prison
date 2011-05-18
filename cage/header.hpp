@@ -13,6 +13,7 @@ struct _short_header
     uint16_t f_type;
     uint16_t m_type;
     uint32_t descriptor;
+    uint32_t m_size;
 };
 
 struct _long_header
@@ -20,6 +21,7 @@ struct _long_header
     uint16_t f_type;
     uint16_t m_type;
     uint32_t descriptor;
+    uint32_t m_size;
     char peer_addr[CAGE_ID_LEN];
     char own_addr[CAGE_ID_LEN];
 };

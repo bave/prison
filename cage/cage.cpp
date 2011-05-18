@@ -1399,6 +1399,7 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             l_header.f_type = F_RDP_LISTEN_B2T;
             l_header.m_type = M_RDP_ACCEPT;
             l_header.descriptor = desc;
+            l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
@@ -1439,11 +1440,10 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             s_header.f_type = F_RDP_LISTEN_B2T;
             s_header.m_type = M_RDP_DATA;
             s_header.descriptor = desc;
-
-            int send_len = len + sizeof(s_header);
+            s_header.m_size = len + sizeof(s_header);
             memcpy(ptr_send_buf, &s_header, sizeof(s_header));
             memcpy(ptr_send_buf+sizeof(s_header), recv_buf, len);
-            send(connfd, send_buf, send_len, 0);
+            send(connfd, send_buf, s_header.m_size, 0);
 
             /* string header send
             const char* ptr_peer_address = addr.did->to_string().c_str();
@@ -1469,6 +1469,7 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             l_header.f_type = F_RDP_LISTEN_B2T;
             l_header.m_type = M_RDP_CLOSED;
             l_header.descriptor = desc;
+            l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
@@ -1486,6 +1487,7 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             l_header.f_type = F_RDP_LISTEN_B2T;
             l_header.m_type = M_RDP_CLOSED;
             l_header.descriptor = desc;
+            l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
@@ -1503,6 +1505,7 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             l_header.f_type = F_RDP_LISTEN_B2T;
             l_header.m_type = M_RDP_TIMEOUT;
             l_header.descriptor = desc;
+            l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
@@ -1520,6 +1523,7 @@ func_rdp_listen::operator() (int desc, libcage::rdp_addr addr, libcage::rdp_even
             l_header.f_type = F_RDP_LISTEN_B2T;
             l_header.m_type = M_RDP_TIMEOUT;
             l_header.descriptor = desc;
+            l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
@@ -1847,6 +1851,7 @@ func_rdp_connect::operator() (int desc,
             l_header.f_type = F_RDP_CONNECT_B2T;
             l_header.m_type = M_RDP_CONNECT;
             l_header.descriptor = desc;
+            l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
@@ -1897,6 +1902,7 @@ func_rdp_connect::operator() (int desc,
                 l_header.f_type = F_RDP_CONNECT_B2T;
                 l_header.m_type = M_RDP_CLOSED;
                 l_header.descriptor = desc;
+                l_header.m_size = sizeof(struct _long_header);
                 addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
                 memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
                 send(connfd, &l_header, sizeof(l_header), 0);
@@ -1913,11 +1919,10 @@ func_rdp_connect::operator() (int desc,
             s_header.f_type = F_RDP_CONNECT_B2T;
             s_header.m_type = M_RDP_DATA;
             s_header.descriptor = desc;
-
-            int send_len = len + sizeof(s_header);
+            s_header.m_size = len + sizeof(s_header);
             memcpy(ptr_send_buf, &s_header, sizeof(s_header));
             memcpy(ptr_send_buf+sizeof(s_header), recv_buf, len);
-            send(connfd, send_buf, send_len, 0);
+            send(connfd, send_buf, s_header.m_size, 0);
 
             /* string header send
             const char* ptr_peer_address = addr.did->to_string().c_str();
@@ -1947,6 +1952,7 @@ func_rdp_connect::operator() (int desc,
             l_header.f_type = F_RDP_CONNECT_B2T;
             l_header.m_type = M_RDP_CLOSED;
             l_header.descriptor = desc;
+            l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
@@ -1972,6 +1978,7 @@ func_rdp_connect::operator() (int desc,
             l_header.f_type = F_RDP_CONNECT_B2T;
             l_header.m_type = M_RDP_CLOSED;
             l_header.descriptor = desc;
+            l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
@@ -1998,6 +2005,7 @@ func_rdp_connect::operator() (int desc,
             l_header.f_type = F_RDP_CONNECT_B2T;
             l_header.m_type = M_RDP_TIMEOUT;
             l_header.descriptor = desc;
+            l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);
@@ -2023,6 +2031,7 @@ func_rdp_connect::operator() (int desc,
             l_header.f_type = F_RDP_CONNECT_B2T;
             l_header.m_type = M_RDP_TIMEOUT;
             l_header.descriptor = desc;
+            l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
             send(connfd, &l_header, sizeof(l_header), 0);

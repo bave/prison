@@ -505,20 +505,18 @@
     ssize_t rsize;
     char buf[64 * 1024];
     memset(buf, 0, sizeof(buf));
-    rsize = recv(sock_fd, &buf, sizeof(buf), 0);
+    rsize = recv(sock_fd, buf, sizeof(buf), 0);
     if (rsize <= 0) {
         return nil;
     } 
 
     struct _short_header* sh = (struct _short_header*)buf;
     if (sh->f_type == F_RDP_CONNECT_B2T && sh->m_type != M_RDP_DATA) {
-        // maybe.. peer rdp close ... (connect socket)
         [psb set_m_type:sh->m_type];
         [psb set_handler:sh->descriptor];
         [psb set_payload:nil];
         return psb;
     } else if (sh->f_type == F_RDP_LISTEN_B2T && sh->m_type != M_RDP_DATA) { 
-        // maybe.. peer rdp close ... (listen socket)
         if (sh->m_type == M_RDP_ACCEPT) {
             errno = 0;
             struct _long_header* lh = (struct _long_header*)buf;
@@ -558,6 +556,7 @@
         sh.f_type = F_RDP_CONNECT_T2B;
         sh.m_type = M_RDP_DATA;
         sh.descriptor = desc;
+        sh.m_size = sizeof(sh) + [[psbuf payload] length];
 
         id send_psbuf = [[NSMutableData new] autorelease];
         [send_psbuf appendBytes:&sh length:sizeof(sh)];
@@ -617,6 +616,7 @@
             lh.f_type = F_RDP_LISTEN_T2B;
             lh.m_type = M_RDP_CLOSED;
             lh.descriptor = handler;
+            lh.m_size = sizeof(lh);
             memcpy(lh.peer_addr, [peer bytes], [peer length]);
             memcpy(lh.own_addr, [own_addr_bin bytes], [own_addr_bin length]);
             rsize = send(sock_fd, &lh, sizeof(lh), 0);

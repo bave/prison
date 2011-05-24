@@ -1955,7 +1955,11 @@ func_rdp_connect::operator() (int desc,
             l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+#ifdef __MACH__
+            ssize_t ssize = send(connfd, &l_header, sizeof(l_header), 0);
+#else
             ssize_t ssize = send(connfd, &l_header, sizeof(l_header), MSG_NOSIGNAL);
+#endif
             if (ssize == -1) {
                 D(std::cout << "    (SIGPIPE) peer socket is already closed.." << std::endl);
             } else if (ssize == 0) {
@@ -1986,7 +1990,11 @@ func_rdp_connect::operator() (int desc,
             l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+#ifdef __MACH__
+            ssize_t ssize = send(connfd, &l_header, sizeof(l_header), 0);
+#else
             ssize_t ssize = send(connfd, &l_header, sizeof(l_header), MSG_NOSIGNAL);
+#endif
             if (ssize == -1) {
                 D(std::cout << "    (SIGPIPE) peer socket is already closed.." << std::endl);
             } else if (ssize == 0) {
@@ -2018,7 +2026,11 @@ func_rdp_connect::operator() (int desc,
             l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+#ifdef __MACH__
+            ssize_t ssize = send(connfd, &l_header, sizeof(l_header), 0);
+#else
             ssize_t ssize = send(connfd, &l_header, sizeof(l_header), MSG_NOSIGNAL);
+#endif
             if (ssize == -1) {
                 D(std::cout << "    (SIGPIPE) peer socket is already closed.." << std::endl);
             } else if (ssize == 0) {
@@ -2049,7 +2061,11 @@ func_rdp_connect::operator() (int desc,
             l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
+#ifdef __MACH__
+            ssize_t ssize = send(connfd, &l_header, sizeof(l_header), 0);
+#else
             ssize_t ssize = send(connfd, &l_header, sizeof(l_header), MSG_NOSIGNAL);
+#endif
             if (ssize == -1) {
                 D(std::cout << "    (SIGPIPE) peer socket is already closed.." << std::endl);
             } else if (ssize == 0) {
@@ -2236,6 +2252,13 @@ void callback_csock_accept(int fd, short ev, void *arg)
         socklen_t sa_len = sizeof(sa_storage);
         memset(&sa_storage, 0, sizeof(sa_storage));
         conn_fd = accept(fd, (struct sockaddr*)&sa_storage, &sa_len);
+#ifdef __MACH__
+        int on = 1;
+        int ret = setsockopt(conn_fd, SOL_SOCKET, SO_NOSIGPIPE, (void*)&on, sizeof(on));
+        if (ret < 0) {
+            perror("callback_csock_accept:setsockopt");
+        }
+#endif
         opaque->connfd = conn_fd;
         event_del(sock2ev[opaque->nsockfd].get());
         sock2ev.erase(opaque->nsockfd);

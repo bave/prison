@@ -4,3 +4,17 @@ Thank you for k_akashi, make following script ...
  - run_put.sh
  - run_scale_test.sh
  - put_test.sh
+
+- Need to insterll packages for linux(ubuntu)
+ - apt-get -y install build-essential
+ - apt-get -y install gnustep
+ - apt-get -y install git-core
+ - apt-get -y install g++
+ - apt-get -y install gnustep-make
+ - apt-get -y install libgnustep-base-dev
+ - apt-get -y install libgnustep-gui-dev
+ - apt-get -y install libgpgme11-dev
+ - apt-get -y install libevent-dev
+ - apt-get -y install libboost-dev
+ - apt-get -y install libssl-dev
+ - apt-get -y install omake

@@ -1955,7 +1955,12 @@ func_rdp_connect::operator() (int desc,
             l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
-            send(connfd, &l_header, sizeof(l_header), 0);
+            ssize_t ssize = send(connfd, &l_header, sizeof(l_header), MSG_NOSIGNAL);
+            if (ssize == -1) {
+                D(std::cout << "    (SIGPIPE) peer socket is already closed.." << std::endl);
+            } else if (ssize == 0) {
+                D(std::cout << "    own socket is already closed.." << std::endl);
+            }
 
             event_del(sock2ev[connfd].get());
             sock2ev.erase(connfd);
@@ -1981,7 +1986,12 @@ func_rdp_connect::operator() (int desc,
             l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
-            send(connfd, &l_header, sizeof(l_header), 0);
+            ssize_t ssize = send(connfd, &l_header, sizeof(l_header), MSG_NOSIGNAL);
+            if (ssize == -1) {
+                D(std::cout << "    (SIGPIPE) peer socket is already closed.." << std::endl);
+            } else if (ssize == 0) {
+                D(std::cout << "    own socket is already closed.." << std::endl);
+            }
 
             event_del(sock2ev[connfd].get());
             sock2ev.erase(connfd);
@@ -2008,7 +2018,12 @@ func_rdp_connect::operator() (int desc,
             l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
-            send(connfd, &l_header, sizeof(l_header), 0);
+            ssize_t ssize = send(connfd, &l_header, sizeof(l_header), MSG_NOSIGNAL);
+            if (ssize == -1) {
+                D(std::cout << "    (SIGPIPE) peer socket is already closed.." << std::endl);
+            } else if (ssize == 0) {
+                D(std::cout << "    own socket is already closed.." << std::endl);
+            }
 
             shutdown(connfd, SHUT_RDWR);
             close(connfd);
@@ -2034,7 +2049,12 @@ func_rdp_connect::operator() (int desc,
             l_header.m_size = sizeof(struct _long_header);
             addr.did->to_binary(l_header.peer_addr, CAGE_ID_LEN);
             memcpy(l_header.own_addr, node_id, CAGE_ID_LEN);
-            send(connfd, &l_header, sizeof(l_header), 0);
+            ssize_t ssize = send(connfd, &l_header, sizeof(l_header), MSG_NOSIGNAL);
+            if (ssize == -1) {
+                D(std::cout << "    (SIGPIPE) peer socket is already closed.." << std::endl);
+            } else if (ssize == 0) {
+                D(std::cout << "    own socket is already closed.." << std::endl);
+            }
 
             shutdown(connfd, SHUT_RDWR);
             close(connfd);

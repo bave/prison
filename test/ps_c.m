@@ -16,7 +16,7 @@ int main(int argc, char** argv)
 
     // configuration
     [ps set_node_name:@"prison"];
-    [ps set_sock_path:@"/tmp/sock_cage"];
+    [ps set_sock_path:@"/tmp/prison/sock_cage"];
     //[ps set_sock_path:@"/tmp/prison/sock_cage"];
 
     // create prison socket
@@ -37,18 +37,23 @@ int main(int argc, char** argv)
 
         // prison socket buffer
         id psb = nil;
+        id m_data = [[NSMutableData new] autorelease];
 
+loop:
         // -------------------------------------------------------------
         // ps_sendto sample
         psb = [[PrisonSockBuffer new] autorelease];
         [psb set_handler:handler];
-        [psb set_payload:[NSData dataWithBytes:argv[3] length:strlen(argv[3])]];
+        [m_data appendData:[NSData dataWithBytes:argv[3] length:strlen(argv[3])]];
+        [psb set_payload:m_data];
         [ps ps_sendto:psb];
+        sleep(1);
         // -------------------------------------------------------------
 
         // -------------------------------------------------------------
         // ps_recvfrom sample
         psb = [ps ps_recvfrom];
+        NSLog(@"recv");
         if (psb == nil) {
             // exceptional!!
             // - remote ps_server process is not servicing
@@ -64,7 +69,8 @@ int main(int argc, char** argv)
             NSLog(@"payload  :%s", [[psb payload] bytes]);
         }
         // -------------------------------------------------------------
-        [ps ps_close:handler];
+        goto loop;
+        //[ps ps_close:handler];
     } else {
         NSLog(@"cant create prisonsock..");
     }

@@ -11,7 +11,7 @@ int main(int argc, char** argv)
 
     // configuration
     [ps set_node_name:@"prison"];
-    [ps set_sock_path:@"/tmp/sock_cage"];
+    [ps set_sock_path:@"/tmp/prison/sock_cage"];
 
     // create prison socket
     BOOL retval = [ps ps_create];

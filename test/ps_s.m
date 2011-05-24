@@ -14,7 +14,7 @@ int main(int argc, char** argv)
     id ps = [[PrisonSock new] autorelease];
 
     [ps set_node_name:@"prison"];
-    [ps set_sock_path:@"/tmp/sock_cage"];
+    [ps set_sock_path:@"/tmp/prison/sock_cage"];
 
     id peer_port= [NSString stringWithUTF8String:argv[1]];
 

@@ -518,7 +518,9 @@
     if (rsize <= 0) {
         free(extbuf);
         return nil;
-    } 
+    } else if (risze != extbuf_size) {
+        printf("rsize : %d\n, extbuf_size : %d\n", rsize, extbuf_size);
+    }
 
     if (sh->f_type == F_RDP_CONNECT_B2T && sh->m_type != M_RDP_DATA) {
         [psb set_m_type:sh->m_type];

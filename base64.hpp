@@ -11,7 +11,7 @@
 
 namespace base64 {
     bool encode(const std::vector<uint8_t>& src, std::string& dst);
-    bool decode(const std::string& src, std::vector<uint8_t>& dst);
+    bool decode(const std::string& c_src, std::vector<uint8_t>& dst);
 }
 
 bool base64::encode(const std::vector<uint8_t>& src, std::string& dst)
@@ -55,23 +55,26 @@ bool base64::encode(const std::vector<uint8_t>& src, std::string& dst)
 
 bool base64::decode(const std::string& src, std::vector<uint8_t>& dst)
 {
-    if (src.size() & 0x00000003) {
+    std::string str = src;
+    std::remove(str.begin(), str.end(), ' ');
+    std::remove(str.begin(), str.end(), '\n');
+    if (str.size() == 0) {
         return false;
     }
     else {
         const std::string table("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
         std::vector<uint8_t> cdst;
 
-        for (std::size_t i = 0; i<src.size(); i += 4) {
-            if (src[i+0] == '=') {
+        for (std::size_t i = 0; i<str.size(); i += 4) {
+            if (str[i+0] == '=') {
                 return false;
             }
-            else if (src[i+1] == '=') {
+            else if (str[i+1] == '=') {
                 return false;
             }
-            else if (src[i+2] == '=') {
-                const std::string::size_type s1 = table.find(src[i+0]);
-                const std::string::size_type s2 = table.find(src[i+1]);
+            else if (str[i+2] == '=') {
+                const std::string::size_type s1 = table.find(str[i+0]);
+                const std::string::size_type s2 = table.find(str[i+1]);
 
                 if (s1 == std::string::npos || s2 == std::string::npos) {
                     return false;
@@ -81,10 +84,10 @@ bool base64::decode(const std::string& src, std::vector<uint8_t>& dst)
                                                           ((s2 & 0x30) >> 4)));
                 break;
             }
-            else if (src[i + 3] == '=') {
-                const std::string::size_type s1 = table.find(src[i+0]);
-                const std::string::size_type s2 = table.find(src[i+1]);
-                const std::string::size_type s3 = table.find(src[i+2]);
+            else if (str[i + 3] == '=') {
+                const std::string::size_type s1 = table.find(str[i+0]);
+                const std::string::size_type s2 = table.find(str[i+1]);
+                const std::string::size_type s3 = table.find(str[i+2]);
 
                 if (s1 == std::string::npos || s2 == std::string::npos || s3 == std::string::npos) {
                     return false;
@@ -97,10 +100,10 @@ bool base64::decode(const std::string& src, std::vector<uint8_t>& dst)
                 break;
             }
             else {
-                const std::string::size_type s1 = table.find(src[i+0]);
-                const std::string::size_type s2 = table.find(src[i+1]);
-                const std::string::size_type s3 = table.find(src[i+2]);
-                const std::string::size_type s4 = table.find(src[i+3]);
+                const std::string::size_type s1 = table.find(str[i+0]);
+                const std::string::size_type s2 = table.find(str[i+1]);
+                const std::string::size_type s3 = table.find(str[i+2]);
+                const std::string::size_type s4 = table.find(str[i+3]);
 
                 if (s1 == std::string::npos ||
                     s2 == std::string::npos ||

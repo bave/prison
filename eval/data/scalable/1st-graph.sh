@@ -53,7 +53,7 @@ do
 done
 
 cat sd.log | sort -n > graph.data
-rm -f sd.log
-rm -f average.log
+#rm -f sd.log
+#rm -f average.log
 
 gnuplot Average_Name_Resolv_Time.plt

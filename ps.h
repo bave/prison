@@ -520,6 +520,7 @@
         return nil;
     } else if (rsize != extbuf_size) {
         printf("rsize : %d\n, extbuf_size : %d\n", (int)rsize, extbuf_size);
+        exit(-1);
     }
 
     if (sh->f_type == F_RDP_CONNECT_B2T && sh->m_type != M_RDP_DATA) {

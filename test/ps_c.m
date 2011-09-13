@@ -17,7 +17,6 @@ int main(int argc, char** argv)
     // configuration
     [ps set_node_name:@"prison"];
     [ps set_sock_path:@"/tmp/prison/sock_cage"];
-    //[ps set_sock_path:@"/tmp/prison/sock_cage"];
 
     // create prison socket
     BOOL retval = [ps ps_create];
@@ -39,15 +38,21 @@ int main(int argc, char** argv)
         id psb = nil;
         id m_data = [[NSMutableData new] autorelease];
 
-loop:
         // -------------------------------------------------------------
+/*
+*/
+//loop:
         // ps_sendto sample
         psb = [[PrisonSockBuffer new] autorelease];
         [psb set_handler:handler];
         [m_data appendData:[NSData dataWithBytes:argv[3] length:strlen(argv[3])]];
         [psb set_payload:m_data];
-        [ps ps_sendto:psb];
-        sleep(1);
+        uint32_t ssize = [ps ps_sendto:psb];
+        if (ssize != [[psb payload] length]) { 
+            printf("dont matching send size");
+            exit(-1);
+        }
+        //sleep(1);
         // -------------------------------------------------------------
 
         // -------------------------------------------------------------
@@ -69,8 +74,8 @@ loop:
             NSLog(@"payload  :%s", [[psb payload] bytes]);
         }
         // -------------------------------------------------------------
-        goto loop;
-        //[ps ps_close:handler];
+        //goto loop;
+        [ps ps_close:handler];
     } else {
         NSLog(@"cant create prisonsock..");
     }

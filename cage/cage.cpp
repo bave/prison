@@ -2342,19 +2342,61 @@ void callback_csock_read(int fd, short ev, void *arg)
     func_rdp_connect* opaque;
     opaque = (func_rdp_connect*)arg;
 
+
     char buf[1024 * 64];
     memset(buf, 0, sizeof(buf));
 
     int rsize;
     rsize = recv(fd, buf, sizeof(buf), 0);
 
+    char* sbuf = NULL;
+
     // --- protocol processing ---
-    // XXX
-    rsize = rsize - sizeof(struct _short_header);
-    char* sbuf = buf + sizeof(struct _short_header);
+    struct _short_header* sh = (struct _short_header*)buf;
+    int completion_size = (int)sh->m_size;
+
+    if (rsize == completion_size) { 
+        rsize = rsize - sizeof(struct _short_header);
+        sbuf = buf + sizeof(struct _short_header);
+    } else {
+        /*
+        printf("------------------------------------------\n");
+        printf("cant matching recv size !!!\n");
+        printf("------------------------------------------\n");
+        */
+        completion_size = completion_size - sizeof(struct _short_header);
+        char* extbuf = (char*)malloc(completion_size);
+        memset(extbuf, 0, completion_size);
+
+        int mid_rsize = rsize - sizeof(struct _short_header);
+        sbuf = buf + sizeof(struct _short_header);
+        memcpy(extbuf, sbuf, mid_rsize);
+        char* extbuf_seek = extbuf + mid_rsize;
+
+        for (;;) {
+            rsize = recv(fd, buf, sizeof(buf), 0);
+            printf("rsize:%d\n",rsize);
+            memcpy(extbuf_seek, buf, rsize);
+            extbuf_seek = extbuf_seek + rsize;
+            mid_rsize = mid_rsize + rsize;
+            if (mid_rsize >= completion_size) {
+                break;
+            }
+        }
+
+        memcpy(buf, extbuf, completion_size);
+        free(extbuf);
+
+        sbuf = buf;
+        rsize = completion_size;
+    }
+
+
+
     // ---------------------------
 
     D(std::cout << "function callback_csock_read" << "\n"
+                << "    msize           : " << completion_size << "\n"
                 << "    node_name       : " << opaque->esc_node_name << "\n"
                 << "    rdp_peer_port   : " << opaque->esc_rdp_port << "\n" 
                 << "    rdp_perr_addr   : " << opaque->esc_rdp_addr << "\n"

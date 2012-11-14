@@ -17,7 +17,7 @@
     NSString* rcRunDir;
     NSString* rcPasswd;
     NSString* rcPrisonName;
-    NSString* rcPurityPath;
+    NSString* rcPrettyPath;
     NSString* rcInternal;
     NSString* rcExternal;
     NSString* rcSeedHost;
@@ -31,7 +31,7 @@
 
 - (NSString*)getPath;
 - (NSString*)getRunDir;
-- (NSString*)getPurityPath;
+- (NSString*)getPrettyPath;
 - (NSString*)getInternal;
 - (NSString*)getExternal;
 - (NSString*)getSeedHost;
@@ -132,12 +132,12 @@
 
 
     if (ret == true) {
-        rcPurityPath = [rcRunDir stringByAppendingPathComponent:@"PurityKey"];
-        [rcPurityPath retain];
+        rcPrettyPath = [rcRunDir stringByAppendingPathComponent:@"PrettyKey"];
+        [rcPrettyPath retain];
 
         BOOL isExist;
         BOOL isDir;
-        isExist = [manager fileExistsAtPath:rcPurityPath isDirectory:&isDir];
+        isExist = [manager fileExistsAtPath:rcPrettyPath isDirectory:&isDir];
         if (isExist == true && isDir == true) {
             ret = true;
         }
@@ -146,7 +146,7 @@
         }
         else if (isExist == false) {
             int err;
-            err = mkdir([rcPurityPath UTF8String], mode_rwx______);
+            err = mkdir([rcPrettyPath UTF8String], mode_rwx______);
             if (err == -1) {
                 ret = false;
             } else {
@@ -208,7 +208,7 @@
     [rcRunDir     release];
     [rcPasswd     release];
     [rcPrisonName release];
-    [rcPurityPath release];
+    [rcPrettyPath release];
     [rcInternal   release];
     [rcExternal   release];
     [rcSeedHost   release];
@@ -238,9 +238,9 @@
     return rcPrisonName;
 }
 
-- (NSString*)getPurityPath
+- (NSString*)getPrettyPath
 {
-    return rcPurityPath;
+    return rcPrettyPath;
 }
 
 - (NSString*)getInternal;

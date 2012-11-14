@@ -326,6 +326,7 @@ extern bool is_linking;
         mgmtDictPortPair   = [NSMutableDictionary new];
         mgmtDictPPFlags    = [NSMutableDictionary new];
         mgmtRequestA       = [NSMutableDictionary new];
+        printf("%d\n", __LINE__);
     }   
     return self;
 }       

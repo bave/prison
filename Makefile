@@ -5,7 +5,7 @@ MIG=/usr/bin/mig
 
 
 # for release
-CFLAGS= -O3 -fomit-frame-pointer -Wall -x objective-c++ -framework Cocoa
+CFLAGS= -O3 -D_REENTRANT -fomit-frame-pointer -Wall -x objective-c++ -framework Cocoa
 # for debug
 #CFLAGS= -g -Wall -x objective-c++ -framework Cocoa
 

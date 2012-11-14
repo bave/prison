@@ -3,6 +3,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+uintptr_t
+
 #ifdef __MARC__
 #include <AvailabilityMacros.h>
 #endif

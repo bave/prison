@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     NSLog(@"\n");
     //rc = [[ResourceConfig alloc] init];
     ret = true;
-    rc = [[ResourceConfig alloc] initWithConf:@"../rc.plist"];
+    rc = [[ResourceConfig alloc] initWithConf:@"../bin/rc.plist"];
 
     //NSLog(@"rc :%@\n", rc);
 

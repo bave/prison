@@ -3154,11 +3154,16 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgme_check_version(NULL);
         gpgme_engine_check_version(GPGME_PROTOCOL_OpenPGP);
 
-        gpgErr = gpgme_set_locale(NULL, LC_CTYPE, setlocale (LC_CTYPE, NULL));
+        /*
+        gpgErr = gpgme_set_locale(NULL, LC_CTYPE, setlocale(LC_CTYPE, NULL));
         if (gpgErr) @throw @"error:[gpg initWithDir]";
 
         gpgErr = gpgme_get_engine_info(&gpgInfo);
         if (gpgErr) @throw @"error:[gpg initWithDir]";
+        */
+
+        gpgme_set_locale(NULL, LC_CTYPE, setlocale(LC_CTYPE, NULL));
+        gpgme_get_engine_info(&gpgInfo);
 
         if (![dir hasSuffix:@"/"]) {
             dir = [NSString stringWithFormat:@"%@%@", dir, @"/"];
@@ -3166,10 +3171,10 @@ static pid_t popen4(char** args, int* fd_in, int* fd_out, int* fd_err, int* fd_p
         gpgErr = gpgme_set_engine_info(gpgInfo->protocol,
                                        gpgInfo->file_name,
                                        [dir UTF8String]);
-        if (gpgErr) @throw @"error:[gpg initWithDir]";
+        if (gpgErr) @throw @"error:[gpg initWithDir: gpgme_set_engine_info]";
 
         gpgErr = gpgme_get_engine_info(&gpgInfo);
-        if (gpgErr) @throw @"error:[gpg initWithDir]";
+        if (gpgErr) @throw @"error:[gpg initWithDir: gpgme_get_engine_info]";
 
         if (gpgInfo->home_dir == NULL) {
             gpgDir = [[NSString alloc]

@@ -1,4 +1,4 @@
-
+// -*- objc -*- 
 #define __PRISON__
 
 // system includer
@@ -94,6 +94,9 @@ int main(int argc, char** argv)
 
     if (config_path == nil) {
         config_path = @"./rc.plist";
+        if (is_verbose) {
+            NSLog(@"config_path%@", config_path);
+        }
     }
     
     rc = [[ResourceConfig alloc] initWithConf:config_path];
@@ -218,6 +221,7 @@ int main(int argc, char** argv)
         [task runTask];
 
         mgmt = [Manager new];
+
         extLock = [NSLock new];
         niLock = [NSLock new];
 
@@ -229,6 +233,7 @@ int main(int argc, char** argv)
     }
     // ------------------------------------------------------------------------
     @finally { }
+
 
 
     // set divert socket for name ---------------------------------------------
@@ -263,7 +268,6 @@ int main(int argc, char** argv)
         exit_action("socket");
     }
     if (bind(divertME2L, (SA*)&sin_divert, sizeof(sin_divert)) < 0) {
-        printf("%d\n", __LINE__);
         perror("bind");
         exit_action("bind");
     }
@@ -317,6 +321,7 @@ int main(int argc, char** argv)
     opROUTE.socketFD=0;
     opROUTE.selector=OP_ROUTE;
     [queue addOperation:opROUTE];
+
 
 
     // set observer instance

@@ -365,7 +365,7 @@ extern bool is_linking;
 
 - (void)_gpg_init
 {
-    gpg = [[GPGME alloc] initWithDir:[rc getPurityPath]];
+    gpg = [[GPGME alloc] initWithDir:[rc getPrettyPath]];
     if (gpg == nil) {
         [self dealloc];
         @throw @"cant init gpg";
@@ -376,14 +376,14 @@ extern bool is_linking;
             NSString* uid = [NSString stringWithFormat:@"%@@prison", user];
             if (user == nil || uid == nil) {
                 [self dealloc];
-                @throw @"cant make PurityKeys";
+                @throw @"cant make PrettyKeys";
             } else {
                 [gpg mkKeyParams:@"RSA" :@"1024" :@"RSA" :@"1024" :user :uid];
                 bool is_genkey = true;
                 is_genkey = [gpg genkey];
                 if (is_genkey == false) {
                     [self dealloc];
-                    @throw @"cant make PurityKeys";
+                    @throw @"cant make PrettyKeys";
                 }
             }
         }
@@ -587,6 +587,8 @@ extern bool is_linking;
         }
     }
 
+    printf("%d\n", __LINE__);
+
     if (err == 0) {
         return true;
     } else {
@@ -661,17 +663,29 @@ extern bool is_linking;
         return false;
     }
 
+    printf("%d\n", __LINE__);
+
     // set_own_id
     const NSStringEncoding* encode;
     encode = [NSString availableStringEncodings];
+    printf("%d\n", __LINE__);
     NSString* user  = [rc getPrisonName];
+    printf("%d\n", __LINE__);
     NSString* uid = [NSString stringWithFormat:@"%@@prison", user];
+    printf("%d\n", __LINE__);
     NSString* pubring = [GPGME trimContentFromArmor:[gpg exportPubring:uid]];
+    printf("%d\n", __LINE__);
     NSString* secring = [GPGME trimContentFromArmor:[gpg exportSecring:nil]];
+    printf("%d\n", __LINE__);
     NSString* id_str = [NSString stringWithFormat:@"%@%@", pubring, secring];
+    printf("%d\n", __LINE__);
     NSString* id_hash = [[[id_str dataUsingEncoding:*encode] sha1Digest] hexString];
 
+    printf("%d\n", __LINE__);
+
     NSString* message = [NSString stringWithFormat:@"set_id,prison,%@\n", id_hash];
+
+    printf("%d\n", __LINE__);
 
     int ret;
     NSString* buf_string = [self _commit_message:message];
@@ -680,6 +694,8 @@ extern bool is_linking;
     } else {
         ret = true;
     }
+
+    printf("%d\n", __LINE__);
 
     if (ret == true) {
         NSArray* buf_array = [buf_string componentsSeparatedByString:@","];
@@ -692,6 +708,8 @@ extern bool is_linking;
         }
     }
 
+    printf("%d\n", __LINE__);
+
     // get_own_id
     if (ret == true) {
         buf_string = [self _commit_message:@"get_id,prison\n"];
@@ -701,6 +719,8 @@ extern bool is_linking;
             ret = true;
         }
     }
+
+    printf("%d\n", __LINE__);
 
     if (ret == true) {
         NSArray* buf_array = [buf_string componentsSeparatedByString:@","];
